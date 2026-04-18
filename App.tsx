@@ -15,6 +15,7 @@ import GameScreen from './src/screens/GameScreen';
 import GameOverScreen from './src/screens/GameOverScreen';
 
 export type RootStackParamList = {
+  Splash: undefined;
   Login: undefined;
   Register: undefined;
   Home: undefined;
@@ -28,18 +29,19 @@ const AppNavigator = () => {
   const { user, loading } = useAuth();
   const [isSplashDone, setIsSplashDone] = useState(false);
 
-  if (loading || !isSplashDone) {
-    return <SplashScreen onFinish={() => setIsSplashDone(true)} />;
-  }
-
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
         animation: 'fade',
+        contentStyle: { backgroundColor: colors.nightBlue }, 
       }}
     >
-      {user ? (
+      {loading || !isSplashDone ? (
+        <Stack.Screen name="Splash">
+          {(props) => <SplashScreen {...props} onFinish={() => setIsSplashDone(true)} />}
+        </Stack.Screen>
+      ) : user ? (
         <>
           <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="Game" component={GameScreen} />
@@ -47,15 +49,30 @@ const AppNavigator = () => {
         </>
       ) : (
         <>
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen
-            name="Register"
-            component={RegisterScreen}
+          <Stack.Screen 
+            name="Login" 
+            component={LoginScreen} 
             options={{
               headerShown: true,
               headerTitle: '',
-              headerTransparent: true,
+              headerStyle: {
+                backgroundColor: colors.nightBlue,
+              },
+              headerShadowVisible: false,
+            }}
+          />
+          <Stack.Screen 
+            name="Register" 
+            component={RegisterScreen} 
+            options={{
+              headerShown: true,
+              headerTitle: '',
+              headerStyle: {
+                backgroundColor: colors.nightBlue,
+              },
+              headerShadowVisible: false,
               headerTintColor: colors.sand,
+              headerBackTitle: '',
             }}
           />
         </>
@@ -67,7 +84,7 @@ const AppNavigator = () => {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <GestureHandlerRootView style={{ flex: 1 }}>
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.nightBlue }}>
         <StatusBar 
           style="light" 
           backgroundColor={colors.nightBlue} 

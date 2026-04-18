@@ -1,5 +1,5 @@
 //src/screens/RegisterScreen.tsx
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
     View, Text, StyleSheet, TouchableOpacity, 
     KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ScrollView 
@@ -14,18 +14,36 @@ import CustomInput from '../components/common/CustomInput';
 type RegisterScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Register'>;
 
 export default function RegisterScreen({ navigation }: { navigation: RegisterScreenNavigationProp }) {
-    const [username, setUsername] = useState('');
+    const [loginIdentifier, setLoginIdentifier] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { register } = useAuth();
+    
+    // Definition de la reference pour controler le ScrollView
+    const scrollViewRef = useRef<ScrollView>(null);
+
+    // Ecouteur d'evenement pour le clavier
+    useEffect(() => {
+        const keyboardEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+        const keyboardSubscription = Keyboard.addListener(keyboardEvent, () => {
+            // Micro-delai pour laisser l'ecran se redimensionner avant de scroller
+            setTimeout(() => {
+                scrollViewRef.current?.scrollToEnd({ animated: true });
+            }, 100);
+        });
+
+        return () => {
+            keyboardSubscription.remove();
+        };
+    }, []);
 
     const handleRegister = async () => {
         setErrorMessage('');
         
-        if (!username || !email || !password) {
+        if (!loginIdentifier || !email || !password) {
             setErrorMessage('Veuillez remplir tous les champs');
             return;
         }
@@ -38,7 +56,7 @@ export default function RegisterScreen({ navigation }: { navigation: RegisterScr
 
         setIsSubmitting(true);
         try {
-            await register({ username, email, password });
+            await register({ login: loginIdentifier, email, password });
         } catch (error: any) {
             setErrorMessage(error.message || 'Erreur lors de l\'inscription');
         } finally {
@@ -53,12 +71,11 @@ export default function RegisterScreen({ navigation }: { navigation: RegisterScr
         >
             <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                 <ScrollView 
+                    ref={scrollViewRef} // Attachement de la reference
                     contentContainerStyle={styles.scrollContent}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
                 >
-                    <View style={styles.headerSpacer} />
-                    
                     <Text style={styles.title}>INSCRIPTION</Text>
                     <Text style={styles.subtitle}>Rejoignez 2Mots</Text>
 
@@ -70,8 +87,8 @@ export default function RegisterScreen({ navigation }: { navigation: RegisterScr
 
                     <View style={styles.inputContainer}>
                         <CustomInput
-                            value={username}
-                            onChangeText={setUsername}
+                            value={loginIdentifier}
+                            onChangeText={setLoginIdentifier}
                             placeholder="Pseudo (3-20 caracteres)"
                             autoCapitalize="none"
                         />
@@ -128,9 +145,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         paddingHorizontal: spacing.xl,
         paddingBottom: spacing.xl * 2,
-    },
-    headerSpacer: {
-        height: spacing.xl,
     },
     title: {
         ...typography.titleLarge,
