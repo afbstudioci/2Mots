@@ -1,32 +1,39 @@
+//src/screens/SplashScreen.tsx
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
-import { typography, colors, spacing, borderRadius } from '../theme/theme';
-import { RootStackParamList } from '../../App';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { typography, colors, spacing } from '../theme/theme';
 
-type SplashScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Splash'>;
+interface SplashScreenProps {
+  onFinish?: () => void;
+}
 
-export default function SplashScreen({ navigation }: { navigation: SplashScreenNavigationProp }) {
+export default function SplashScreen({ onFinish }: SplashScreenProps) {
   const [progress, setProgress] = useState(0);
   const opacity = useState(new Animated.Value(0))[0];
 
   useEffect(() => {
+    // Apparition en fondu doux
     Animated.timing(opacity, {
       toValue: 1,
-      duration: 1000,
+      duration: 800,
       useNativeDriver: true,
     }).start();
 
+    // Duree totale 2500ms (2.5s) selon le cahier des charges
+    // 100 etapes de 25ms = 2500ms
     const interval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) {
           clearInterval(interval);
-          setTimeout(() => navigation.replace('Login'), 300);
+          if (onFinish) {
+            // Un micro delai visuel une fois la barre remplie avant de basculer
+            setTimeout(onFinish, 100);
+          }
           return 100;
         }
-        return prev + 2;
+        return prev + 1;
       });
-    }, 50);
+    }, 25);
 
     return () => clearInterval(interval);
   }, []);
@@ -34,16 +41,15 @@ export default function SplashScreen({ navigation }: { navigation: SplashScreenN
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.content, { opacity }]}>
-        <Text style={styles.logo}>2Mots</Text>
-        
-        <View style={styles.progressBarBackground}>
-          <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
+        <View style={styles.centerBlock}>
+          <Text style={styles.logoMark}>M</Text>
+          <Text style={styles.logoText}>2Mots</Text>
         </View>
-        <Text style={styles.progressText}>initializing sanctuary {progress}%</Text>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>END-TO-END ENCRYPTED</Text>
-          <Text style={styles.footerText}>VERSION 2.0.4 - NOCTURNE EDITION</Text>
+        
+        <View style={styles.bottomBlock}>
+          <View style={styles.progressBarBackground}>
+            <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
+          </View>
         </View>
       </Animated.View>
     </View>
@@ -58,45 +64,45 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   content: {
-    width: '80%',
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: '20%',
+  },
+  centerBlock: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  logo: {
+  logoMark: {
+    fontSize: 72,
+    color: colors.coral,
+    fontWeight: '300',
+    marginBottom: spacing.xs,
+  },
+  logoText: {
     ...typography.titleHuge,
     color: colors.coral,
-    fontSize: 64,
-    marginBottom: spacing.xl * 2,
+    fontSize: 54,
+    fontWeight: '900',
+    letterSpacing: -1,
+  },
+  bottomBlock: {
+    width: '100%',
+    alignItems: 'center',
+    paddingBottom: spacing.xl,
   },
   progressBarBackground: {
-    width: '100%',
-    height: 4,
-    backgroundColor: '#2D3748',
-    borderRadius: borderRadius.sm,
+    width: 80, // Toute petite barre de chargement
+    height: 6,
+    backgroundColor: 'rgba(244, 235, 216, 0.15)', // Beige sable transparent
+    borderRadius: 10, // Pilule parfaite
     overflow: 'hidden',
-    marginBottom: spacing.sm,
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: colors.coral,
-  },
-  progressText: {
-    fontFamily: 'Poppins_400Regular',
-    fontSize: 12,
-    color: colors.sand,
-    opacity: 0.6,
-    letterSpacing: 1,
-    marginBottom: spacing.xl * 3,
-  },
-  footer: {
-    alignItems: 'center',
-    marginTop: spacing.xl * 2,
-  },
-  footerText: {
-    fontFamily: 'Poppins_500Medium',
-    fontSize: 10,
-    color: colors.sand,
-    opacity: 0.4,
-    letterSpacing: 2,
-    marginBottom: spacing.xs,
-  },
+    backgroundColor: colors.sand,
+    borderRadius: 10,
+  }
 });

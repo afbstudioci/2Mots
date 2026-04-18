@@ -1,79 +1,78 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+//src/context/AuthContext.tsx
+import React, { createContext, useState, useEffect, useContext } from 'react';
 import api from '../services/api';
-import { authStorage } from '../services/authStorage';
+import { saveTokens, saveUser, getToken, getUser, clearTokens } from '../services/authStorage';
 
-interface User {
-    id: string;
-    username: string;
+interface AuthContextData {
+  user: any;
+  loading: boolean;
+  login: (credentials: any) => Promise<void>;
+  register: (userData: any) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
-interface AuthContextType {
-    user: User | null;
-    isLoading: boolean;
-    login: (login: string, password: string) => Promise<void>;
-    register: (username: string, email: string, password: string) => Promise<void>;
-    logout: () => Promise<void>;
-}
+const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-    const [user, setUser] = useState<User | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+  useEffect(() => {
+    async function loadStorageData() {
+      const storageToken = await getToken();
+      const storageUser = await getUser();
 
-    // Vérifie au démarrage de l'app si un token existe
-    useEffect(() => {
-        const checkLogin = async () => {
-            try {
-                const token = await authStorage.getToken();
-                if (token) {
-                    // Optionnel : on pourrait faire un appel API /api/auth/me pour vérifier si le token est valide
-                    // Pour l'instant, on simule qu'on est connecté (le vrai test sera fait au premier appel jeu)
-                    setUser({ id: 'temp', username: 'Joueur' }); 
-                }
-            } catch (error) {
-                await authStorage.deleteTokens();
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        checkLogin();
-    }, []);
+      if (storageToken && storageUser) {
+        setUser(storageUser);
+      }
+      setLoading(false);
+    }
 
-    const login = async (login: string, password: string) => {
-        const response = await api.post('/auth/login', { login, password });
-        const { user: userData, accessToken, refreshToken } = response.data.data;
-        await authStorage.saveTokens(accessToken, refreshToken);
-        setUser(userData);
-    };
+    loadStorageData();
+  }, []);
 
-    const register = async (username: string, email: string, password: string) => {
-        const response = await api.post('/auth/register', { username, email, password });
-        const { user: userData, accessToken, refreshToken } = response.data.data;
-        await authStorage.saveTokens(accessToken, refreshToken);
-        setUser(userData);
-    };
+  const login = async (credentials: any) => {
+    try {
+      const response = await api.post('/auth/login', credentials);
+      const { user, accessToken, refreshToken } = response.data.data;
 
-    const logout = async () => {
-        try {
-            await api.post('/auth/logout');
-        } catch (error) {
-            // Même si le serveur échoue, on vide le téléphone
-        } finally {
-            await authStorage.deleteTokens();
-            setUser(null);
-        }
-    };
+      await saveTokens(accessToken, refreshToken);
+      await saveUser(user);
+      setUser(user);
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Erreur de connexion');
+    }
+  };
 
-    return (
-        <AuthContext.Provider value={{ user, isLoading, login, register, logout }}>
-            {children}
-        </AuthContext.Provider>
-    );
+  const register = async (userData: any) => {
+    try {
+      const response = await api.post('/auth/register', userData);
+      const { user, accessToken, refreshToken } = response.data.data;
+
+      await saveTokens(accessToken, refreshToken);
+      await saveUser(user);
+      setUser(user);
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Erreur lors de l\'inscription');
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (e) {
+      // On ignore l'erreur serveur au logout pour forcer le nettoyage local
+    } finally {
+      await clearTokens();
+      setUser(null);
+    }
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
-export const useAuth = () => {
-    const context = useContext(AuthContext);
-    if (!context) throw new Error('useAuth must be used within an AuthProvider');
-    return context;
-};
+export const useAuth = () => useContext(AuthContext);

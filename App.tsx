@@ -1,9 +1,12 @@
-import React from 'react';
+//App.tsx
+import React, { useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { AuthProvider } from './src/context/AuthContext';
-import { darkTheme } from './src/theme/theme';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { darkTheme, colors } from './src/theme/theme';
 import SplashScreen from './src/screens/SplashScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
@@ -12,7 +15,6 @@ import GameScreen from './src/screens/GameScreen';
 import GameOverScreen from './src/screens/GameOverScreen';
 
 export type RootStackParamList = {
-  Splash: undefined;
   Login: undefined;
   Register: undefined;
   Home: undefined;
@@ -22,24 +24,61 @@ export type RootStackParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+const AppNavigator = () => {
+  const { user, loading } = useAuth();
+  const [isSplashDone, setIsSplashDone] = useState(false);
+
+  if (loading || !isSplashDone) {
+    return <SplashScreen onFinish={() => setIsSplashDone(true)} />;
+  }
+
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+        animation: 'fade',
+      }}
+    >
+      {user ? (
+        <>
+          <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen name="Game" component={GameScreen} />
+          <Stack.Screen name="GameOver" component={GameOverScreen} />
+        </>
+      ) : (
+        <>
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen
+            name="Register"
+            component={RegisterScreen}
+            options={{
+              headerShown: true,
+              headerTitle: '',
+              headerTransparent: true,
+              headerTintColor: colors.sand,
+            }}
+          />
+        </>
+      )}
+    </Stack.Navigator>
+  );
+};
+
 export default function App() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <NavigationContainer theme={darkTheme}>
-          <Stack.Navigator 
-            screenOptions={{ headerShown: false }}
-            initialRouteName="Splash"
-          >
-            <Stack.Screen name="Splash" component={SplashScreen} />
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="Register" component={RegisterScreen} />
-            <Stack.Screen name="Home" component={HomeScreen} />
-            <Stack.Screen name="Game" component={GameScreen} />
-            <Stack.Screen name="GameOver" component={GameOverScreen} />
-          </Stack.Navigator>
-        </NavigationContainer>
-      </AuthProvider>
-    </GestureHandlerRootView>
+    <SafeAreaProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <StatusBar 
+          style="light" 
+          backgroundColor={colors.nightBlue} 
+          translucent={false} 
+        />
+        <AuthProvider>
+          <NavigationContainer theme={darkTheme}>
+            <AppNavigator />
+          </NavigationContainer>
+        </AuthProvider>
+      </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }

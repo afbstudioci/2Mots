@@ -1,9 +1,12 @@
+//src/theme/theme.ts
 import { TextStyle } from 'react-native';
 
 export const colors = {
     coral: '#FF7F50',
     sand: '#F7F5F0',
     nightBlue: '#1A202C',
+    success: '#4ADE80', // Vert Menthe ajoute
+    error: '#EF4444',   // Rouge d'erreur ajoute
 };
 
 export const spacing = {
