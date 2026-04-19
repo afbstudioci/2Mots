@@ -1,141 +1,168 @@
+//src/screens/GameScreen.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-    View, Text, StyleSheet, TouchableOpacity, 
-    KeyboardAvoidingView, Platform, Animated 
+    View, StyleSheet, KeyboardAvoidingView, Platform, Animated, Dimensions 
 } from 'react-native';
-import { typography, colors, spacing, borderRadius } from '../theme/theme';
-import CustomInput from '../components/common/CustomInput';
+import { colors } from '../theme/theme';
 import api from '../services/api';
 import * as Haptics from 'expo-haptics';
 import { RootStackParamList } from '../../App';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-// Importation de nos composants modulaires
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import GameLoading from '../components/game/GameLoading';
 import GameEmpty from '../components/game/GameEmpty';
+import GameHeader from '../components/game/GameHeader';
+import GamePlayArea from '../components/game/GamePlayArea';
+import GameInputArea from '../components/game/GameInputArea';
 
 type GameScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Game'>;
+
+const { width } = Dimensions.get('window');
 
 export default function GameScreen({ navigation }: { navigation: GameScreenNavigationProp }) {
     const [wordPairs, setWordPairs] = useState<any[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [timeLeft, setTimeLeft] = useState(30);
-    const [score, setScore] = useState(0);
     const [answer, setAnswer] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isAnimating, setIsAnimating] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
+    
+    const [sessionAnswers, setSessionAnswers] = useState<any[]>([]);
 
     const progressAnim = useRef(new Animated.Value(1)).current;
+    const slideWordsAnim = useRef(new Animated.Value(0)).current;
+    const morphInputAnim = useRef(new Animated.Value(1)).current;
 
     useEffect(() => {
         fetchWords();
     }, []);
 
     useEffect(() => {
-        if (isLoading || wordPairs.length === 0) return;
+        if (isLoading || wordPairs.length === 0 || isAnimating) return;
 
         progressAnim.setValue(1);
         Animated.timing(progressAnim, {
             toValue: 0,
-            duration: 30000,
+            duration: timeLeft * 1000,
             useNativeDriver: false,
         }).start();
 
         const timer = setInterval(() => {
-            setTimeLeft((prev) => {
-                if (prev <= 1) {
-                    clearInterval(timer);
-                    handleTimeUp();
-                    return 0;
-                }
-                return prev - 1;
-            });
+            setTimeLeft((prev) => prev - 1);
         }, 1000);
 
         return () => {
             clearInterval(timer);
             progressAnim.stopAnimation();
         };
-    }, [currentIndex, isLoading, wordPairs.length]);
+    }, [currentIndex, isLoading, wordPairs.length, isAnimating]);
+
+    useEffect(() => {
+        if (timeLeft <= 0 && wordPairs.length > 0 && currentIndex < wordPairs.length && !isAnimating) {
+            handleTimeUp();
+        }
+    }, [timeLeft, wordPairs.length, currentIndex, isAnimating]);
 
     const fetchWords = async () => {
         try {
             const response = await api.get('/game/batch');
             const fetchedWords = response.data.data;
-            
-            // Delai artificiel de 2.5s pour admirer ton animation de chargement premium
+
             setTimeout(() => {
                 if (fetchedWords && fetchedWords.length > 0) {
                     setWordPairs(fetchedWords);
                 } else {
-                    setErrorMessage("Il n'y a pas d'enigmes disponibles pour le moment.");
+                    setErrorMessage("Il n'y a pas d'énigmes disponibles pour le moment.");
                 }
                 setIsLoading(false);
-            }, 2500);
+            }, 1000);
 
         } catch (error) {
-            console.error('Erreur de chargement des mots');
-            setTimeout(() => {
-                setErrorMessage('Erreur de connexion au serveur.');
-                setIsLoading(false);
-            }, 2500);
+            setErrorMessage('Erreur de connexion au serveur.');
+            setIsLoading(false);
         }
     };
 
     const handleTimeUp = () => {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        moveToNextWord();
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        triggerNextWord(''); 
     };
 
-    const submitAnswer = async () => {
-        if (!answer.trim() || isSubmitting) return;
+    const submitAnswer = () => {
+        if (!answer.trim() || isSubmitting || isAnimating) return;
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); 
+        triggerNextWord(answer);
+    };
 
+    const triggerNextWord = (userText: string) => {
+        setIsAnimating(true);
+        const timeSpent = 30 - Math.max(0, timeLeft);
+        const currentPair = wordPairs[currentIndex];
+
+        const newAnswer = {
+            wordPairId: currentPair._id,
+            answer: userText,
+            timeSpent: timeSpent
+        };
+        const updatedAnswers = [...sessionAnswers, newAnswer];
+        setSessionAnswers(updatedAnswers);
+
+        Animated.sequence([
+            Animated.timing(morphInputAnim, { toValue: 0.95, duration: 100, useNativeDriver: true }),
+            Animated.spring(morphInputAnim, { toValue: 1, friction: 4, tension: 100, useNativeDriver: true }),
+            Animated.timing(slideWordsAnim, { toValue: -width, duration: 200, useNativeDriver: true })
+        ]).start(() => {
+            if (currentIndex < wordPairs.length - 1) {
+                setAnswer('');
+                setCurrentIndex((prev) => prev + 1);
+                setTimeLeft(30);
+                slideWordsAnim.setValue(width);
+                
+                Animated.spring(slideWordsAnim, { 
+                    toValue: 0, friction: 7, tension: 50, useNativeDriver: true 
+                }).start(() => {
+                    setIsAnimating(false);
+                });
+            } else {
+                finishSession(updatedAnswers);
+            }
+        });
+    };
+
+    const finishSession = async (finalAnswers: any[]) => {
         setIsSubmitting(true);
         try {
-            const currentPair = wordPairs[currentIndex];
-            const response = await api.post('/game/submit', {
-                wordPairId: currentPair._id,
-                userAnswer: answer,
-                timeRemaining: timeLeft
+            const response = await api.post('/game/validate', { answers: finalAnswers });
+            const result = response.data.data;
+            
+            const formattedDetails = finalAnswers.map(ans => {
+                const isCorrect = !result.corrections.some((c: any) => c.userAnswer === ans.answer);
+                return {
+                    word: ans.answer || "Passé",
+                    accuracy: isCorrect ? 100 : 0,
+                    label: isCorrect ? "+XP" : "ÉCHEC"
+                };
             });
 
-            const result = response.data.data;
-
-            if (result.isCorrect) {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                setScore((prev) => prev + result.points);
-            } else {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            }
-
-            moveToNextWord();
+            navigation.navigate('GameOver', { 
+                score: result.totalScore, 
+                details: formattedDetails 
+            });
+            
         } catch (error) {
+            console.error(error);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            navigation.navigate('Home');
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    const moveToNextWord = () => {
-        setAnswer('');
-        if (currentIndex < wordPairs.length - 1) {
-            setTimeLeft(30);
-            setCurrentIndex((prev) => prev + 1);
-        } else {
-            api.post('/game/score', { score }).catch(e => console.error(e));
-            navigation.navigate('Home');
-        }
-    };
-
-    if (isLoading) {
-        return <GameLoading />;
-    }
-
-    if (errorMessage || wordPairs.length === 0) {
-        return <GameEmpty message={errorMessage} onBack={() => navigation.navigate('Home')} />;
-    }
+    if (isLoading) return <GameLoading />;
+    if (errorMessage || wordPairs.length === 0) return <GameEmpty message={errorMessage} onBack={() => navigation.navigate('Home')} />;
 
     const currentPair = wordPairs[currentIndex];
 
@@ -145,140 +172,41 @@ export default function GameScreen({ navigation }: { navigation: GameScreenNavig
                 style={styles.container} 
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             >
-                <View style={styles.header}>
-                    <Text style={styles.headerText}>SCORE: {score}</Text>
-                    <Text style={styles.headerText}>{currentIndex + 1} / {wordPairs.length}</Text>
-                </View>
+                <GameHeader currentIndex={currentIndex} totalWords={wordPairs.length} />
 
                 <View style={styles.timerContainer}>
+                    <View style={styles.timerTrack} />
                     <Animated.View style={[styles.timerBar, {
                         width: progressAnim.interpolate({
                             inputRange: [0, 1],
                             outputRange: ['0%', '100%']
-                        }),
+                        }) as any,
                         backgroundColor: timeLeft > 10 ? colors.coral : colors.error
                     }]} />
                 </View>
 
-                <View style={styles.gameArea}>
-                    <Text style={styles.timerText}>{timeLeft}s</Text>
-                    
-                    <View style={styles.wordsBox}>
-                        <View style={styles.singleWord}>
-                            <Text style={styles.wordTitle}>{currentPair.word1}</Text>
-                        </View>
-                        <Text style={styles.plusSign}>+</Text>
-                        <View style={styles.singleWord}>
-                            <Text style={styles.wordTitle}>{currentPair.word2}</Text>
-                        </View>
-                    </View>
-                </View>
+                <GamePlayArea 
+                    timeLeft={timeLeft} 
+                    currentPair={currentPair} 
+                    slideWordsAnim={slideWordsAnim} 
+                />
 
-                <View style={styles.inputArea}>
-                    <CustomInput
-                        value={answer}
-                        onChangeText={setAnswer}
-                        placeholder="Trouvez le lien..."
-                        autoCapitalize="none"
-                        autoFocus={true}
-                        returnKeyType="send"
-                        onSubmitEditing={submitAnswer}
-                    />
-                    
-                    <TouchableOpacity 
-                        style={[styles.button, isSubmitting && styles.buttonDisabled]} 
-                        onPress={submitAnswer}
-                        disabled={isSubmitting}
-                        activeOpacity={0.8}
-                    >
-                        <Text style={styles.buttonText}>
-                            {isSubmitting ? 'VALIDATION...' : 'VALIDER'}
-                        </Text>
-                    </TouchableOpacity>
-                </View>
+                <GameInputArea 
+                    answer={answer} 
+                    setAnswer={setAnswer} 
+                    submitAnswer={submitAnswer} 
+                    isSubmitting={isSubmitting} 
+                    isAnimating={isAnimating} 
+                    morphInputAnim={morphInputAnim} 
+                />
             </KeyboardAvoidingView>
         </ScreenWrapper>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        paddingHorizontal: spacing.xl,
-        paddingTop: spacing.xl,
-        paddingBottom: spacing.sm,
-    },
-    headerText: {
-        fontFamily: 'Poppins_500Medium',
-        color: colors.sand,
-        fontSize: 16,
-    },
-    timerContainer: {
-        height: 4,
-        backgroundColor: 'rgba(244, 238, 224, 0.1)',
-        width: '100%',
-    },
-    timerBar: {
-        height: '100%',
-    },
-    gameArea: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: spacing.xl,
-    },
-    timerText: {
-        ...typography.titleLarge,
-        color: colors.sand,
-        opacity: 0.8,
-        marginBottom: spacing.xl,
-    },
-    wordsBox: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.03)',
-        padding: spacing.xl,
-        borderRadius: borderRadius.xl,
-        width: '100%',
-    },
-    singleWord: {
-        flex: 1,
-        alignItems: 'center',
-    },
-    wordTitle: {
-        fontFamily: 'Poppins_700Bold',
-        fontSize: 22,
-        color: colors.sand,
-        textTransform: 'uppercase',
-        textAlign: 'center',
-    },
-    plusSign: {
-        fontFamily: 'Poppins_400Regular',
-        fontSize: 24,
-        color: colors.coral,
-        marginHorizontal: spacing.md,
-    },
-    inputArea: {
-        padding: spacing.xl,
-        paddingBottom: spacing.xl * 2,
-    },
-    button: {
-        backgroundColor: colors.coral,
-        paddingVertical: spacing.md,
-        borderRadius: borderRadius.xl,
-        alignItems: 'center',
-        marginTop: spacing.sm,
-    },
-    buttonDisabled: {
-        opacity: 0.6,
-    },
-    buttonText: {
-        ...typography.buttonPrimary,
-        letterSpacing: 1,
-    },
+    container: { flex: 1 },
+    timerContainer: { height: 4, width: '100%', position: 'relative' },
+    timerTrack: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.sand, opacity: 0.1 },
+    timerBar: { height: '100%', position: 'absolute', top: 0, left: 0 },
 });

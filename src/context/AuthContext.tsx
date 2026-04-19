@@ -50,8 +50,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await api.get('/auth/me');
       const freshUser = response.data.data.user;
-      await saveUser(freshUser);
-      setUser(freshUser);
+      
+      // FIX ANTI-ZOMBIE : On s'assure que le token n'a pas ete detruit (par un logout)
+      // pendant que cette requete reseau etait en vol.
+      const currentToken = await getToken();
+      if (currentToken) {
+        await saveUser(freshUser);
+        setUser(freshUser);
+      }
     } catch (error) {
       console.info('Session validee mais profil non rafraichi en arriere-plan');
     }
@@ -89,12 +95,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      await api.post('/auth/logout');
-    } catch (e) {
-      // Nettoyage forcé même si le serveur ne répond pas
-    } finally {
+      // 1. Coupe-circuit immediat : On detruit la session locale avant tout
       await clearTokens();
+      
+      // 2. UI Optimiste : On kick l'utilisateur instantanement vers LoginScreen
       setUser(null);
+      
+      // 3. Arriere-plan : On previent le serveur silencieusement sans bloquer l'UI
+      api.post('/auth/logout').catch(() => {});
+    } catch (e) {
+      console.error('Erreur lors de la deconnexion', e);
     }
   };
 

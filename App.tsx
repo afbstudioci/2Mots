@@ -1,4 +1,4 @@
-// App.tsx
+//App.tsx
 import React, { useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer } from '@react-navigation/native';
@@ -8,12 +8,15 @@ import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { lightTheme, darkTheme } from './src/theme/theme';
+
+// Screens
 import SplashScreen from './src/screens/SplashScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import GameScreen from './src/screens/GameScreen';
 import GameOverScreen from './src/screens/GameOverScreen';
+import LeaderboardScreen from './src/screens/LeaderboardScreen';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -22,6 +25,7 @@ export type RootStackParamList = {
   Home: undefined;
   Game: undefined;
   GameOver: { score: number; details: { word: string; accuracy: number; label: string }[] };
+  Leaderboard: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -36,7 +40,6 @@ const AppNavigator = () => {
       screenOptions={{
         headerShown: false,
         animation: 'fade',
-        // Fond universel du navigateur pour tuer le flash blanc
         contentStyle: { backgroundColor: themeColors.background }, 
       }}
     >
@@ -49,6 +52,14 @@ const AppNavigator = () => {
           <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="Game" component={GameScreen} />
           <Stack.Screen name="GameOver" component={GameOverScreen} />
+          <Stack.Screen 
+            name="Leaderboard" 
+            component={LeaderboardScreen} 
+            options={{ 
+              animation: 'fade', 
+              presentation: 'transparentModal' 
+            }}
+          />
         </>
       ) : (
         <>
@@ -84,7 +95,6 @@ const AppContent = () => {
   const { isDark, themeColors } = useTheme();
 
   return (
-    // SafeAreaProvider doit porter la couleur de fond
     <SafeAreaProvider style={{ flex: 1, backgroundColor: themeColors.background }}>
       <GestureHandlerRootView style={{ flex: 1, backgroundColor: themeColors.background }}>
         <StatusBar 
