@@ -77,6 +77,14 @@ export default function LoginScreen({ navigation }: { navigation: LoginScreenNav
                     </View>
 
                     <TouchableOpacity 
+                        style={styles.forgotPasswordLink}
+                        onPress={() => { /* On activera plus tard */ }}
+                        activeOpacity={0.7}
+                    >
+                        <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
                         style={[styles.button, isSubmitting && styles.buttonDisabled]} 
                         onPress={handleLogin}
                         disabled={isSubmitting}
@@ -137,7 +145,17 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     inputContainer: {
-        marginBottom: spacing.md,
+        marginBottom: spacing.xs, // Reduit legerement pour coller avec le lien "mot de passe oublie"
+    },
+    forgotPasswordLink: {
+        alignSelf: 'flex-end',
+        marginBottom: spacing.lg,
+    },
+    forgotPasswordText: {
+        fontFamily: 'Poppins_400Regular',
+        color: colors.sand,
+        opacity: 0.6,
+        fontSize: 14,
     },
     button: {
         backgroundColor: colors.coral,

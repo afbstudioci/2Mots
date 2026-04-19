@@ -9,6 +9,7 @@ interface AuthContextData {
   login: (credentials: any) => Promise<void>;
   register: (userData: any) => Promise<void>;
   logout: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -57,11 +58,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const refreshProfile = async () => {
+    try {
+      const response = await api.get('/auth/me');
+      const freshUser = response.data.data.user;
+      await saveUser(freshUser);
+      setUser(freshUser);
+    } catch (error) {
+      console.warn('Impossible de rafraichir le profil en arriere-plan');
+    }
+  };
+
   const logout = async () => {
     try {
       await api.post('/auth/logout');
     } catch (e) {
-      // On ignore l'erreur serveur au logout pour forcer le nettoyage local
+      // Ignorer l'erreur serveur, forcer le nettoyage local
     } finally {
       await clearTokens();
       setUser(null);
@@ -69,7 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

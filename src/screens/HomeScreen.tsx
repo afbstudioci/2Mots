@@ -1,91 +1,169 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { typography, colors, spacing, borderRadius, shadows } from '../theme/theme';
-import { RootStackParamList } from '../../App';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+//src/screens/HomeScreen.tsx
+import React, { useRef, useCallback } from 'react';
+import { View, Text, StyleSheet, Animated, Pressable, StatusBar, SafeAreaView } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
+import { useAuth } from '../context/AuthContext';
+import { colors, typography, borderRadius } from '../theme/theme';
 
-type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
+const HomeScreen = ({ navigation }: any) => {
+    const { user, refreshProfile, logout } = useAuth();
+    const scaleAnim = useRef(new Animated.Value(1)).current;
 
-export default function HomeScreen({ navigation }: { navigation: HomeScreenNavigationProp }) {
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.logo}>2Mots</Text>
-      </View>
+    // Actualise le profil a chaque fois que l'ecran devient actif (ex: retour d'une partie)
+    useFocusEffect(
+        useCallback(() => {
+            refreshProfile();
+        }, [])
+    );
 
-      <View style={styles.main}>
-        <Text style={styles.tagline}>Reflexion. Instinct. Rapidite.</Text>
-        
-        <TouchableOpacity 
-          style={styles.playButton} 
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate('Game')}
-        >
-          <Text style={styles.playButtonText}>JOUER</Text>
-        </TouchableOpacity>
-      </View>
+    const handlePressIn = () => {
+        Animated.spring(scaleAnim, {
+            toValue: 0.92,
+            useNativeDriver: true,
+        }).start();
+    };
 
-      <View style={styles.navBar}>
-        <View style={styles.navIcon} />
-        <View style={[styles.navIcon, { backgroundColor: colors.coral, width: 6, height: 6 }]} />
-        <View style={styles.navIcon} />
-        <View style={styles.navIcon} />
-      </View>
-    </View>
-  );
-}
+    const handlePressOut = () => {
+        Animated.spring(scaleAnim, {
+            toValue: 1,
+            friction: 4,
+            tension: 40,
+            useNativeDriver: true,
+        }).start();
+    };
+
+    const handlePlayPress = async () => {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        navigation.navigate('GameScreen');
+    };
+
+    return (
+        <SafeAreaView style={styles.safeArea}>
+            <StatusBar barStyle="light-content" backgroundColor={colors.nightBlue} translucent={false} />
+            <View style={styles.container}>
+                
+                {/* Header Section */}
+                <View style={styles.header}>
+                    <View style={styles.greetingRow}>
+                        <Text style={styles.greetingText}>Pret, {user?.login} ?</Text>
+                        {user?.role === 'superadmin' && (
+                            <View style={styles.adminBadge}>
+                                <Text style={styles.adminBadgeText}>Admin</Text>
+                            </View>
+                        )}
+                    </View>
+                    <View style={styles.scoreContainer}>
+                        <Text style={styles.scoreLabel}>Meilleur score</Text>
+                        <Text style={styles.scoreValue}>{user?.bestScore || 0}</Text>
+                    </View>
+                </View>
+
+                {/* Center Section: Main Action */}
+                <View style={styles.centerContainer}>
+                    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                        <Pressable
+                            onPressIn={handlePressIn}
+                            onPressOut={handlePressOut}
+                            onPress={handlePlayPress}
+                            style={styles.playButton}
+                        >
+                            <Text style={styles.playButtonText}>JOUER</Text>
+                        </Pressable>
+                    </Animated.View>
+                </View>
+
+                {/* Footer Section: Navigation Secondaire / Deconnexion */}
+                <Pressable onPress={logout} style={styles.logoutButton}>
+                    <Text style={styles.logoutText}>Se deconnecter</Text>
+                </Pressable>
+
+            </View>
+        </SafeAreaView>
+    );
+};
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.nightBlue,
-  },
-  header: {
-    paddingTop: spacing.xl * 2,
-    paddingHorizontal: spacing.xl,
-  },
-  logo: {
-    ...typography.titleLarge,
-    color: colors.coral,
-  },
-  main: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tagline: {
-    fontFamily: 'Poppins_400Regular',
-    fontSize: 14,
-    color: colors.sand,
-    opacity: 0.5,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-    marginBottom: spacing.xl * 2,
-  },
-  playButton: {
-    backgroundColor: colors.coral,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xl * 3,
-    borderRadius: borderRadius.xl,
-    ...shadows.soft,
-  },
-  playButtonText: {
-    ...typography.buttonPrimary,
-    fontSize: 20,
-    letterSpacing: 3,
-  },
-  navBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingBottom: spacing.xl * 2,
-    paddingTop: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: '#2D3748',
-  },
-  navIcon: {
-    width: 5,
-    height: 5,
-    borderRadius: 50,
-    backgroundColor: '#4A5568',
-  },
+    safeArea: {
+        flex: 1,
+        backgroundColor: colors.nightBlue,
+    },
+    container: {
+        flex: 1,
+        paddingHorizontal: 24,
+        paddingBottom: 24,
+        justifyContent: 'space-between',
+    },
+    header: {
+        marginTop: 40,
+    },
+    greetingRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    greetingText: {
+        ...typography.titleLarge,
+        color: colors.sand,
+        marginRight: 12,
+    },
+    adminBadge: {
+        backgroundColor: colors.coral,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: borderRadius.sm,
+    },
+    adminBadgeText: {
+        color: colors.nightBlue,
+        fontFamily: 'Poppins_700Bold',
+        fontSize: 12,
+        textTransform: 'uppercase',
+    },
+    scoreContainer: {
+        marginTop: 4,
+    },
+    scoreLabel: {
+        ...typography.bodyMedium,
+        color: colors.sand,
+        opacity: 0.6,
+    },
+    scoreValue: {
+        ...typography.titleHuge,
+        color: colors.coral,
+        lineHeight: 50,
+    },
+    centerContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    playButton: {
+        backgroundColor: colors.coral,
+        paddingVertical: 24,
+        paddingHorizontal: 72,
+        borderRadius: borderRadius.xl,
+        shadowColor: colors.coral,
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
+        elevation: 12,
+    },
+    playButtonText: {
+        fontFamily: 'Poppins_900Black',
+        fontSize: 36,
+        color: colors.nightBlue,
+        letterSpacing: 2,
+    },
+    logoutButton: {
+        alignSelf: 'center',
+        padding: 16,
+    },
+    logoutText: {
+        ...typography.bodyMedium,
+        color: colors.sand,
+        opacity: 0.4,
+        textDecorationLine: 'underline',
+    },
 });
+
+export default HomeScreen;
