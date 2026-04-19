@@ -1,3 +1,4 @@
+//src/screens/LoginScreen.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { 
     View, Text, StyleSheet, TouchableOpacity, 
@@ -8,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../../App';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import CustomInput from '../components/common/CustomInput';
+import ServerWakeUpLoader from '../components/auth/ServerWakeUpLoader';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -19,14 +21,11 @@ export default function LoginScreen({ navigation }: { navigation: LoginScreenNav
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { login } = useAuth();
 
-    // Definition de la reference pour controler le ScrollView
     const scrollViewRef = useRef<ScrollView>(null);
 
-    // Ecouteur d'evenement pour le clavier
     useEffect(() => {
         const keyboardEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
         const keyboardSubscription = Keyboard.addListener(keyboardEvent, () => {
-            // Micro-delai pour laisser l'ecran se redimensionner avant de scroller
             setTimeout(() => {
                 scrollViewRef.current?.scrollToEnd({ animated: true });
             }, 100);
@@ -46,11 +45,12 @@ export default function LoginScreen({ navigation }: { navigation: LoginScreenNav
         }
 
         setIsSubmitting(true);
+        Keyboard.dismiss();
+
         try {
             await login({ login: loginIdentifier, password });
         } catch (error: any) {
             setErrorMessage(error.message || 'Identifiants incorrects');
-        } finally {
             setIsSubmitting(false);
         }
     };
@@ -60,9 +60,11 @@ export default function LoginScreen({ navigation }: { navigation: LoginScreenNav
             style={styles.container} 
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
+            {isSubmitting && <ServerWakeUpLoader />}
+
             <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                 <ScrollView 
-                    ref={scrollViewRef} // Attachement de la reference
+                    ref={scrollViewRef}
                     contentContainerStyle={styles.scrollContent}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
@@ -108,7 +110,7 @@ export default function LoginScreen({ navigation }: { navigation: LoginScreenNav
                         disabled={isSubmitting}
                         activeOpacity={0.8}
                     >
-                        <Text style={styles.buttonText}>{isSubmitting ? 'VERIFICATION...' : 'SE CONNECTER'}</Text>
+                        <Text style={styles.buttonText}>SE CONNECTER</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity 
