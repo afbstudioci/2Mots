@@ -1,12 +1,16 @@
-//src/screens/HomeScreen.tsx
 import React, { useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, Animated, Pressable, StatusBar, SafeAreaView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../context/AuthContext';
 import { colors, typography, borderRadius } from '../theme/theme';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../App';
 
-const HomeScreen = ({ navigation }: any) => {
+// Nous definissons strictement ce que la navigation a le droit de faire sur cet ecran
+type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
+
+const HomeScreen = ({ navigation }: { navigation: HomeScreenNavigationProp }) => {
     const { user, refreshProfile, logout } = useAuth();
     const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -35,7 +39,8 @@ const HomeScreen = ({ navigation }: any) => {
 
     const handlePlayPress = async () => {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-        navigation.navigate('GameScreen');
+        // Correction ici : on appelle 'Game' tel que defini dans App.tsx
+        navigation.navigate('Game');
     };
 
     return (

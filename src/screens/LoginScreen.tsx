@@ -1,5 +1,4 @@
-//src/screens/LoginScreen.tsx
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
     View, Text, StyleSheet, TouchableOpacity, 
     KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ScrollView 
@@ -19,6 +18,24 @@ export default function LoginScreen({ navigation }: { navigation: LoginScreenNav
     const [errorMessage, setErrorMessage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { login } = useAuth();
+
+    // Definition de la reference pour controler le ScrollView
+    const scrollViewRef = useRef<ScrollView>(null);
+
+    // Ecouteur d'evenement pour le clavier
+    useEffect(() => {
+        const keyboardEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+        const keyboardSubscription = Keyboard.addListener(keyboardEvent, () => {
+            // Micro-delai pour laisser l'ecran se redimensionner avant de scroller
+            setTimeout(() => {
+                scrollViewRef.current?.scrollToEnd({ animated: true });
+            }, 100);
+        });
+
+        return () => {
+            keyboardSubscription.remove();
+        };
+    }, []);
 
     const handleLogin = async () => {
         setErrorMessage('');
@@ -45,6 +62,7 @@ export default function LoginScreen({ navigation }: { navigation: LoginScreenNav
         >
             <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                 <ScrollView 
+                    ref={scrollViewRef} // Attachement de la reference
                     contentContainerStyle={styles.scrollContent}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
@@ -81,7 +99,7 @@ export default function LoginScreen({ navigation }: { navigation: LoginScreenNav
                         onPress={() => { /* On activera plus tard */ }}
                         activeOpacity={0.7}
                     >
-                        <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
+                        <Text style={styles.forgotPasswordText}>Mot de passe oublie ?</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity 
@@ -145,7 +163,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     inputContainer: {
-        marginBottom: spacing.xs, // Reduit legerement pour coller avec le lien "mot de passe oublie"
+        marginBottom: spacing.xs,
     },
     forgotPasswordLink: {
         alignSelf: 'flex-end',

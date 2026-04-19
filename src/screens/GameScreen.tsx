@@ -1,190 +1,284 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
-import { typography, colors, spacing, borderRadius, shadows } from '../theme/theme';
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+    View, Text, StyleSheet, TouchableOpacity, 
+    KeyboardAvoidingView, Platform, Animated 
+} from 'react-native';
+import { typography, colors, spacing, borderRadius } from '../theme/theme';
+import CustomInput from '../components/common/CustomInput';
+import api from '../services/api';
+import * as Haptics from 'expo-haptics';
 import { RootStackParamList } from '../../App';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+// Importation de nos composants modulaires
+import ScreenWrapper from '../components/layout/ScreenWrapper';
+import GameLoading from '../components/game/GameLoading';
+import GameEmpty from '../components/game/GameEmpty';
 
 type GameScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Game'>;
 
 export default function GameScreen({ navigation }: { navigation: GameScreenNavigationProp }) {
-  const [userInput, setUserInput] = useState('');
+    const [wordPairs, setWordPairs] = useState<any[]>([]);
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [timeLeft, setTimeLeft] = useState(30);
+    const [score, setScore] = useState(0);
+    const [answer, setAnswer] = useState('');
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
-  // Simule la fin de partie
-  const handleFakeSubmit = () => {
-    navigation.replace('GameOver', {
-      score: 2450,
-      details: [
-        { word: 'ARBRE', accuracy: 100, label: 'PERFECT MATCH' },
-        { word: 'LIVRE', accuracy: 85, label: 'HIGH ACCURACY' },
-        { word: 'RACINE', accuracy: 92, label: 'EXCELLENT' },
-      ]
-    });
-  };
+    const progressAnim = useRef(new Animated.Value(1)).current;
 
-  return (
-    <View style={styles.container}>
-      {/* Header Niveau */}
-      <View style={styles.header}>
-        <Text style={styles.levelText}>NIVEAU 12</Text>
-        <View style={styles.progressBarBackground}>
-          <View style={[styles.progressBarFill, { width: '65%' }]} />
-        </View>
-        <Text style={styles.progressPercent}>65%</Text>
-      </View>
+    useEffect(() => {
+        fetchWords();
+    }, []);
 
-      {/* Mots et Icones */}
-      <View style={styles.wordsContainer}>
-        <View style={styles.wordCard}>
-          <View style={styles.iconPlaceholder}><Text style={styles.iconText}>ICON</Text></View>
-          <Text style={styles.wordText}>ARBRE</Text>
-        </View>
-        <View style={styles.wordCard}>
-          <View style={styles.iconPlaceholder}><Text style={styles.iconText}>ICON</Text></View>
-          <Text style={styles.wordText}>LIVRE</Text>
-        </View>
-      </View>
+    useEffect(() => {
+        if (isLoading || wordPairs.length === 0) return;
 
-      {/* Saisie */}
-      <View style={styles.inputContainer}>
-        <Text style={styles.questionText}>Quel est le lien ?</Text>
-        <TextInput
-          style={styles.input}
-          value={userInput}
-          onChangeText={setUserInput}
-          placeholder="Tapez votre reponse..."
-          placeholderTextColor="#4A5568"
-          onSubmitEditing={handleFakeSubmit}
-        />
-      </View>
+        progressAnim.setValue(1);
+        Animated.timing(progressAnim, {
+            toValue: 0,
+            duration: 30000,
+            useNativeDriver: false,
+        }).start();
 
-      {/* Indice */}
-      <TouchableOpacity style={styles.hintButton}>
-        <Text style={styles.hintText}>Indice logique</Text>
-      </TouchableOpacity>
+        const timer = setInterval(() => {
+            setTimeLeft((prev) => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    handleTimeUp();
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
 
-      {/* Nav Bar */}
-      <View style={styles.navBar}>
-        <View style={styles.navIcon} />
-        <View style={[styles.navIcon, { backgroundColor: colors.coral, width: 6, height: 6 }]} />
-        <View style={styles.navIcon} />
-        <View style={styles.navIcon} />
-      </View>
-    </View>
-  );
+        return () => {
+            clearInterval(timer);
+            progressAnim.stopAnimation();
+        };
+    }, [currentIndex, isLoading, wordPairs.length]);
+
+    const fetchWords = async () => {
+        try {
+            const response = await api.get('/game/batch');
+            const fetchedWords = response.data.data;
+            
+            // Delai artificiel de 2.5s pour admirer ton animation de chargement premium
+            setTimeout(() => {
+                if (fetchedWords && fetchedWords.length > 0) {
+                    setWordPairs(fetchedWords);
+                } else {
+                    setErrorMessage("Il n'y a pas d'enigmes disponibles pour le moment.");
+                }
+                setIsLoading(false);
+            }, 2500);
+
+        } catch (error) {
+            console.error('Erreur de chargement des mots');
+            setTimeout(() => {
+                setErrorMessage('Erreur de connexion au serveur.');
+                setIsLoading(false);
+            }, 2500);
+        }
+    };
+
+    const handleTimeUp = () => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        moveToNextWord();
+    };
+
+    const submitAnswer = async () => {
+        if (!answer.trim() || isSubmitting) return;
+
+        setIsSubmitting(true);
+        try {
+            const currentPair = wordPairs[currentIndex];
+            const response = await api.post('/game/submit', {
+                wordPairId: currentPair._id,
+                userAnswer: answer,
+                timeRemaining: timeLeft
+            });
+
+            const result = response.data.data;
+
+            if (result.isCorrect) {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                setScore((prev) => prev + result.points);
+            } else {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            }
+
+            moveToNextWord();
+        } catch (error) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const moveToNextWord = () => {
+        setAnswer('');
+        if (currentIndex < wordPairs.length - 1) {
+            setTimeLeft(30);
+            setCurrentIndex((prev) => prev + 1);
+        } else {
+            api.post('/game/score', { score }).catch(e => console.error(e));
+            navigation.navigate('Home');
+        }
+    };
+
+    if (isLoading) {
+        return <GameLoading />;
+    }
+
+    if (errorMessage || wordPairs.length === 0) {
+        return <GameEmpty message={errorMessage} onBack={() => navigation.navigate('Home')} />;
+    }
+
+    const currentPair = wordPairs[currentIndex];
+
+    return (
+        <ScreenWrapper>
+            <KeyboardAvoidingView 
+                style={styles.container} 
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            >
+                <View style={styles.header}>
+                    <Text style={styles.headerText}>SCORE: {score}</Text>
+                    <Text style={styles.headerText}>{currentIndex + 1} / {wordPairs.length}</Text>
+                </View>
+
+                <View style={styles.timerContainer}>
+                    <Animated.View style={[styles.timerBar, {
+                        width: progressAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: ['0%', '100%']
+                        }),
+                        backgroundColor: timeLeft > 10 ? colors.coral : colors.error
+                    }]} />
+                </View>
+
+                <View style={styles.gameArea}>
+                    <Text style={styles.timerText}>{timeLeft}s</Text>
+                    
+                    <View style={styles.wordsBox}>
+                        <View style={styles.singleWord}>
+                            <Text style={styles.wordTitle}>{currentPair.word1}</Text>
+                        </View>
+                        <Text style={styles.plusSign}>+</Text>
+                        <View style={styles.singleWord}>
+                            <Text style={styles.wordTitle}>{currentPair.word2}</Text>
+                        </View>
+                    </View>
+                </View>
+
+                <View style={styles.inputArea}>
+                    <CustomInput
+                        value={answer}
+                        onChangeText={setAnswer}
+                        placeholder="Trouvez le lien..."
+                        autoCapitalize="none"
+                        autoFocus={true}
+                        returnKeyType="send"
+                        onSubmitEditing={submitAnswer}
+                    />
+                    
+                    <TouchableOpacity 
+                        style={[styles.button, isSubmitting && styles.buttonDisabled]} 
+                        onPress={submitAnswer}
+                        disabled={isSubmitting}
+                        activeOpacity={0.8}
+                    >
+                        <Text style={styles.buttonText}>
+                            {isSubmitting ? 'VALIDATION...' : 'VALIDER'}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            </KeyboardAvoidingView>
+        </ScreenWrapper>
+    );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.nightBlue,
-    paddingHorizontal: spacing.xl,
-  },
-  header: {
-    paddingTop: spacing.xl,
-    marginBottom: spacing.xl * 2,
-  },
-  levelText: {
-    fontFamily: 'Poppins_700Bold',
-    color: colors.sand,
-    fontSize: 12,
-    letterSpacing: 2,
-    marginBottom: spacing.sm,
-  },
-  progressBarBackground: {
-    height: 6,
-    backgroundColor: '#2D3748',
-    borderRadius: borderRadius.sm,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: colors.coral,
-  },
-  progressPercent: {
-    fontFamily: 'Poppins_500Medium',
-    color: colors.coral,
-    fontSize: 12,
-    textAlign: 'right',
-    marginTop: spacing.xs,
-  },
-  wordsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.xl * 3,
-  },
-  wordCard: {
-    flex: 1,
-    backgroundColor: '#242B3A',
-    marginHorizontal: spacing.sm,
-    padding: spacing.lg,
-    borderRadius: borderRadius.lg,
-    alignItems: 'center',
-    ...shadows.soft,
-  },
-  iconPlaceholder: {
-    width: 60,
-    height: 60,
-    backgroundColor: '#2D3748',
-    borderRadius: borderRadius.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  iconText: {
-    fontFamily: 'Poppins_400Regular',
-    fontSize: 10,
-    color: '#4A5568',
-  },
-  wordText: {
-    ...typography.titleLarge,
-    fontSize: 22,
-    color: colors.sand,
-  },
-  inputContainer: {
-    marginBottom: spacing.lg,
-  },
-  questionText: {
-    fontFamily: 'Poppins_500Medium',
-    color: colors.sand,
-    fontSize: 16,
-    marginBottom: spacing.md,
-  },
-  input: {
-    backgroundColor: '#242B3A',
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    fontFamily: 'Poppins_500Medium',
-    fontSize: 16,
-    color: colors.sand,
-    ...shadows.soft,
-  },
-  hintButton: {
-    alignSelf: 'flex-start',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderWidth: 1,
-    borderColor: '#4A5568',
-    borderRadius: borderRadius.md,
-  },
-  hintText: {
-    fontFamily: 'Poppins_500Medium',
-    fontSize: 14,
-    color: colors.sand,
-    opacity: 0.7,
-  },
-  navBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingBottom: spacing.xl * 2,
-    paddingTop: spacing.lg,
-    marginTop: 'auto',
-    borderTopWidth: 1,
-    borderTopColor: '#2D3748',
-  },
-  navIcon: {
-    width: 5,
-    height: 5,
-    borderRadius: 50,
-    backgroundColor: '#4A5568',
-  },
+    container: {
+        flex: 1,
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingHorizontal: spacing.xl,
+        paddingTop: spacing.xl,
+        paddingBottom: spacing.sm,
+    },
+    headerText: {
+        fontFamily: 'Poppins_500Medium',
+        color: colors.sand,
+        fontSize: 16,
+    },
+    timerContainer: {
+        height: 4,
+        backgroundColor: 'rgba(244, 238, 224, 0.1)',
+        width: '100%',
+    },
+    timerBar: {
+        height: '100%',
+    },
+    gameArea: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: spacing.xl,
+    },
+    timerText: {
+        ...typography.titleLarge,
+        color: colors.sand,
+        opacity: 0.8,
+        marginBottom: spacing.xl,
+    },
+    wordsBox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        padding: spacing.xl,
+        borderRadius: borderRadius.xl,
+        width: '100%',
+    },
+    singleWord: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    wordTitle: {
+        fontFamily: 'Poppins_700Bold',
+        fontSize: 22,
+        color: colors.sand,
+        textTransform: 'uppercase',
+        textAlign: 'center',
+    },
+    plusSign: {
+        fontFamily: 'Poppins_400Regular',
+        fontSize: 24,
+        color: colors.coral,
+        marginHorizontal: spacing.md,
+    },
+    inputArea: {
+        padding: spacing.xl,
+        paddingBottom: spacing.xl * 2,
+    },
+    button: {
+        backgroundColor: colors.coral,
+        paddingVertical: spacing.md,
+        borderRadius: borderRadius.xl,
+        alignItems: 'center',
+        marginTop: spacing.sm,
+    },
+    buttonDisabled: {
+        opacity: 0.6,
+    },
+    buttonText: {
+        ...typography.buttonPrimary,
+        letterSpacing: 1,
+    },
 });
