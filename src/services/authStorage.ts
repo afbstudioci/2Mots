@@ -5,34 +5,47 @@ const ACCESS_TOKEN_KEY = 'auth_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
 const USER_KEY = 'user_data';
 
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const getItemWithRetry = async (key: string, maxRetries = 3): Promise<string | null> => {
+  let attempt = 0;
+  while (attempt < maxRetries) {
+    try {
+      return await SecureStore.getItemAsync(key);
+    } catch (error) {
+      attempt++;
+      if (attempt >= maxRetries) {
+        return null;
+      }
+      await sleep(100 * Math.pow(2, attempt - 1));
+    }
+  }
+  return null;
+};
+
 export const saveTokens = async (accessToken: string, refreshToken: string) => {
   try {
     await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, accessToken);
     await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
   } catch (error) {
-    console.error('Erreur lors de la sauvegarde des tokens', error);
+    console.warn("Erreur d'ecriture des tokens", error);
   }
-};
-
-export const getToken = async () => {
-  return await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
-};
-
-export const getRefreshToken = async () => {
-  return await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
 };
 
 export const saveUser = async (user: any) => {
   try {
     await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
   } catch (error) {
-    console.error('Erreur lors de la sauvegarde de l\'utilisateur', error);
+    console.warn("Erreur d'ecriture des donnees utilisateur", error);
   }
 };
 
+export const getToken = () => getItemWithRetry(ACCESS_TOKEN_KEY);
+export const getRefreshToken = () => getItemWithRetry(REFRESH_TOKEN_KEY);
+
 export const getUser = async () => {
-  const user = await SecureStore.getItemAsync(USER_KEY);
-  return user ? JSON.parse(user) : null;
+  const userData = await getItemWithRetry(USER_KEY);
+  return userData ? JSON.parse(userData) : null;
 };
 
 export const clearTokens = async () => {
@@ -41,6 +54,6 @@ export const clearTokens = async () => {
     await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
     await SecureStore.deleteItemAsync(USER_KEY);
   } catch (error) {
-    console.error('Erreur lors du nettoyage du stockage', error);
+    console.warn("Erreur lors du nettoyage du stockage", error);
   }
 };

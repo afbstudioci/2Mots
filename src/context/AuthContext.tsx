@@ -1,5 +1,6 @@
 //src/context/AuthContext.tsx
 import React, { createContext, useState, useEffect, useContext } from 'react';
+import { DeviceEventEmitter } from 'react-native';
 import api from '../services/api';
 import { saveTokens, saveUser, getToken, getUser, clearTokens } from '../services/authStorage';
 
@@ -19,27 +20,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     async function loadStorageData() {
       const storageToken = await getToken();
       const storageUser = await getUser();
 
-      if (storageToken && storageUser) {
+      if (storageToken && storageUser && isMounted) {
         setUser(storageUser);
+        refreshProfileSilently();
       }
-      setLoading(false);
+      
+      if (isMounted) setLoading(false);
     }
 
     loadStorageData();
+
+    const authFailedListener = DeviceEventEmitter.addListener('AUTH_FAILED', () => {
+      if (isMounted) setUser(null);
+    });
+
+    return () => {
+      isMounted = false;
+      authFailedListener.remove();
+    };
   }, []);
+
+  const refreshProfileSilently = async () => {
+    try {
+      const response = await api.get('/auth/me');
+      const freshUser = response.data.data.user;
+      await saveUser(freshUser);
+      setUser(freshUser);
+    } catch (error) {
+      console.info('Session validee mais profil non rafraichi en arriere-plan');
+    }
+  };
 
   const login = async (credentials: any) => {
     try {
       const response = await api.post('/auth/login', credentials);
-      const { user, accessToken, refreshToken } = response.data.data;
+      const { user: userData, accessToken, refreshToken } = response.data.data;
 
       await saveTokens(accessToken, refreshToken);
-      await saveUser(user);
-      setUser(user);
+      await saveUser(userData);
+      setUser(userData);
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Erreur de connexion');
     }
@@ -48,32 +73,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (userData: any) => {
     try {
       const response = await api.post('/auth/register', userData);
-      const { user, accessToken, refreshToken } = response.data.data;
+      const { user: newUserData, accessToken, refreshToken } = response.data.data;
 
       await saveTokens(accessToken, refreshToken);
-      await saveUser(user);
-      setUser(user);
+      await saveUser(newUserData);
+      setUser(newUserData);
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Erreur lors de l\'inscription');
     }
   };
 
   const refreshProfile = async () => {
-    try {
-      const response = await api.get('/auth/me');
-      const freshUser = response.data.data.user;
-      await saveUser(freshUser);
-      setUser(freshUser);
-    } catch (error) {
-      console.warn('Impossible de rafraichir le profil en arriere-plan');
-    }
+    await refreshProfileSilently();
   };
 
   const logout = async () => {
     try {
       await api.post('/auth/logout');
     } catch (e) {
-      // Ignorer l'erreur serveur, forcer le nettoyage local
+      // Nettoyage forcé même si le serveur ne répond pas
     } finally {
       await clearTokens();
       setUser(null);
