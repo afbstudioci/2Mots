@@ -1,12 +1,6 @@
 //src/components/game/WordCard.tsx
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withSpring, 
-  withTiming 
-} from 'react-native-reanimated';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import { colors, typography, spacing, borderRadius, shadows } from '../../theme/theme';
 
 interface WordCardProps {
@@ -16,29 +10,30 @@ interface WordCardProps {
 }
 
 const WordCard: React.FC<WordCardProps> = ({ word1, word2, expectedType }) => {
-  const translateY = useSharedValue(30);
-  const opacity = useSharedValue(0);
+  const translateY = useRef(new Animated.Value(30)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    opacity.value = 0;
-    translateY.value = 30;
+    opacity.setValue(0);
+    translateY.setValue(30);
 
-    opacity.value = withTiming(1, { duration: 400 });
-    translateY.value = withSpring(0, { 
-      damping: 12, 
-      stiffness: 90 
-    });
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.spring(translateY, {
+        toValue: 0,
+        friction: 12,
+        tension: 90,
+        useNativeDriver: true,
+      })
+    ]).start();
   }, [word1, word2]); 
 
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateY: translateY.value }],
-      opacity: opacity.value,
-    };
-  });
-
   return (
-    <Animated.View style={[styles.card, animatedStyle]}>
+    <Animated.View style={[styles.card, { opacity, transform: [{ translateY }] }]}>
       <View style={styles.typeContainer}>
         <Text style={styles.typeText}>{expectedType}</Text>
       </View>

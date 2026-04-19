@@ -1,13 +1,25 @@
-//src/theme/theme.ts
+// src/theme/theme.ts
 import { TextStyle } from 'react-native';
 
 export const colors = {
     coral: '#FF7F50',
     sand: '#F7F5F0',
     nightBlue: '#1A202C',
-    success: '#4ADE80', // Vert Menthe ajoute
-    error: '#EF4444',   // Rouge d'erreur ajoute
+    success: '#4ADE80', 
+    error: '#EF4444',   
+    white: '#FFFFFF',
 };
+
+// Logique pour le "cerveau" dynamique de l'app
+export const getPalette = (isDark: boolean) => ({
+    primary: colors.coral,
+    background: isDark ? colors.nightBlue : colors.sand,
+    surface: isDark ? '#242B3A' : colors.white,
+    text: isDark ? colors.sand : colors.nightBlue,
+    textSecondary: isDark ? 'rgba(247, 245, 240, 0.6)' : 'rgba(26, 32, 44, 0.6)',
+    border: isDark ? '#2D3748' : '#E2E0DB',
+    card: isDark ? '#242B3A' : colors.white,
+});
 
 export const spacing = {
     xs: 4,
@@ -25,44 +37,41 @@ export const borderRadius = {
 };
 
 export const shadows = {
-    soft: {
-        shadowColor: colors.nightBlue,
+    soft: (isDark: boolean) => ({
+        shadowColor: isDark ? '#000000' : colors.nightBlue,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
+        shadowOpacity: isDark ? 0.3 : 0.08,
         shadowRadius: 12,
         elevation: 5,
-    },
+    }),
 };
 
 export const typography: Record<string, TextStyle> = {
     titleHuge: {
         fontFamily: 'Poppins_900Black',
         fontSize: 42,
-        color: colors.nightBlue,
     },
     titleLarge: {
         fontFamily: 'Poppins_800ExtraBold',
         fontSize: 28,
-        color: colors.nightBlue,
     },
     bodyMedium: {
         fontFamily: 'Poppins_500Medium',
         fontSize: 16,
-        color: colors.nightBlue,
     },
     buttonPrimary: {
         fontFamily: 'Poppins_700Bold',
         fontSize: 18,
-        color: colors.sand,
     },
 };
 
+// Configuration pour la navigation (Clair)
 export const lightTheme = {
     dark: false,
     colors: {
         primary: colors.coral,
-        background: colors.sand,
-        card: '#FFFFFF',
+        background: colors.sand, // Unifie avec ta couleur sable
+        card: colors.sand,
         text: colors.nightBlue,
         border: '#E2E0DB',
         notification: colors.coral,
@@ -75,12 +84,13 @@ export const lightTheme = {
     },
 };
 
+// Configuration pour la navigation (Sombre)
 export const darkTheme = {
     dark: true,
     colors: {
         primary: colors.coral,
-        background: colors.nightBlue,
-        card: '#242B3A',
+        background: colors.nightBlue, // Unifie avec ton bleu nuit
+        card: colors.nightBlue,
         text: colors.sand,
         border: '#2D3748',
         notification: colors.coral,

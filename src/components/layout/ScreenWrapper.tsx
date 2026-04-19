@@ -11,15 +11,24 @@ interface ScreenWrapperProps {
 }
 
 export default function ScreenWrapper({ children, style, useSafeArea = true }: ScreenWrapperProps) {
-    const Container = useSafeArea ? SafeAreaView : View;
+    if (useSafeArea) {
+        return (
+            <SafeAreaView style={[styles.container, style]} edges={['top']}>
+                <StatusBar style="light" backgroundColor={colors.nightBlue} translucent={false} />
+                <View style={styles.content}>
+                    {children}
+                </View>
+            </SafeAreaView>
+        );
+    }
 
     return (
-        <Container style={[styles.container, style]} edges={['top']}>
+        <View style={[styles.container, style]}>
             <StatusBar style="light" backgroundColor={colors.nightBlue} translucent={false} />
             <View style={styles.content}>
                 {children}
             </View>
-        </Container>
+        </View>
     );
 }
 

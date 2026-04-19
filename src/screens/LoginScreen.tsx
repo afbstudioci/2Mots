@@ -1,11 +1,12 @@
-//src/screens/LoginScreen.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { 
     View, Text, StyleSheet, TouchableOpacity, 
     KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ScrollView 
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { typography, colors, spacing, borderRadius } from '../theme/theme';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { RootStackParamList } from '../../App';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import CustomInput from '../components/common/CustomInput';
@@ -19,7 +20,9 @@ export default function LoginScreen({ navigation }: { navigation: LoginScreenNav
     const [showPassword, setShowPassword] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    
     const { login } = useAuth();
+    const { themeColors } = useTheme();
 
     const scrollViewRef = useRef<ScrollView>(null);
 
@@ -56,82 +59,83 @@ export default function LoginScreen({ navigation }: { navigation: LoginScreenNav
     };
 
     return (
-        <KeyboardAvoidingView 
-            style={styles.container} 
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-            {isSubmitting && <ServerWakeUpLoader />}
+        <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }} edges={['top', 'bottom']}>
+            <KeyboardAvoidingView 
+                style={[styles.container, { backgroundColor: themeColors.background }]} 
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            >
+                {isSubmitting && <ServerWakeUpLoader />}
 
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                <ScrollView 
-                    ref={scrollViewRef}
-                    contentContainerStyle={styles.scrollContent}
-                    keyboardShouldPersistTaps="handled"
-                    showsVerticalScrollIndicator={false}
-                >
-                    <Text style={styles.title}>CONNEXION</Text>
-                    <Text style={styles.subtitle}>Heureux de vous revoir</Text>
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                    <ScrollView 
+                        ref={scrollViewRef}
+                        contentContainerStyle={styles.scrollContent}
+                        keyboardShouldPersistTaps="handled"
+                        showsVerticalScrollIndicator={false}
+                    >
+                        <Text style={[styles.title, { color: themeColors.primary }]}>CONNEXION</Text>
+                        <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>Heureux de vous revoir</Text>
 
-                    {errorMessage ? (
-                        <View style={styles.errorBox}>
-                            <Text style={styles.errorText}>{errorMessage}</Text>
+                        {errorMessage ? (
+                            <View style={styles.errorBox}>
+                                <Text style={styles.errorText}>{errorMessage}</Text>
+                            </View>
+                        ) : null}
+
+                        <View style={styles.inputContainer}>
+                            <CustomInput
+                                value={loginIdentifier}
+                                onChangeText={setLoginIdentifier}
+                                placeholder="Pseudo ou Email"
+                                autoCapitalize="none"
+                                keyboardType="email-address"
+                            />
+                            <CustomInput
+                                value={password}
+                                onChangeText={setPassword}
+                                placeholder="Mot de passe"
+                                secureTextEntry={!showPassword}
+                                iconName={showPassword ? 'eye-outline' : 'eye-off-outline'}
+                                onIconPress={() => setShowPassword(!showPassword)}
+                            />
                         </View>
-                    ) : null}
 
-                    <View style={styles.inputContainer}>
-                        <CustomInput
-                            value={loginIdentifier}
-                            onChangeText={setLoginIdentifier}
-                            placeholder="Pseudo ou Email"
-                            autoCapitalize="none"
-                            keyboardType="email-address"
-                        />
-                        <CustomInput
-                            value={password}
-                            onChangeText={setPassword}
-                            placeholder="Mot de passe"
-                            secureTextEntry={!showPassword}
-                            iconName={showPassword ? 'eye-outline' : 'eye-off-outline'}
-                            onIconPress={() => setShowPassword(!showPassword)}
-                        />
-                    </View>
+                        <TouchableOpacity 
+                            style={styles.forgotPasswordLink}
+                            onPress={() => {}}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={[styles.forgotPasswordText, { color: themeColors.textSecondary }]}>Mot de passe oublié ?</Text>
+                        </TouchableOpacity>
 
-                    <TouchableOpacity 
-                        style={styles.forgotPasswordLink}
-                        onPress={() => { /* On activera plus tard */ }}
-                        activeOpacity={0.7}
-                    >
-                        <Text style={styles.forgotPasswordText}>Mot de passe oublie ?</Text>
-                    </TouchableOpacity>
+                        <TouchableOpacity 
+                            style={[styles.button, isSubmitting && styles.buttonDisabled]} 
+                            onPress={handleLogin}
+                            disabled={isSubmitting}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={styles.buttonText}>SE CONNECTER</Text>
+                        </TouchableOpacity>
 
-                    <TouchableOpacity 
-                        style={[styles.button, isSubmitting && styles.buttonDisabled]} 
-                        onPress={handleLogin}
-                        disabled={isSubmitting}
-                        activeOpacity={0.8}
-                    >
-                        <Text style={styles.buttonText}>SE CONNECTER</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity 
-                        style={styles.registerLink} 
-                        onPress={() => navigation.navigate('Register')}
-                        activeOpacity={0.7}
-                    >
-                        <Text style={styles.registerLinkText}>
-                            Nouveau ici ? <Text style={styles.registerLinkHighlight}>Creer un compte</Text>
-                        </Text>
-                    </TouchableOpacity>
-                </ScrollView>
-            </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
+                        <TouchableOpacity 
+                            style={styles.registerLink} 
+                            onPress={() => navigation.navigate('Register')}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={[styles.registerLinkText, { color: themeColors.textSecondary }]}>
+                                Nouveau ici ? <Text style={styles.registerLinkHighlight}>Créer un compte</Text>
+                            </Text>
+                        </TouchableOpacity>
+                    </ScrollView>
+                </TouchableWithoutFeedback>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.nightBlue,
     },
     scrollContent: {
         flexGrow: 1,
@@ -141,13 +145,10 @@ const styles = StyleSheet.create({
     },
     title: {
         ...typography.titleLarge,
-        color: colors.coral,
         marginBottom: spacing.xs,
     },
     subtitle: {
         fontFamily: 'Poppins_400Regular',
-        color: colors.sand,
-        opacity: 0.5,
         marginBottom: spacing.xl * 2,
     },
     errorBox: {
@@ -173,8 +174,6 @@ const styles = StyleSheet.create({
     },
     forgotPasswordText: {
         fontFamily: 'Poppins_400Regular',
-        color: colors.sand,
-        opacity: 0.6,
         fontSize: 14,
     },
     button: {
@@ -198,8 +197,6 @@ const styles = StyleSheet.create({
     registerLinkText: {
         fontFamily: 'Poppins_400Regular',
         fontSize: 14,
-        color: colors.sand,
-        opacity: 0.8,
     },
     registerLinkHighlight: {
         color: colors.coral,

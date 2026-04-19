@@ -1,15 +1,17 @@
-//src/screens/RegisterScreen.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-    View, Text, StyleSheet, TouchableOpacity, 
-    KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ScrollView 
+import {
+    View, Text, StyleSheet, TouchableOpacity,
+    KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ScrollView
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { typography, colors, spacing, borderRadius } from '../theme/theme';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { RootStackParamList } from '../../App';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import PasswordValidator from '../components/auth/PasswordValidator';
 import CustomInput from '../components/common/CustomInput';
+import PasswordValidator from '../components/auth/PasswordValidator';
+import ServerWakeUpLoader from '../components/auth/ServerWakeUpLoader';
 
 type RegisterScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Register'>;
 
@@ -20,16 +22,15 @@ export default function RegisterScreen({ navigation }: { navigation: RegisterScr
     const [showPassword, setShowPassword] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const { register } = useAuth();
     
-    // Definition de la reference pour controler le ScrollView
+    const { register } = useAuth();
+    const { themeColors } = useTheme();
+
     const scrollViewRef = useRef<ScrollView>(null);
 
-    // Ecouteur d'evenement pour le clavier
     useEffect(() => {
         const keyboardEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
         const keyboardSubscription = Keyboard.addListener(keyboardEvent, () => {
-            // Micro-delai pour laisser l'ecran se redimensionner avant de scroller
             setTimeout(() => {
                 scrollViewRef.current?.scrollToEnd({ animated: true });
             }, 100);
@@ -48,97 +49,95 @@ export default function RegisterScreen({ navigation }: { navigation: RegisterScr
             return;
         }
 
-        const isPasswordValid = password.length >= 8 && /[A-Z]/.test(password) && /[0-9]/.test(password);
-        if (!isPasswordValid) {
-            setErrorMessage('Le mot de passe ne respecte pas les conditions');
-            return;
-        }
-
         setIsSubmitting(true);
+        Keyboard.dismiss();
+
         try {
             await register({ login: loginIdentifier, email, password });
         } catch (error: any) {
-            setErrorMessage(error.message || 'Erreur lors de l\'inscription');
-        } finally {
+            setErrorMessage(error.message || "Erreur lors de l'inscription");
             setIsSubmitting(false);
         }
     };
 
     return (
-        <KeyboardAvoidingView 
-            style={styles.container} 
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                <ScrollView 
-                    ref={scrollViewRef} // Attachement de la reference
-                    contentContainerStyle={styles.scrollContent}
-                    keyboardShouldPersistTaps="handled"
-                    showsVerticalScrollIndicator={false}
-                >
-                    <Text style={styles.title}>INSCRIPTION</Text>
-                    <Text style={styles.subtitle}>Rejoignez 2Mots</Text>
+        <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }} edges={['top', 'bottom']}>
+            <KeyboardAvoidingView
+                style={[styles.container, { backgroundColor: themeColors.background }]}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            >
+                {isSubmitting && <ServerWakeUpLoader />}
 
-                    {errorMessage ? (
-                        <View style={styles.errorBox}>
-                            <Text style={styles.errorText}>{errorMessage}</Text>
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                    <ScrollView
+                        ref={scrollViewRef}
+                        contentContainerStyle={styles.scrollContent}
+                        keyboardShouldPersistTaps="handled"
+                        showsVerticalScrollIndicator={false}
+                    >
+                        <Text style={[styles.title, { color: themeColors.primary }]}>INSCRIPTION</Text>
+                        <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>Rejoignez l'aventure 2Mots</Text>
+
+                        {errorMessage ? (
+                            <View style={styles.errorBox}>
+                                <Text style={styles.errorText}>{errorMessage}</Text>
+                            </View>
+                        ) : null}
+
+                        <View style={styles.inputContainer}>
+                            <CustomInput
+                                value={loginIdentifier}
+                                onChangeText={setLoginIdentifier}
+                                placeholder="Pseudo"
+                                autoCapitalize="none"
+                            />
+                            <CustomInput
+                                value={email}
+                                onChangeText={setEmail}
+                                placeholder="Email"
+                                autoCapitalize="none"
+                                keyboardType="email-address"
+                            />
+                            <CustomInput
+                                value={password}
+                                onChangeText={setPassword}
+                                placeholder="Mot de passe"
+                                secureTextEntry={!showPassword}
+                                iconName={showPassword ? 'eye-outline' : 'eye-off-outline'}
+                                onIconPress={() => setShowPassword(!showPassword)}
+                            />
+
+                            <PasswordValidator password={password} />
                         </View>
-                    ) : null}
 
-                    <View style={styles.inputContainer}>
-                        <CustomInput
-                            value={loginIdentifier}
-                            onChangeText={setLoginIdentifier}
-                            placeholder="Pseudo (3-20 caracteres)"
-                            autoCapitalize="none"
-                        />
-                        <CustomInput
-                            value={email}
-                            onChangeText={setEmail}
-                            placeholder="Email"
-                            keyboardType="email-address"
-                            autoCapitalize="none"
-                        />
-                        <CustomInput
-                            value={password}
-                            onChangeText={setPassword}
-                            placeholder="Mot de passe"
-                            secureTextEntry={!showPassword}
-                            iconName={showPassword ? 'eye-outline' : 'eye-off-outline'}
-                            onIconPress={() => setShowPassword(!showPassword)}
-                        />
-                        
-                        <PasswordValidator password={password} />
-                    </View>
+                        <TouchableOpacity
+                            style={[styles.button, isSubmitting && styles.buttonDisabled]}
+                            onPress={handleRegister}
+                            disabled={isSubmitting}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={styles.buttonText}>S'INSCRIRE</Text>
+                        </TouchableOpacity>
 
-                    <TouchableOpacity 
-                        style={[styles.button, isSubmitting && styles.buttonDisabled]} 
-                        onPress={handleRegister}
-                        disabled={isSubmitting}
-                        activeOpacity={0.8}
-                    >
-                        <Text style={styles.buttonText}>{isSubmitting ? 'CHARGEMENT...' : 'CREER LE COMPTE'}</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity 
-                        style={styles.loginLink} 
-                        onPress={() => navigation.navigate('Login')}
-                        activeOpacity={0.7}
-                    >
-                        <Text style={styles.loginLinkText}>
-                            Deja un compte ? <Text style={styles.loginLinkHighlight}>Se connecter</Text>
-                        </Text>
-                    </TouchableOpacity>
-                </ScrollView>
-            </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
+                        <TouchableOpacity
+                            style={styles.loginLink}
+                            onPress={() => navigation.navigate('Login')}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={[styles.loginLinkText, { color: themeColors.textSecondary }]}>
+                                Déjà un compte ? <Text style={styles.loginLinkHighlight}>Se connecter</Text>
+                            </Text>
+                        </TouchableOpacity>
+                    </ScrollView>
+                </TouchableWithoutFeedback>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.nightBlue,
     },
     scrollContent: {
         flexGrow: 1,
@@ -148,13 +147,10 @@ const styles = StyleSheet.create({
     },
     title: {
         ...typography.titleLarge,
-        color: colors.coral,
         marginBottom: spacing.xs,
     },
     subtitle: {
         fontFamily: 'Poppins_400Regular',
-        color: colors.sand,
-        opacity: 0.5,
         marginBottom: spacing.xl * 2,
     },
     errorBox: {
@@ -172,14 +168,14 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     inputContainer: {
-        marginBottom: spacing.md,
+        marginBottom: spacing.xs,
     },
     button: {
         backgroundColor: colors.coral,
         paddingVertical: spacing.md,
         borderRadius: borderRadius.xl,
         alignItems: 'center',
-        marginTop: spacing.sm,
+        marginTop: spacing.lg,
     },
     buttonDisabled: {
         opacity: 0.6,
@@ -195,8 +191,6 @@ const styles = StyleSheet.create({
     loginLinkText: {
         fontFamily: 'Poppins_400Regular',
         fontSize: 14,
-        color: colors.sand,
-        opacity: 0.8,
     },
     loginLinkHighlight: {
         color: colors.coral,

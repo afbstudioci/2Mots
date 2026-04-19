@@ -1,87 +1,97 @@
-import React, { useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, Animated, Pressable, StatusBar, SafeAreaView } from 'react-native';
+// src/screens/HomeScreen.tsx
+import React, { useRef, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, Animated, Pressable } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../context/AuthContext';
-import { colors, typography, borderRadius } from '../theme/theme';
+import { useTheme } from '../context/ThemeContext';
+import { colors, typography, borderRadius, shadows, spacing } from '../theme/theme';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 
-// Nous definissons strictement ce que la navigation a le droit de faire sur cet ecran
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
 const HomeScreen = ({ navigation }: { navigation: HomeScreenNavigationProp }) => {
     const { user, refreshProfile, logout } = useAuth();
-    const scaleAnim = useRef(new Animated.Value(1)).current;
+    const { themeColors } = useTheme();
+    
+    const scalePressAnim = useRef(new Animated.Value(1)).current;
+    const breathAnim = useRef(new Animated.Value(1)).current;
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(30)).current;
 
-    // Actualise le profil a chaque fois que l'ecran devient actif (ex: retour d'une partie)
     useFocusEffect(
         useCallback(() => {
             refreshProfile();
-        }, [])
+        }, [refreshProfile])
     );
 
+    useEffect(() => {
+        Animated.parallel([
+            Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+            Animated.spring(slideAnim, { toValue: 0, tension: 40, friction: 7, useNativeDriver: true })
+        ]).start();
+
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(breathAnim, { toValue: 1.03, duration: 1500, useNativeDriver: true }),
+                Animated.timing(breathAnim, { toValue: 1, duration: 1500, useNativeDriver: true })
+            ])
+        ).start();
+    }, [breathAnim, fadeAnim, slideAnim]);
+
     const handlePressIn = () => {
-        Animated.spring(scaleAnim, {
-            toValue: 0.92,
-            useNativeDriver: true,
-        }).start();
+        Animated.spring(scalePressAnim, { toValue: 0.94, useNativeDriver: true }).start();
     };
 
     const handlePressOut = () => {
-        Animated.spring(scaleAnim, {
-            toValue: 1,
-            friction: 4,
-            tension: 40,
-            useNativeDriver: true,
-        }).start();
+        Animated.spring(scalePressAnim, { toValue: 1, friction: 4, tension: 40, useNativeDriver: true }).start();
     };
 
     const handlePlayPress = async () => {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-        // Correction ici : on appelle 'Game' tel que defini dans App.tsx
         navigation.navigate('Game');
     };
 
     return (
-        <SafeAreaView style={styles.safeArea}>
-            <StatusBar barStyle="light-content" backgroundColor={colors.nightBlue} translucent={false} />
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
             <View style={styles.container}>
                 
-                {/* Header Section */}
-                <View style={styles.header}>
-                    <View style={styles.greetingRow}>
-                        <Text style={styles.greetingText}>Pret, {user?.login} ?</Text>
-                        {user?.role === 'superadmin' && (
-                            <View style={styles.adminBadge}>
-                                <Text style={styles.adminBadgeText}>Admin</Text>
-                            </View>
-                        )}
+                <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+                    <Text style={[styles.greetingText, { color: themeColors.text }]}>Bonjour, {user?.login}</Text>
+                    <View style={[styles.recordBadge, { backgroundColor: themeColors.card }]}>
+                        <Text style={[styles.recordLabel, { color: themeColors.textSecondary }]}>Record : </Text>
+                        <Text style={[styles.recordValue, { color: themeColors.text }]}>{user?.bestScore || 0}</Text>
                     </View>
-                    <View style={styles.scoreContainer}>
-                        <Text style={styles.scoreLabel}>Meilleur score</Text>
-                        <Text style={styles.scoreValue}>{user?.bestScore || 0}</Text>
-                    </View>
-                </View>
+                </Animated.View>
 
-                {/* Center Section: Main Action */}
                 <View style={styles.centerContainer}>
-                    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-                        <Pressable
-                            onPressIn={handlePressIn}
-                            onPressOut={handlePressOut}
-                            onPress={handlePlayPress}
-                            style={styles.playButton}
-                        >
-                            <Text style={styles.playButtonText}>JOUER</Text>
+                    <Animated.View style={{ transform: [{ scale: breathAnim }] }}>
+                        <Animated.View style={{ transform: [{ scale: scalePressAnim }] }}>
+                            <Pressable
+                                onPressIn={handlePressIn}
+                                onPressOut={handlePressOut}
+                                onPress={handlePlayPress}
+                                style={styles.playButton}
+                            >
+                                <Text style={[styles.playButtonText, { color: themeColors.background }]}>JOUER</Text>
+                            </Pressable>
+                        </Animated.View>
+                    </Animated.View>
+
+                    <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+                        <Pressable style={styles.secondaryButton}>
+                            <Text style={styles.secondaryButtonText}>CLASSEMENT</Text>
                         </Pressable>
                     </Animated.View>
                 </View>
 
-                {/* Footer Section: Navigation Secondaire / Deconnexion */}
-                <Pressable onPress={logout} style={styles.logoutButton}>
-                    <Text style={styles.logoutText}>Se deconnecter</Text>
-                </Pressable>
+                <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
+                    <Pressable onPress={logout} style={styles.logoutButton}>
+                        <Text style={[styles.logoutText, { color: themeColors.text }]}>Se déconnecter</Text>
+                    </Pressable>
+                </Animated.View>
 
             </View>
         </SafeAreaView>
@@ -91,51 +101,38 @@ const HomeScreen = ({ navigation }: { navigation: HomeScreenNavigationProp }) =>
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: colors.nightBlue,
     },
     container: {
         flex: 1,
-        paddingHorizontal: 24,
-        paddingBottom: 24,
+        paddingHorizontal: spacing.lg,
+        paddingBottom: spacing.lg,
         justifyContent: 'space-between',
     },
     header: {
-        marginTop: 40,
-    },
-    greetingRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 8,
+        marginTop: spacing.xl,
+        alignItems: 'flex-start',
     },
     greetingText: {
-        ...typography.titleLarge,
-        color: colors.sand,
-        marginRight: 12,
+        fontFamily: 'Poppins_500Medium',
+        fontSize: 14,
+        marginBottom: spacing.xs,
+        paddingLeft: spacing.xs,
     },
-    adminBadge: {
-        backgroundColor: colors.coral,
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: borderRadius.sm,
+    recordBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderRadius: borderRadius.xl,
+        ...shadows.soft(false),
     },
-    adminBadgeText: {
-        color: colors.nightBlue,
-        fontFamily: 'Poppins_700Bold',
-        fontSize: 12,
-        textTransform: 'uppercase',
+    recordLabel: {
+        fontFamily: 'Poppins_500Medium',
+        fontSize: 16,
     },
-    scoreContainer: {
-        marginTop: 4,
-    },
-    scoreLabel: {
-        ...typography.bodyMedium,
-        color: colors.sand,
-        opacity: 0.6,
-    },
-    scoreValue: {
-        ...typography.titleHuge,
-        color: colors.coral,
-        lineHeight: 50,
+    recordValue: {
+        fontFamily: 'Poppins_800ExtraBold',
+        fontSize: 18,
     },
     centerContainer: {
         flex: 1,
@@ -144,28 +141,40 @@ const styles = StyleSheet.create({
     },
     playButton: {
         backgroundColor: colors.coral,
-        paddingVertical: 24,
-        paddingHorizontal: 72,
+        paddingVertical: spacing.lg,
+        paddingHorizontal: 80,
         borderRadius: borderRadius.xl,
-        shadowColor: colors.coral,
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.3,
-        shadowRadius: 20,
-        elevation: 12,
+        marginBottom: spacing.lg,
+        ...shadows.soft(true),
     },
     playButtonText: {
         fontFamily: 'Poppins_900Black',
-        fontSize: 36,
-        color: colors.nightBlue,
+        fontSize: 40,
         letterSpacing: 2,
     },
+    secondaryButton: {
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        borderColor: colors.coral,
+        paddingVertical: spacing.md,
+        paddingHorizontal: spacing.xl,
+        borderRadius: borderRadius.xl,
+    },
+    secondaryButtonText: {
+        fontFamily: 'Poppins_800ExtraBold',
+        fontSize: 18,
+        color: colors.coral,
+        letterSpacing: 1,
+    },
+    footer: {
+        alignItems: 'center',
+        paddingBottom: spacing.sm,
+    },
     logoutButton: {
-        alignSelf: 'center',
-        padding: 16,
+        padding: spacing.md,
     },
     logoutText: {
         ...typography.bodyMedium,
-        color: colors.sand,
         opacity: 0.4,
         textDecorationLine: 'underline',
     },

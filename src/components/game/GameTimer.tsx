@@ -1,14 +1,6 @@
 //src/components/game/GameTimer.tsx
-import React, { useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withTiming, 
-  Easing, 
-  interpolateColor, 
-  runOnJS 
-} from 'react-native-reanimated';
+import React, { useEffect, useRef } from 'react';
+import { View, StyleSheet, Animated, Easing } from 'react-native';
 import { colors, borderRadius } from '../../theme/theme';
 
 interface GameTimerProps {
@@ -19,44 +11,41 @@ interface GameTimerProps {
 }
 
 const GameTimer: React.FC<GameTimerProps> = ({ duration, onTimeUp, isActive, wordKey }) => {
-  const progress = useSharedValue(1);
+  const progress = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    progress.stopAnimation();
+    
     if (isActive) {
-      progress.value = 1;
-      progress.value = withTiming(
-        0,
-        {
-          duration: duration * 1000,
-          easing: Easing.linear,
-        },
-        (finished) => {
-          if (finished) {
-            runOnJS(onTimeUp)();
-          }
+      progress.setValue(1);
+      Animated.timing(progress, {
+        toValue: 0,
+        duration: duration * 1000,
+        easing: Easing.linear,
+        useNativeDriver: false, 
+      }).start(({ finished }) => {
+        if (finished) {
+          onTimeUp();
         }
-      );
+      });
     } else {
-      progress.value = 1; 
+      progress.setValue(1);
     }
   }, [isActive, duration, onTimeUp, wordKey]);
 
-  const animatedStyle = useAnimatedStyle(() => {
-    const backgroundColor = interpolateColor(
-      progress.value,
-      [0, 0.3, 1],
-      [colors.error, colors.coral, colors.success] 
-    );
+  const backgroundColor = progress.interpolate({
+    inputRange: [0, 0.3, 1],
+    outputRange: [colors.error, colors.coral, colors.success]
+  });
 
-    return {
-      width: `${progress.value * 100}%`,
-      backgroundColor,
-    };
+  const width = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%']
   });
 
   return (
     <View style={styles.container}>
-      <Animated.View style={[styles.bar, animatedStyle]} />
+      <Animated.View style={[styles.bar, { width, backgroundColor }]} />
     </View>
   );
 };

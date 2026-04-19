@@ -1,4 +1,4 @@
-//App.tsx
+// App.tsx
 import React, { useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer } from '@react-navigation/native';
@@ -6,7 +6,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
-import { darkTheme, colors } from './src/theme/theme';
+import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+import { lightTheme, darkTheme } from './src/theme/theme';
 import SplashScreen from './src/screens/SplashScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
@@ -27,6 +28,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AppNavigator = () => {
   const { user, loading } = useAuth();
+  const { themeColors } = useTheme();
   const [isSplashDone, setIsSplashDone] = useState(false);
 
   return (
@@ -34,7 +36,8 @@ const AppNavigator = () => {
       screenOptions={{
         headerShown: false,
         animation: 'fade',
-        contentStyle: { backgroundColor: colors.nightBlue }, 
+        // Fond universel du navigateur pour tuer le flash blanc
+        contentStyle: { backgroundColor: themeColors.background }, 
       }}
     >
       {loading || !isSplashDone ? (
@@ -55,9 +58,7 @@ const AppNavigator = () => {
             options={{
               headerShown: true,
               headerTitle: '',
-              headerStyle: {
-                backgroundColor: colors.nightBlue,
-              },
+              headerStyle: { backgroundColor: themeColors.background },
               headerShadowVisible: false,
             }}
           />
@@ -67,11 +68,9 @@ const AppNavigator = () => {
             options={{
               headerShown: true,
               headerTitle: '',
-              headerStyle: {
-                backgroundColor: colors.nightBlue,
-              },
+              headerStyle: { backgroundColor: themeColors.background },
               headerShadowVisible: false,
-              headerTintColor: colors.sand,
+              headerTintColor: themeColors.text,
               headerBackTitle: '',
             }}
           />
@@ -81,21 +80,32 @@ const AppNavigator = () => {
   );
 };
 
-export default function App() {
+const AppContent = () => {
+  const { isDark, themeColors } = useTheme();
+
   return (
-    <SafeAreaProvider>
-      <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.nightBlue }}>
+    // SafeAreaProvider doit porter la couleur de fond
+    <SafeAreaProvider style={{ flex: 1, backgroundColor: themeColors.background }}>
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: themeColors.background }}>
         <StatusBar 
-          style="light" 
-          backgroundColor={colors.nightBlue} 
-          translucent={false} 
+          style={isDark ? "light" : "dark"} 
+          backgroundColor="transparent" 
+          translucent={true} 
         />
-        <AuthProvider>
-          <NavigationContainer theme={darkTheme}>
-            <AppNavigator />
-          </NavigationContainer>
-        </AuthProvider>
+        <NavigationContainer theme={isDark ? darkTheme : lightTheme}>
+          <AppNavigator />
+        </NavigationContainer>
       </GestureHandlerRootView>
     </SafeAreaProvider>
+  );
+};
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
