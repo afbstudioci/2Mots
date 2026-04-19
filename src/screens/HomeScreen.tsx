@@ -1,5 +1,4 @@
-// src/screens/HomeScreen.tsx
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { View, Text, StyleSheet, Animated, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -10,11 +9,16 @@ import { colors, typography, borderRadius, shadows, spacing } from '../theme/the
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 
+import FloatingTabBar from '../components/navigation/FloatingTabBar';
+import FullScreenMenu from '../components/navigation/FullScreenMenu';
+
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
 const HomeScreen = ({ navigation }: { navigation: HomeScreenNavigationProp }) => {
-    const { user, refreshProfile, logout } = useAuth();
+    const { user, refreshProfile } = useAuth();
     const { themeColors } = useTheme();
+    
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
     
     const scalePressAnim = useRef(new Animated.Value(1)).current;
     const breathAnim = useRef(new Animated.Value(1)).current;
@@ -23,8 +27,10 @@ const HomeScreen = ({ navigation }: { navigation: HomeScreenNavigationProp }) =>
 
     useFocusEffect(
         useCallback(() => {
-            refreshProfile();
-        }, [refreshProfile])
+            if (!isLoggingOut) {
+                refreshProfile();
+            }
+        }, [isLoggingOut, refreshProfile])
     );
 
     useEffect(() => {
@@ -55,14 +61,25 @@ const HomeScreen = ({ navigation }: { navigation: HomeScreenNavigationProp }) =>
     };
 
     return (
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]} edges={['top', 'bottom']}>
+            
+            <FullScreenMenu />
+
             <View style={styles.container}>
                 
                 <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
                     <Text style={[styles.greetingText, { color: themeColors.text }]}>Bonjour, {user?.login}</Text>
-                    <View style={[styles.recordBadge, { backgroundColor: themeColors.card }]}>
-                        <Text style={[styles.recordLabel, { color: themeColors.textSecondary }]}>Record : </Text>
-                        <Text style={[styles.recordValue, { color: themeColors.text }]}>{user?.bestScore || 0}</Text>
+                    
+                    <View style={styles.badgesContainer}>
+                        <View style={[styles.badge, { backgroundColor: themeColors.card }]}>
+                            <Text style={[styles.badgeLabel, { color: themeColors.textSecondary }]}>Record </Text>
+                            <Text style={[styles.badgeValue, { color: themeColors.text }]}>{user?.bestScore || 0}</Text>
+                        </View>
+                        
+                        <View style={[styles.badge, styles.kevsBadge, { backgroundColor: 'rgba(255, 215, 0, 0.1)' }]}>
+                            <Text style={[styles.badgeLabel, { color: '#FFD700' }]}>Kevs </Text>
+                            <Text style={[styles.badgeValue, { color: '#FFD700' }]}>{user?.kevs || 0}</Text>
+                        </View>
                     </View>
                 </Animated.View>
 
@@ -79,21 +96,12 @@ const HomeScreen = ({ navigation }: { navigation: HomeScreenNavigationProp }) =>
                             </Pressable>
                         </Animated.View>
                     </Animated.View>
-
-                    <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-                        <Pressable style={styles.secondaryButton}>
-                            <Text style={styles.secondaryButtonText}>CLASSEMENT</Text>
-                        </Pressable>
-                    </Animated.View>
                 </View>
 
-                <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
-                    <Pressable onPress={logout} style={styles.logoutButton}>
-                        <Text style={[styles.logoutText, { color: themeColors.text }]}>Se déconnecter</Text>
-                    </Pressable>
-                </Animated.View>
-
             </View>
+
+            <FloatingTabBar />
+
         </SafeAreaView>
     );
 };
@@ -105,7 +113,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         paddingHorizontal: spacing.lg,
-        paddingBottom: spacing.lg,
+        paddingBottom: 100, 
         justifyContent: 'space-between',
     },
     header: {
@@ -118,7 +126,12 @@ const styles = StyleSheet.create({
         marginBottom: spacing.xs,
         paddingLeft: spacing.xs,
     },
-    recordBadge: {
+    badgesContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm,
+    },
+    badge: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: spacing.md,
@@ -126,57 +139,35 @@ const styles = StyleSheet.create({
         borderRadius: borderRadius.xl,
         ...shadows.soft(false),
     },
-    recordLabel: {
-        fontFamily: 'Poppins_500Medium',
-        fontSize: 16,
+    kevsBadge: {
+        borderWidth: 1,
+        borderColor: 'rgba(255, 215, 0, 0.3)',
     },
-    recordValue: {
+    badgeLabel: {
+        fontFamily: 'Poppins_500Medium',
+        fontSize: 14,
+    },
+    badgeValue: {
         fontFamily: 'Poppins_800ExtraBold',
-        fontSize: 18,
+        fontSize: 16,
     },
     centerContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        marginTop: -50, 
     },
     playButton: {
         backgroundColor: colors.coral,
         paddingVertical: spacing.lg,
         paddingHorizontal: 80,
         borderRadius: borderRadius.xl,
-        marginBottom: spacing.lg,
         ...shadows.soft(true),
     },
     playButtonText: {
         fontFamily: 'Poppins_900Black',
         fontSize: 40,
         letterSpacing: 2,
-    },
-    secondaryButton: {
-        backgroundColor: 'transparent',
-        borderWidth: 2,
-        borderColor: colors.coral,
-        paddingVertical: spacing.md,
-        paddingHorizontal: spacing.xl,
-        borderRadius: borderRadius.xl,
-    },
-    secondaryButtonText: {
-        fontFamily: 'Poppins_800ExtraBold',
-        fontSize: 18,
-        color: colors.coral,
-        letterSpacing: 1,
-    },
-    footer: {
-        alignItems: 'center',
-        paddingBottom: spacing.sm,
-    },
-    logoutButton: {
-        padding: spacing.md,
-    },
-    logoutText: {
-        ...typography.bodyMedium,
-        opacity: 0.4,
-        textDecorationLine: 'underline',
     },
 });
 

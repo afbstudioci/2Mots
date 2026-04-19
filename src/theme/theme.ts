@@ -1,4 +1,3 @@
-// src/theme/theme.ts
 import { TextStyle } from 'react-native';
 
 export const colors = {
@@ -10,15 +9,14 @@ export const colors = {
     white: '#FFFFFF',
 };
 
-// Logique pour le "cerveau" dynamique de l'app
 export const getPalette = (isDark: boolean) => ({
     primary: colors.coral,
-    background: isDark ? colors.nightBlue : colors.sand,
-    surface: isDark ? '#242B3A' : colors.white,
-    text: isDark ? colors.sand : colors.nightBlue,
-    textSecondary: isDark ? 'rgba(247, 245, 240, 0.6)' : 'rgba(26, 32, 44, 0.6)',
-    border: isDark ? '#2D3748' : '#E2E0DB',
-    card: isDark ? '#242B3A' : colors.white,
+    background: colors.nightBlue, // Force le Bleu Nuit partout
+    surface: '#242B3A',
+    text: colors.sand,
+    textSecondary: 'rgba(247, 245, 240, 0.6)',
+    border: '#2D3748',
+    card: '#242B3A',
 });
 
 export const spacing = {
@@ -38,9 +36,9 @@ export const borderRadius = {
 
 export const shadows = {
     soft: (isDark: boolean) => ({
-        shadowColor: isDark ? '#000000' : colors.nightBlue,
+        shadowColor: '#000000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: isDark ? 0.3 : 0.08,
+        shadowOpacity: 0.3,
         shadowRadius: 12,
         elevation: 5,
     }),
@@ -65,15 +63,14 @@ export const typography: Record<string, TextStyle> = {
     },
 };
 
-// Configuration pour la navigation (Clair)
 export const lightTheme = {
     dark: false,
     colors: {
         primary: colors.coral,
-        background: colors.sand, // Unifie avec ta couleur sable
-        card: colors.sand,
-        text: colors.nightBlue,
-        border: '#E2E0DB',
+        background: colors.nightBlue, // Securite anti-blanc
+        card: colors.nightBlue,
+        text: colors.sand,
+        border: '#2D3748',
         notification: colors.coral,
     },
     fonts: {
@@ -84,12 +81,11 @@ export const lightTheme = {
     },
 };
 
-// Configuration pour la navigation (Sombre)
 export const darkTheme = {
     dark: true,
     colors: {
         primary: colors.coral,
-        background: colors.nightBlue, // Unifie avec ton bleu nuit
+        background: colors.nightBlue,
         card: colors.nightBlue,
         text: colors.sand,
         border: '#2D3748',

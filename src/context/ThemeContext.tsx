@@ -1,6 +1,4 @@
-// src/context/ThemeContext.tsx
 import React, { createContext, useContext, useMemo } from 'react';
-import { useColorScheme } from 'react-native';
 import { getPalette } from '../theme/theme';
 
 type ThemeContextType = {
@@ -11,10 +9,10 @@ type ThemeContextType = {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const colorScheme = useColorScheme();
-    const isDark = colorScheme === 'dark';
-
-    // useMemo evite de recalculer les couleurs si le mode ne change pas
+    // LOGIQUE METIER : On verrouille isDark sur "true" de facon permanente.
+    // L'application n'ecoute plus le telephone, elle sera toujours en Bleu Nuit.
+    const isDark = true;
+    
     const themeColors = useMemo(() => getPalette(isDark), [isDark]);
 
     return (

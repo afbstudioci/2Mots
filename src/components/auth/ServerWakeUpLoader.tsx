@@ -1,149 +1,143 @@
-//src/components/auth/ServerWakeUpLoader.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
-import { colors, typography, spacing } from '../../theme/theme';
+import { View, Text, StyleSheet, Modal, Animated } from 'react-native';
+import { colors, typography, borderRadius, spacing } from '../../theme/theme';
+import { useTheme } from '../../context/ThemeContext';
 
-const AnimatedPath = Animated.createAnimatedComponent(Path);
-
-const WAITING_PHRASES = [
-  "Authentification en cours...",
-  "Reveil des serveurs (Cold Start)...",
-  "Synchronisation de la base de donnees...",
-  "Preparation de votre espace de jeu...",
-  "Derniers reglages, merci de patienter..."
+const MESSAGES = [
+    "Reveil du serveur...",
+    "Echauffement des processeurs...",
+    "Preparation de vos defis...",
+    "Connexion securisee...",
+    "Presque la...",
 ];
 
 const ServerWakeUpLoader = () => {
-  const [phraseIndex, setPhraseIndex] = useState(0);
-  
-  const drawAnim = useRef(new Animated.Value(300)).current;
-  const opacityAnim = useRef(new Animated.Value(0.5)).current;
-  const textOpacity = useRef(new Animated.Value(1)).current;
-  const overlayOpacity = useRef(new Animated.Value(0)).current;
+    const { themeColors } = useTheme();
+    const [messageIndex, setMessageIndex] = useState(0);
+    
+    const pulseAnim = useRef(new Animated.Value(1)).current;
+    const fadeAnim = useRef(new Animated.Value(1)).current;
 
-  useEffect(() => {
-    // Apparition de l'overlay
-    Animated.timing(overlayOpacity, {
-      toValue: 1,
-      duration: 500,
-      useNativeDriver: true,
-    }).start();
+    // Logique d'intelligence : Rotation des messages
+    useEffect(() => {
+        const interval = setInterval(() => {
+            Animated.timing(fadeAnim, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true
+            }).start(() => {
+                setMessageIndex((prev) => (prev + 1) % MESSAGES.length);
+                Animated.timing(fadeAnim, {
+                    toValue: 1,
+                    duration: 300,
+                    useNativeDriver: true
+                }).start();
+            });
+        }, 3000);
 
-    // L'effet serpentin infini (Tracé SVG)
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(drawAnim, {
-          toValue: 0,
-          duration: 1500,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: false, 
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(drawAnim, {
-          toValue: 300,
-          duration: 0,
-          useNativeDriver: false,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
+        return () => clearInterval(interval);
+    }, [fadeAnim]);
 
-    // Changement de texte
-    const interval = setInterval(() => {
-      Animated.timing(textOpacity, { 
-        toValue: 0, 
-        duration: 500, 
-        useNativeDriver: true 
-      }).start(() => {
-        setPhraseIndex((prev) => (prev < WAITING_PHRASES.length - 1 ? prev + 1 : prev));
-        Animated.timing(textOpacity, { 
-          toValue: 1, 
-          duration: 500, 
-          useNativeDriver: true 
-        }).start();
-      });
-    }, 6000);
+    // Animation de pulsation Premium
+    useEffect(() => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulseAnim, {
+                    toValue: 1.2,
+                    duration: 1000,
+                    useNativeDriver: true
+                }),
+                Animated.timing(pulseAnim, {
+                    toValue: 1,
+                    duration: 1000,
+                    useNativeDriver: true
+                })
+            ])
+        ).start();
+    }, [pulseAnim]);
 
-    return () => {
-      clearInterval(interval);
-      drawAnim.stopAnimation();
-      opacityAnim.stopAnimation();
-      textOpacity.stopAnimation();
-    };
-  }, []);
+    return (
+        <Modal transparent animationType="fade" statusBarTranslucent>
+            <View style={styles.overlay}>
+                <View style={[styles.container, { backgroundColor: themeColors.card }]}>
+                    
+                    {/* Indicateur Visuel Anime */}
+                    <View style={styles.animationContainer}>
+                        <Animated.View style={[
+                            styles.pulseCircle, 
+                            { transform: [{ scale: pulseAnim }], borderColor: colors.coral }
+                        ]} />
+                        <View style={[styles.dot, { backgroundColor: colors.coral }]} />
+                    </View>
 
-  return (
-    <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
-      <View style={styles.content}>
-        
-        <Animated.View style={[styles.iconContainer, { opacity: opacityAnim }]}>
-          <Svg width="100" height="50" viewBox="0 0 100 50">
-            <AnimatedPath
-              d="M 50 25 C 65 0, 95 0, 95 25 C 95 50, 65 50, 50 25 C 35 0, 5 0, 5 25 C 5 50, 35 50, 50 25 Z"
-              fill="none"
-              stroke={colors.coral}
-              strokeWidth="4"
-              strokeLinecap="round"
-              strokeDasharray="300"
-              strokeDashoffset={drawAnim}
-            />
-          </Svg>
-        </Animated.View>
-        
-        <View style={styles.textContainer}>
-          <Text style={styles.mainText}>2MOTS</Text>
-          <Animated.Text style={[styles.subText, { opacity: textOpacity }]}>
-            {WAITING_PHRASES[phraseIndex]}
-          </Animated.Text>
-        </View>
-      </View>
-    </Animated.View>
-  );
+                    <Animated.Text style={[
+                        styles.title, 
+                        { color: themeColors.text, opacity: fadeAnim }
+                    ]}>
+                        {MESSAGES[messageIndex]}
+                    </Animated.Text>
+                    
+                    <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+                        Le serveur demarre sa session
+                    </Text>
+
+                </View>
+            </View>
+        </Modal>
+    );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(10, 14, 23, 0.95)', 
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 999,
-    elevation: 10,
-  },
-  content: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconContainer: {
-    marginBottom: spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  textContainer: {
-    alignItems: 'center',
-    height: 80, 
-  },
-  mainText: {
-    ...typography.headlineMedium,
-    color: colors.sand,
-    letterSpacing: 4,
-    marginBottom: spacing.sm,
-  },
-  subText: {
-    ...typography.bodyMedium,
-    color: colors.coral,
-    textAlign: 'center',
-    paddingHorizontal: spacing.xl,
-  }
+    overlay: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(11, 19, 43, 0.9)', // Bleu Nuit profond translucide
+    },
+    container: {
+        width: '85%',
+        paddingVertical: spacing.xl,
+        paddingHorizontal: spacing.lg,
+        borderRadius: borderRadius.lg,
+        alignItems: 'center',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
+        elevation: 15,
+    },
+    animationContainer: {
+        height: 80,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: spacing.md,
+    },
+    pulseCircle: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        borderWidth: 2,
+        position: 'absolute',
+    },
+    dot: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+    },
+    title: {
+        ...typography.bodyMedium,
+        fontFamily: 'Poppins_800ExtraBold',
+        fontSize: 20,
+        textAlign: 'center',
+        height: 30,
+    },
+    subtitle: {
+        ...typography.bodyMedium,
+        textAlign: 'center',
+        marginTop: spacing.xs,
+        fontSize: 14,
+        opacity: 0.6,
+    },
 });
 
 export default ServerWakeUpLoader;
