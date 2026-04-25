@@ -1,14 +1,16 @@
 //src/components/navigation/FullScreenMenu.tsx
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Animated, Modal } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated, Modal, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { colors, spacing, borderRadius } from '../../theme/theme';
+import { colors, spacing, borderRadius, typography } from '../../theme/theme';
 import { RootStackParamList } from '../../../App';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('screen');
 
 const appConfig = require('../../../app.json');
 const APP_VERSION = appConfig.expo.version || '1.0.0';
@@ -65,8 +67,22 @@ export default function FullScreenMenu() {
     const handleNavigation = (id: string) => {
         toggleMenu();
         setTimeout(() => {
-            if (id === 'home') navigation.navigate('Home');
-            if (id === 'leaderboard') navigation.navigate('Leaderboard');
+            switch (id) {
+                case 'home':
+                    navigation.navigate('Home');
+                    break;
+                case 'profile':
+                    navigation.navigate('Profile');
+                    break;
+                case 'leaderboard':
+                    navigation.navigate('Leaderboard');
+                    break;
+                case 'settings':
+                    navigation.navigate('Settings');
+                    break;
+                default:
+                    break;
+            }
         }, 300);
     };
 
@@ -100,12 +116,15 @@ export default function FullScreenMenu() {
                 visible={isOpen} 
                 animationType="none" 
                 statusBarTranslucent 
-                navigationBarTranslucent={true} // CORRECTIF : Couvre la barre de navigation Android
+                navigationBarTranslucent={true}
             >
-                <Animated.View style={[
-                    styles.menuOverlay, 
-                    { backgroundColor: themeColors.background, opacity: fadeAnim }
-                ]}>
+                <Animated.View style={[styles.menuContainer, { opacity: fadeAnim }]}>
+                    
+                    <View style={[
+                        StyleSheet.absoluteFillObject, 
+                        { backgroundColor: themeColors.background, bottom: -150 }
+                    ]} />
+
                     <Pressable onPress={toggleMenu} style={[styles.actionButton, { top: insets.top + spacing.sm }]}>
                         <Animated.View style={[styles.crossLine, { backgroundColor: themeColors.text, transform: [{ rotate: rotate1 }] }]} />
                         <Animated.View style={[styles.crossLine, { backgroundColor: themeColors.text, transform: [{ rotate: rotate2 }] }]} />
@@ -161,20 +180,24 @@ const styles = StyleSheet.create({
     hamburgerContainer: { alignItems: 'flex-end', width: 24 },
     hamburgerLine: { width: 24, height: 2.5, borderRadius: 2, marginVertical: 3 },
     crossLine: { width: 26, height: 2.5, borderRadius: 2, position: 'absolute' },
-    menuOverlay: { 
-        ...StyleSheet.absoluteFillObject // CORRECTIF : Prend 100% de l'écran réel
+    menuContainer: { 
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: SCREEN_WIDTH,
+        height: SCREEN_HEIGHT,
     },
     menuContent: { flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%', marginTop: -40 },
     animatedItemContainer: { alignItems: 'center' },
     menuItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.md, marginVertical: spacing.xs },
     menuIcon: { marginRight: spacing.md },
-    menuText: { fontFamily: 'Poppins_800ExtraBold', fontSize: 32, letterSpacing: 1 },
+    menuText: { ...typography.titleHuge, fontSize: 32, letterSpacing: 1 },
     footer: { width: '100%', alignItems: 'center' },
     logoutButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.md, paddingHorizontal: spacing.xl, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: borderRadius.xl, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.2)', marginBottom: spacing.lg },
     logoutIcon: { marginRight: spacing.sm },
-    logoutText: { fontFamily: 'Poppins_700Bold', fontSize: 16, letterSpacing: 0.5 },
+    logoutText: { ...typography.buttonPrimary, fontSize: 16, letterSpacing: 0.5 },
     versionContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-    brandText: { fontFamily: 'Poppins_700Bold', fontSize: 14, letterSpacing: 1, marginRight: spacing.sm, opacity: 0.7 },
+    brandText: { ...typography.buttonPrimary, fontSize: 14, letterSpacing: 1, marginRight: spacing.sm, opacity: 0.7 },
     versionBadge: { paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: borderRadius.sm },
-    versionText: { fontFamily: 'Poppins_500Medium', fontSize: 11, letterSpacing: 1, opacity: 0.6 },
+    versionText: { ...typography.bodySmall, fontSize: 11, letterSpacing: 1, opacity: 0.6 },
 });

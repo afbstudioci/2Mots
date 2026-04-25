@@ -1,32 +1,39 @@
+//src/components/navigation/FloatingTabBar.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../../context/ThemeContext';
 import { colors, spacing, borderRadius, shadows } from '../../theme/theme';
+import { RootStackParamList } from '../../../App';
 
 export default function FloatingTabBar() {
     const { themeColors } = useTheme();
-    // Par defaut, aucun n'est actif puisqu'on est sur l'Accueil (qui n'est plus dans la barre)
-    const [activeTab, setActiveTab] = useState<string | null>(null);
-
+    const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+    const route = useRoute();
+    
     const tabs = [
         { id: 'Shop', label: 'Boutique', icon: 'basket' },
         { id: 'Missions', label: 'Missions', icon: 'rocket' },
         { id: 'Friends', label: 'Amis', icon: 'people' },
     ];
 
+    const handlePress = (id: any) => {
+        navigation.navigate(id);
+    };
+
     return (
         <View style={styles.container}>
             <View style={[styles.tabBar, { backgroundColor: themeColors.card }]}>
                 {tabs.map((tab) => {
-                    const isActive = activeTab === tab.id;
-                    
+                    const isActive = route.name === tab.id;
                     return (
                         <TabItem 
                             key={tab.id}
                             item={tab}
                             isActive={isActive}
-                            onPress={() => setActiveTab(tab.id)}
+                            onPress={() => handlePress(tab.id)}
                             themeColors={themeColors}
                         />
                     );
@@ -41,7 +48,6 @@ const TabItem = ({ item, isActive, onPress, themeColors }: any) => {
     const activeBubbleAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        // Animation de la bulle de fond quand l'onglet devient actif
         Animated.spring(activeBubbleAnim, {
             toValue: isActive ? 1 : 0,
             useNativeDriver: true,
@@ -61,42 +67,28 @@ const TabItem = ({ item, isActive, onPress, themeColors }: any) => {
         onPress();
     };
 
-    // L'icone vectorielle depend de l'etat (pleine si active, contour si inactive)
-    const iconName = isActive ? item.icon : `${item.icon}-outline`;
-
     return (
-        <Pressable 
-            onPressIn={handlePressIn}
-            onPressOut={handlePressOut}
-            style={styles.tabItem}
-        >
+        <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut} style={styles.tabItem}>
             <View style={styles.iconContainer}>
-                {/* Bulle d'arriere-plan qui apparait en grandissant */}
                 <Animated.View style={[
                     styles.activeBubble, 
                     { 
-                        backgroundColor: 'rgba(255, 127, 80, 0.15)', // Corail transparent
+                        backgroundColor: 'rgba(255, 127, 80, 0.15)',
                         opacity: activeBubbleAnim,
                         transform: [{ 
                             scale: activeBubbleAnim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }) 
                         }]
                     }
                 ]} />
-                
-                {/* L'icone Vectorielle qui rebondit */}
                 <Animated.View style={{ transform: [{ scale: scaleIconAnim }] }}>
                     <Ionicons 
-                        name={iconName as any} 
+                        name={isActive ? (item.icon as any) : (`${item.icon}-outline` as any)} 
                         size={24} 
                         color={isActive ? colors.coral : themeColors.textSecondary} 
                     />
                 </Animated.View>
             </View>
-
-            <Text style={[
-                styles.tabText, 
-                { color: isActive ? colors.coral : themeColors.textSecondary }
-            ]}>
+            <Text style={[styles.tabText, { color: isActive ? colors.coral : themeColors.textSecondary }]}>
                 {item.label}
             </Text>
         </Pressable>
@@ -104,45 +96,10 @@ const TabItem = ({ item, isActive, onPress, themeColors }: any) => {
 };
 
 const styles = StyleSheet.create({
-    container: {
-        position: 'absolute',
-        bottom: spacing.xl,
-        left: 0,
-        right: 0,
-        alignItems: 'center',
-        zIndex: 10,
-    },
-    tabBar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingVertical: spacing.sm,
-        paddingHorizontal: spacing.lg,
-        borderRadius: borderRadius.xl,
-        width: '85%',
-        ...shadows.soft(true),
-    },
-    tabItem: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: spacing.sm,
-        width: 80,
-    },
-    iconContainer: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: 40,
-        width: 40,
-    },
-    activeBubble: {
-        position: 'absolute',
-        width: 46,
-        height: 46,
-        borderRadius: 23,
-    },
-    tabText: {
-        fontFamily: 'Poppins_700Bold',
-        fontSize: 10,
-        marginTop: 2,
-    },
+    container: { position: 'absolute', bottom: spacing.xl, left: 0, right: 0, alignItems: 'center', zIndex: 10 },
+    tabBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.sm, paddingHorizontal: spacing.lg, borderRadius: borderRadius.xl, width: '85%', ...shadows.soft(true) },
+    tabItem: { alignItems: 'center', justifyContent: 'center', width: 80 },
+    iconContainer: { alignItems: 'center', justifyContent: 'center', height: 40, width: 40 },
+    activeBubble: { position: 'absolute', width: 46, height: 46, borderRadius: 23 },
+    tabText: { fontFamily: 'Poppins_700Bold', fontSize: 10, marginTop: 2 }
 });
