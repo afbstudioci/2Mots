@@ -21,22 +21,23 @@ export default function GameInputArea({
     const [hintUsed, setHintUsed] = useState(false);
 
     const handleHint = () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); // Vibration forte
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
         if (!hintUsed) setHintUsed(true);
         onHintPress();
     };
 
+    // CORRECTION GRAMMATICALE FRANCAISE
     const formatExpectedType = (type: string) => {
         if (!type) return "";
-        const lower = type.toLowerCase();
-        const vowels = ['a', 'e', 'i', 'o', 'u'];
-        const article = vowels.includes(lower.charAt(0)) ? "une" : "un";
+        const lower = type.toLowerCase().trim();
+        // Seules ces catégories sont féminines en français
+        const feminineTypes = ["préposition", "conjonction", "déterminant"];
+        const article = feminineTypes.some(t => lower.includes(t)) ? "une" : "un";
         return `${article} ${lower}`;
     };
 
     return (
         <View style={styles.container}>
-            {/* Indication de la nature du mot (Pilule visible) */}
             {expectedType ? (
                 <View style={styles.typePill}>
                     <Ionicons name="information-circle" size={16} color={colors.nightBlue} />
@@ -46,7 +47,6 @@ export default function GameInputArea({
                 </View>
             ) : null}
 
-            {/* Zone de saisie + Bouton Envoyer */}
             <View style={styles.inputWrapper}>
                 <TextInput
                     style={styles.input}
@@ -65,7 +65,6 @@ export default function GameInputArea({
                 </TouchableOpacity>
             </View>
 
-            {/* Bouton Indice Logique (Style Carte) */}
             <TouchableOpacity style={styles.hintCard} onPress={handleHint} activeOpacity={0.7} disabled={isAnimating}>
                 <Ionicons name="bulb" size={22} color={colors.coral} />
                 <Text style={styles.hintText}>
@@ -80,7 +79,7 @@ const styles = StyleSheet.create({
     container: {
         paddingHorizontal: spacing.lg,
         paddingTop: spacing.md,
-        paddingBottom: spacing.xl, // Remonté et sécurisé pour le clavier
+        paddingBottom: spacing.xl,
     },
     typePill: {
         flexDirection: 'row',

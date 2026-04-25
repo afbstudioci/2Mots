@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
-    View, StyleSheet, KeyboardAvoidingView, Platform, Animated, Dimensions, Keyboard 
+    View, StyleSheet, KeyboardAvoidingView, Platform, Animated, Dimensions 
 } from 'react-native';
 import { colors, spacing } from '../theme/theme';
 import api from '../services/api';
 import * as Haptics from 'expo-haptics';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
+import { useFocusEffect } from '@react-navigation/native'; // ESSENTIEL POUR LE BUG DE NAVIGATION
 
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import GameLoading from '../components/game/GameLoading';
@@ -52,7 +53,6 @@ export default function GameScreen({ navigation }: { navigation: GameScreenNavig
     const [isChecking, setIsChecking] = useState(false);
     const [isGameOver, setIsGameOver] = useState(false);
 
-    // Progression & Animation Temps
     const [userLevel, setUserLevel] = useState(1);
     const [currentXp, setCurrentXp] = useState(0);
     const [xpNeeded, setXpNeeded] = useState(5);
@@ -64,23 +64,6 @@ export default function GameScreen({ navigation }: { navigation: GameScreenNavig
 
     const sessionAnswersRef = useRef<any[]>([]);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-    useEffect(() => { fetchWords(true); }, []);
-
-    useEffect(() => {
-        if (isLoading || isGameOver || timeLeft <= 0) return;
-        timerRef.current = setInterval(() => {
-            setTimeLeft(prev => {
-                if (prev <= 1) {
-                    if (timerRef.current) clearInterval(timerRef.current);
-                    triggerGameOver();
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-        return () => { if (timerRef.current) clearInterval(timerRef.current); };
-    }, [isLoading, isGameOver, currentIndex]);
 
     const fetchWords = async (isInitial = false) => {
         try {
@@ -98,6 +81,40 @@ export default function GameScreen({ navigation }: { navigation: GameScreenNavig
         }
     };
 
+    useEffect(() => { fetchWords(true); }, []);
+
+    // GESTION DU TIMER
+    useEffect(() => {
+        if (isLoading || isGameOver || timeLeft <= 0) return;
+
+        timerRef.current = setInterval(() => {
+            setTimeLeft(prev => {
+                if (prev <= 1) {
+                    if (timerRef.current) clearInterval(timerRef.current);
+                    triggerGameOver();
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    }, [isLoading, isGameOver, currentIndex]);
+
+    // CORRECTION DU BUG DE NAVIGATION : Tue le timer si on quitte l'écran
+    useFocusEffect(
+        useCallback(() => {
+            return () => {
+                // Cette fonction s'exécute quand l'écran perd le focus (Retour)
+                if (timerRef.current) {
+                    clearInterval(timerRef.current);
+                    timerRef.current = null;
+                }
+                setIsGameOver(true); // Empêche les appels asynchrones en arrière-plan
+            };
+        }, [])
+    );
+
     useEffect(() => {
         if (wordPairs.length > 0 && currentIndex === wordPairs.length - 3) fetchWords();
     }, [currentIndex, wordPairs.length]);
@@ -106,7 +123,6 @@ export default function GameScreen({ navigation }: { navigation: GameScreenNavig
         if (!answer.trim() || isChecking || isGameOver) return;
         setIsChecking(true);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-        Keyboard.dismiss(); // Ranger le clavier lors de l'envoi pour voir l'animation
 
         const currentPair = wordPairs[currentIndex];
         const timeSpent = 30 - Math.max(0, timeLeft);
@@ -122,7 +138,7 @@ export default function GameScreen({ navigation }: { navigation: GameScreenNavig
             if (result.isCorrect) {
                 setSuccessTrigger(prev => prev + 1);
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                setTimeWon(result.timeWon); // Déclenche l'animation +Xs
+                setTimeWon(result.timeWon);
 
                 setTimeLeft(prev => Math.min(30, prev + result.timeWon));
                 setUserLevel(result.newLevel);
@@ -137,7 +153,10 @@ export default function GameScreen({ navigation }: { navigation: GameScreenNavig
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
                 setIsChecking(false);
             }
-        } catch (error) { setIsChecking(false); }
+        } catch (error) { 
+            console.error('Erreur vérification :', error);
+            setIsChecking(false); 
+        }
     };
 
     const goToNextWord = () => {
@@ -175,11 +194,11 @@ export default function GameScreen({ navigation }: { navigation: GameScreenNavig
 
     return (
         <ScreenWrapper>
-            {/* LOGIQUE INFAILLIBLE DU CLAVIER */}
+            {/* Suppression du ScrollView. Le KeyboardAvoidingView suffit avec un bon comportement */}
             <KeyboardAvoidingView 
                 style={styles.container} 
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'} // Height sur Android push toute la vue vers le haut
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0} // Décalage précis
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
             >
                 <GameHeader level={userLevel} currentXp={currentXp} xpNeeded={xpNeeded} />
                 
@@ -224,7 +243,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.xl,
     },
     playAreaWrapper: {
-        flex: 1,
+        flex: 1, // Prend l'espace restant, se réduit quand le clavier apparait
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden',
