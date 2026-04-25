@@ -1,13 +1,14 @@
+//src/screens/GameScreen.tsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
-    View, StyleSheet, KeyboardAvoidingView, Platform, Animated, Dimensions 
+    View, StyleSheet, KeyboardAvoidingView, Platform, Animated, Dimensions, ScrollView 
 } from 'react-native';
 import { colors, spacing } from '../theme/theme';
 import api from '../services/api';
 import * as Haptics from 'expo-haptics';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { useFocusEffect } from '@react-navigation/native'; // ESSENTIEL POUR LE BUG DE NAVIGATION
+import { useFocusEffect } from '@react-navigation/native';
 
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import GameLoading from '../components/game/GameLoading';
@@ -83,7 +84,6 @@ export default function GameScreen({ navigation }: { navigation: GameScreenNavig
 
     useEffect(() => { fetchWords(true); }, []);
 
-    // GESTION DU TIMER
     useEffect(() => {
         if (isLoading || isGameOver || timeLeft <= 0) return;
 
@@ -101,16 +101,14 @@ export default function GameScreen({ navigation }: { navigation: GameScreenNavig
         return () => { if (timerRef.current) clearInterval(timerRef.current); };
     }, [isLoading, isGameOver, currentIndex]);
 
-    // CORRECTION DU BUG DE NAVIGATION : Tue le timer si on quitte l'écran
     useFocusEffect(
         useCallback(() => {
             return () => {
-                // Cette fonction s'exécute quand l'écran perd le focus (Retour)
                 if (timerRef.current) {
                     clearInterval(timerRef.current);
                     timerRef.current = null;
                 }
-                setIsGameOver(true); // Empêche les appels asynchrones en arrière-plan
+                setIsGameOver(true);
             };
         }, [])
     );
@@ -174,13 +172,20 @@ export default function GameScreen({ navigation }: { navigation: GameScreenNavig
         if (isGameOver) return;
         setIsGameOver(true);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        
         api.post('/game/validate', { answers: sessionAnswersRef.current })
             .then(res => {
                 const result = res.data.data;
                 const formattedDetails = sessionAnswersRef.current.map(ans => ({
-                    word: ans.answer || "Passé", accuracy: ans.accuracy || 0, label: ans.isCorrect ? "SUCCES" : "ECHEC"
+                    word: ans.answer || "Passé", 
+                    accuracy: ans.accuracy || 0, 
+                    label: ans.isCorrect ? "SUCCÈS" : "ÉCHEC"
                 }));
-                navigation.replace('GameOver', { score: result.totalScore, details: formattedDetails });
+                navigation.replace('GameOver', { 
+                    score: result.totalScore, 
+                    details: formattedDetails,
+                    corrections: result.corrections || []
+                });
             })
             .catch(() => navigation.replace('Home'));
     }, [isGameOver, navigation]);
@@ -194,7 +199,6 @@ export default function GameScreen({ navigation }: { navigation: GameScreenNavig
 
     return (
         <ScreenWrapper>
-            {/* Suppression du ScrollView. Le KeyboardAvoidingView suffit avec un bon comportement */}
             <KeyboardAvoidingView 
                 style={styles.container} 
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -211,14 +215,21 @@ export default function GameScreen({ navigation }: { navigation: GameScreenNavig
                     />
                 </View>
 
-                <View style={styles.playAreaWrapper}>
-                    <SuccessRipple trigger={successTrigger} />
-                    <Animated.View style={{ transform: [{ scale: successScaleAnim }] }}>
-                        <Animated.View style={{ transform: [{ translateX: slideWordsAnim }] }}>
-                            <GamePlayArea currentPair={currentPair} />
+                {/* Ajout du ScrollView pour permettre de scroller quand le clavier est ouvert */}
+                <ScrollView 
+                    contentContainerStyle={styles.scrollContent}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                >
+                    <View style={styles.playAreaWrapper}>
+                        <SuccessRipple trigger={successTrigger} />
+                        <Animated.View style={{ transform: [{ scale: successScaleAnim }] }}>
+                            <Animated.View style={{ transform: [{ translateX: slideWordsAnim }] }}>
+                                <GamePlayArea currentPair={currentPair} />
+                            </Animated.View>
                         </Animated.View>
-                    </Animated.View>
-                </View>
+                    </View>
+                </ScrollView>
 
                 <GameInputArea 
                     answer={answer} 
@@ -242,11 +253,14 @@ const styles = StyleSheet.create({
     timerWrapper: {
         paddingHorizontal: spacing.xl,
     },
+    scrollContent: {
+        flexGrow: 1,
+        justifyContent: 'center',
+    },
     playAreaWrapper: {
-        flex: 1, // Prend l'espace restant, se réduit quand le clavier apparait
         justifyContent: 'center',
         alignItems: 'center',
-        overflow: 'hidden',
+        paddingVertical: spacing.xl,
     },
     rippleContainer: {
         position: 'absolute',

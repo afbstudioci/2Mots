@@ -1,3 +1,4 @@
+//src/components/game/GamePlayArea.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, typography, spacing } from '../../theme/theme';
@@ -17,10 +18,10 @@ export default function GamePlayArea({ currentPair }: GamePlayAreaProps) {
 
     return (
         <View style={styles.container}>
-            {/* Mot 1 : En haut à gauche, icône à droite */}
-            <View style={styles.wordRowLeft}>
-                <Text style={styles.wordText}>{word1}</Text>
-                <DynamicIcon iconString={icon1} size={38} color={colors.white} />
+            {/* Carte Mot 1 */}
+            <View style={styles.card}>
+                <DynamicIcon iconString={icon1} size={48} color={colors.white} />
+                <Text style={styles.wordText} numberOfLines={1} adjustsFontSizeToFit>{word1}</Text>
             </View>
 
             {/* Symbole + */}
@@ -28,10 +29,10 @@ export default function GamePlayArea({ currentPair }: GamePlayAreaProps) {
                 <Text style={styles.linkSymbol}>+</Text>
             </View>
 
-            {/* Mot 2 : En bas à droite, icône à gauche */}
-            <View style={styles.wordRowRight}>
-                <DynamicIcon iconString={icon2} size={38} color={colors.white} />
-                <Text style={styles.wordText}>{word2}</Text>
+            {/* Carte Mot 2 */}
+            <View style={styles.card}>
+                <DynamicIcon iconString={icon2} size={48} color={colors.white} />
+                <Text style={styles.wordText} numberOfLines={1} adjustsFontSizeToFit>{word2}</Text>
             </View>
         </View>
     );
@@ -39,34 +40,37 @@ export default function GamePlayArea({ currentPair }: GamePlayAreaProps) {
 
 const styles = StyleSheet.create({
     container: {
+        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: spacing.lg,
+        width: '100%',
     },
-    wordRowLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        alignSelf: 'flex-start',
-    },
-    wordRowRight: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        alignSelf: 'flex-end',
-    },
-    wordText: {
-        ...typography.titleHuge,
-        color: colors.white,
-        textTransform: 'uppercase',
-        marginHorizontal: spacing.sm,
-    },
-    linkContainer: {
+    card: {
+        flex: 1,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        borderRadius: 24,
+        paddingVertical: spacing.xl,
+        paddingHorizontal: spacing.md,
         alignItems: 'center',
         justifyContent: 'center',
-        marginVertical: spacing.xs,
+        minHeight: 140,
+    },
+    wordText: {
+        ...typography.titleLarge,
+        color: colors.white,
+        textTransform: 'uppercase',
+        marginTop: spacing.md,
+        textAlign: 'center',
+    },
+    linkContainer: {
+        marginHorizontal: spacing.sm,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     linkSymbol: {
-        ...typography.titleLarge,
+        ...typography.titleHuge,
         color: colors.coral,
-        fontSize: 40,
+        fontSize: 48,
     }
 });

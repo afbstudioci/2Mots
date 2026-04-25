@@ -12,25 +12,18 @@ interface WordCardProps {
 export default function WordCard({ word1, word2 }: WordCardProps) {
     return (
         <View style={styles.container}>
-            {/* Premier mot */}
-            <View style={styles.wordRow}>
-                <Ionicons name="leaf-outline" size={32} color={colors.nightBlue} style={styles.icon} />
-                <Text style={styles.wordText} numberOfLines={1} adjustsFontSizeToFit>
-                    {word1}
-                </Text>
+            <View style={styles.card}>
+                <Ionicons name="leaf-outline" size={40} color={colors.white} />
+                <Text style={styles.wordText} numberOfLines={1} adjustsFontSizeToFit>{word1}</Text>
             </View>
 
-            {/* Symbole de liaison */}
             <View style={styles.linkContainer}>
                 <Text style={styles.linkSymbol}>+</Text>
             </View>
 
-            {/* Deuxième mot */}
-            <View style={styles.wordRow}>
-                <Ionicons name="nutrition-outline" size={32} color={colors.nightBlue} style={styles.icon} />
-                <Text style={styles.wordText} numberOfLines={1} adjustsFontSizeToFit>
-                    {word2}
-                </Text>
+            <View style={styles.card}>
+                <Ionicons name="nutrition-outline" size={40} color={colors.white} />
+                <Text style={styles.wordText} numberOfLines={1} adjustsFontSizeToFit>{word2}</Text>
             </View>
         </View>
     );
@@ -38,35 +31,37 @@ export default function WordCard({ word1, word2 }: WordCardProps) {
 
 const styles = StyleSheet.create({
     container: {
-        width: '100%',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: spacing.xl,
-    },
-    wordRow: {
         flexDirection: 'row',
+        width: '100%',
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: spacing.md,
     },
-    icon: {
-        marginRight: spacing.sm,
-        opacity: 0.8,
+    card: {
+        flex: 1,
+        backgroundColor: colors.nightBlue,
+        borderRadius: 20,
+        paddingVertical: spacing.lg,
+        paddingHorizontal: spacing.sm,
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 120,
     },
     wordText: {
-        ...typography.titleHuge,
-        color: colors.nightBlue,
-        textTransform: 'capitalize',
-        lineHeight: 50,
+        ...typography.titleLarge,
+        color: colors.white,
+        textTransform: 'uppercase',
+        marginTop: spacing.sm,
+        textAlign: 'center',
     },
     linkContainer: {
-        marginVertical: spacing.sm,
+        marginHorizontal: spacing.xs,
         alignItems: 'center',
         justifyContent: 'center',
     },
     linkSymbol: {
-        ...typography.titleLarge,
+        ...typography.titleHuge,
         color: colors.coral,
-        fontSize: 36,
+        fontSize: 40,
     }
 });

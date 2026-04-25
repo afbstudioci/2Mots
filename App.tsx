@@ -24,7 +24,11 @@ export type RootStackParamList = {
   Register: undefined;
   Home: undefined;
   Game: undefined;
-  GameOver: { score: number; details: { word: string; accuracy: number; label: string }[] };
+  GameOver: { 
+    score: number; 
+    details: { word: string; accuracy: number; label: string }[];
+    corrections?: { word1: string; word2: string; expectedAnswer: string; userAnswer: string }[];
+  };
   Leaderboard: undefined;
 };
 

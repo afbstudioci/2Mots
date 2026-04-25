@@ -1,7 +1,7 @@
 //src/screens/GameOverScreen.tsx
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { typography, colors, spacing, borderRadius } from '../theme/theme';
+import { typography, colors, spacing } from '../theme/theme';
 import { RootStackParamList } from '../../App';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
@@ -10,11 +10,14 @@ import ScreenWrapper from '../components/layout/ScreenWrapper';
 type GameOverScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'GameOver'>;
 
 export default function GameOverScreen({ route, navigation }: { route: any, navigation: GameOverScreenNavigationProp }) {
-    const { score, details } = route.params;
+    const { score, details, corrections } = route.params;
 
     useEffect(() => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }, []);
+
+    // Vérification intelligente pour le singulier ou le pluriel
+    const correctionTitle = corrections && corrections.length > 1 ? "RÉPONSES ATTENDUES" : "RÉPONSE ATTENDUE";
 
     return (
         <ScreenWrapper>
@@ -24,10 +27,27 @@ export default function GameOverScreen({ route, navigation }: { route: any, navi
                     <Text style={styles.scoreLabel}>SCORE FINAL</Text>
                     <Text style={styles.scoreValue}>{score}</Text>
 
+                    {/* Bloc conditionnel des corrections s'il y a eu des erreurs */}
+                    {corrections && corrections.length > 0 && (
+                        <View style={styles.correctionsWrapper}>
+                            <Text style={styles.correctionsTitle}>{correctionTitle}</Text>
+                            {corrections.map((item: any, index: number) => (
+                                <View key={index} style={styles.correctionItem}>
+                                    <Text style={styles.correctionPair}>
+                                        {item.word1.toUpperCase()} + {item.word2.toUpperCase()}
+                                    </Text>
+                                    <Text style={styles.correctionExpected}>
+                                        = {item.expectedAnswer.toUpperCase()}
+                                    </Text>
+                                </View>
+                            ))}
+                        </View>
+                    )}
+
                     <View style={styles.cardContainer}>
                         {details.map((item: any, index: number) => {
                             const isHighAccuracy = item.accuracy >= 80;
-                            const accuracyColor = isHighAccuracy ? colors.success : colors.sand;
+                            const accuracyColor = isHighAccuracy ? colors.success : colors.coral;
 
                             return (
                                 <View 
@@ -90,6 +110,39 @@ const styles = StyleSheet.create({
         fontSize: 72,
         lineHeight: 80,
         marginBottom: spacing.xl * 2,
+    },
+    correctionsWrapper: {
+        width: '100%',
+        backgroundColor: 'rgba(255, 90, 95, 0.1)',
+        borderRadius: 24,
+        padding: spacing.lg,
+        marginBottom: spacing.xl,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 90, 95, 0.3)',
+    },
+    correctionsTitle: {
+        fontFamily: 'Poppins_700Bold',
+        color: colors.coral,
+        fontSize: 14,
+        letterSpacing: 2,
+        marginBottom: spacing.md,
+        textAlign: 'center',
+    },
+    correctionItem: {
+        alignItems: 'center',
+        marginVertical: spacing.xs,
+    },
+    correctionPair: {
+        fontFamily: 'Poppins_500Medium',
+        color: colors.sand,
+        fontSize: 14,
+        opacity: 0.8,
+    },
+    correctionExpected: {
+        fontFamily: 'Poppins_700Bold',
+        color: colors.success,
+        fontSize: 16,
+        marginTop: 2,
     },
     cardContainer: {
         width: '100%',
