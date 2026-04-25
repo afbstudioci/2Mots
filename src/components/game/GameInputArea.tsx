@@ -1,9 +1,13 @@
 //src/components/game/GameInputArea.tsx
-import React from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Keyboard } from 'react-native';
+import React, { useState, useImperativeHandle, useRef } from 'react';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Keyboard, Animated } from 'react-native';
 import { colors, typography, borderRadius, shadows, spacing } from '../../theme/theme';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+
+export interface GameInputAreaRef {
+    triggerShake: () => void;
+}
 
 interface GameInputAreaProps {
     answer: string;
@@ -13,13 +17,30 @@ interface GameInputAreaProps {
     clue: string;
     onHintPress: () => void;
     isAnimating: boolean;
+    actionRef?: React.Ref<GameInputAreaRef>;
 }
 
 export default function GameInputArea({ 
-    answer, setAnswer, submitAnswer, expectedType, clue, onHintPress, isAnimating
+    answer, setAnswer, submitAnswer, expectedType, clue, onHintPress, isAnimating, actionRef
 }: GameInputAreaProps) {
     
-    const [hintUsed, setHintUsed] = React.useState(false);
+    const [hintUsed, setHintUsed] = useState(false);
+    const [isError, setIsError] = useState(false);
+    const shakeAnim = useRef(new Animated.Value(0)).current;
+
+    useImperativeHandle(actionRef, () => ({
+        triggerShake: () => {
+            setIsError(true);
+            Animated.sequence([
+                Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
+                Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
+                Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
+                Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true })
+            ]).start(() => {
+                setTimeout(() => setIsError(false), 500);
+            });
+        }
+    }));
 
     const handleHint = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -28,7 +49,6 @@ export default function GameInputArea({
     };
 
     const handleSubmission = () => {
-        // Sécurité : on masque le clavier et on lance la vérification
         Keyboard.dismiss();
         submitAnswer();
     };
@@ -52,7 +72,13 @@ export default function GameInputArea({
                 </View>
             ) : null}
 
-            <View style={styles.inputWrapper}>
+            <Animated.View 
+                style={[
+                    styles.inputWrapper, 
+                    { transform: [{ translateX: shakeAnim }] },
+                    isError && styles.inputWrapperError
+                ]}
+            >
                 <TextInput
                     style={styles.input}
                     value={answer}
@@ -66,14 +92,22 @@ export default function GameInputArea({
                 />
                 
                 <TouchableOpacity 
-                    style={[styles.sendButton, isAnimating && styles.sendButtonDisabled]} 
+                    style={[
+                        styles.sendButton, 
+                        isAnimating && styles.sendButtonDisabled,
+                        isError && { backgroundColor: colors.coral }
+                    ]} 
                     onPress={handleSubmission} 
                     activeOpacity={0.8} 
                     disabled={isAnimating}
                 >
-                    <Ionicons name="arrow-forward" size={24} color={colors.white} />
+                    <Ionicons 
+                        name={isError ? "close" : "arrow-forward"} 
+                        size={24} 
+                        color={colors.white} 
+                    />
                 </TouchableOpacity>
-            </View>
+            </Animated.View>
 
             <TouchableOpacity style={styles.hintCard} onPress={handleHint} activeOpacity={0.7} disabled={isAnimating}>
                 <Ionicons name="bulb" size={22} color={colors.coral} />
@@ -116,6 +150,11 @@ const styles = StyleSheet.create({
         paddingRight: spacing.xs,
         height: 60,
         ...shadows.float(),
+        borderWidth: 2,
+        borderColor: 'transparent',
+    },
+    inputWrapperError: {
+        borderColor: colors.coral,
     },
     input: {
         flex: 1,

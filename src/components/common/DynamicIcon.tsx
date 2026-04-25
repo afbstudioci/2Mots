@@ -1,36 +1,88 @@
+//src/components/common/DynamicIcon.tsx
 import React from 'react';
+import { View, Text, ViewStyle, TextStyle, StyleSheet } from 'react-native';
 import { AntDesign, Feather, FontAwesome5, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import { colors } from '../../theme/theme';
+
+const ICON_FAMILIES: Record<string, any> = {
+    Ionicons,
+    FontAwesome5,
+    MaterialIcons,
+    MaterialCommunityIcons,
+    Feather,
+    AntDesign
+};
 
 interface DynamicIconProps {
-    iconString: string; // Format "Famille:NomIcone" ex: "MaterialCommunityIcons:food-apple"
+    iconString?: string;
     size?: number;
     color?: string;
+    style?: ViewStyle | TextStyle;
 }
 
-export default function DynamicIcon({ iconString, size = 24, color = '#000' }: DynamicIconProps) {
-    if (!iconString || !iconString.includes(':')) {
-        return <Ionicons name="help-circle-outline" size={size} color={color} />;
+export default function DynamicIcon({ 
+    iconString, 
+    size = 24, 
+    color = colors.white, 
+    style 
+}: DynamicIconProps) {
+    
+    const FallbackIcon = () => (
+        <Ionicons name="help-circle-outline" size={size} color={color} style={style as any} />
+    );
+
+    if (!iconString) return <FallbackIcon />;
+
+    if (iconString.includes(':') || iconString.includes('/')) {
+        const separator = iconString.includes(':') ? ':' : '/';
+        const parts = iconString.split(separator);
+        
+        if (parts.length !== 2) return <FallbackIcon />;
+
+        const familyName = parts[0];
+        const iconName = parts[1];
+        const IconComponent = ICON_FAMILIES[familyName];
+
+        if (!IconComponent) return <FallbackIcon />;
+
+        const isValidIcon = IconComponent.glyphMap && IconComponent.glyphMap[iconName] !== undefined;
+
+        if (!isValidIcon) return <FallbackIcon />;
+
+        return <IconComponent name={iconName} size={size} color={color} style={style as any} />;
     }
 
-    const [family, name] = iconString.split(':');
+    // Le conteneur s'adapte dynamiquement pour toujours parfaitement encadrer l'emoji
+    const containerSize = size * 1.4;
 
-    // Le 'as any' est obligatoire ici car TypeScript ne peut pas valider 
-    // une chaîne dynamique contre les milliers de noms d'icones possibles.
-    // Notre backend garantit que le nom est correct grâce au dictionnaire.
-    switch (family) {
-        case 'AntDesign':
-            return <AntDesign name={name as any} size={size} color={color} />;
-        case 'Feather':
-            return <Feather name={name as any} size={size} color={color} />;
-        case 'FontAwesome5':
-            return <FontAwesome5 name={name as any} size={size} color={color} />;
-        case 'Ionicons':
-            return <Ionicons name={name as any} size={size} color={color} />;
-        case 'MaterialCommunityIcons':
-            return <MaterialCommunityIcons name={name as any} size={size} color={color} />;
-        case 'MaterialIcons':
-            return <MaterialIcons name={name as any} size={size} color={color} />;
-        default:
-            return <Ionicons name="help-circle-outline" size={size} color={color} />;
-    }
+    return (
+        <View style={[
+            styles.glassContainer, 
+            { 
+                width: containerSize, 
+                height: containerSize, 
+                borderRadius: containerSize / 3 
+            },
+            style as ViewStyle
+        ]}>
+            <Text style={{ fontSize: size, includeFontPadding: false, textAlign: 'center' }}>
+                {iconString}
+            </Text>
+        </View>
+    );
 }
+
+const styles = StyleSheet.create({
+    glassContainer: {
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.25)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: 'rgba(255, 255, 255, 0.5)',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.2,
+        shadowRadius: 15,
+        elevation: 8,
+    }
+});
