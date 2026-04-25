@@ -16,7 +16,6 @@ export default function GameOverScreen({ route, navigation }: { route: any, navi
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }, []);
 
-    // Vérification intelligente pour le singulier ou le pluriel
     const correctionTitle = corrections && corrections.length > 1 ? "RÉPONSES ATTENDUES" : "RÉPONSE ATTENDUE";
 
     return (
@@ -27,7 +26,6 @@ export default function GameOverScreen({ route, navigation }: { route: any, navi
                     <Text style={styles.scoreLabel}>SCORE FINAL</Text>
                     <Text style={styles.scoreValue}>{score}</Text>
 
-                    {/* Bloc conditionnel des corrections s'il y a eu des erreurs */}
                     {corrections && corrections.length > 0 && (
                         <View style={styles.correctionsWrapper}>
                             <Text style={styles.correctionsTitle}>{correctionTitle}</Text>
@@ -76,9 +74,17 @@ export default function GameOverScreen({ route, navigation }: { route: any, navi
                     <TouchableOpacity 
                         style={styles.replayButton} 
                         activeOpacity={0.8}
-                        onPress={() => navigation.replace('Home')}
+                        onPress={() => navigation.replace('Game')}
                     >
                         <Text style={styles.replayText}>REJOUER</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
+                        style={styles.homeButton} 
+                        activeOpacity={0.6}
+                        onPress={() => navigation.replace('Home')}
+                    >
+                        <Text style={styles.homeText}>RETOUR À L'ACCUEIL</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -190,6 +196,7 @@ const styles = StyleSheet.create({
         paddingVertical: spacing.xl,
         paddingBottom: spacing.xl * 2,
         alignItems: 'center',
+        gap: spacing.md,
     },
     replayButton: {
         backgroundColor: colors.coral,
@@ -204,4 +211,17 @@ const styles = StyleSheet.create({
         fontSize: 18,
         letterSpacing: 2,
     },
+    homeButton: {
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.xl,
+        width: '100%',
+        alignItems: 'center',
+    },
+    homeText: {
+        ...typography.buttonPrimary,
+        color: colors.sand,
+        fontSize: 14,
+        letterSpacing: 1,
+        opacity: 0.7,
+    }
 });

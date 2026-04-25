@@ -1,5 +1,6 @@
+//src/components/game/GameTimer.tsx
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Text } from 'react-native';
+import { View, StyleSheet, Animated } from 'react-native';
 import { colors, spacing, borderRadius, typography } from '../../theme/theme';
 import * as Haptics from 'expo-haptics';
 import TimeGainIndicator from './TimeGainIndicator';
@@ -13,13 +14,7 @@ interface GameTimerProps {
 
 export default function GameTimer({ timeLeft, maxTime, timeWon, onTimeGainAnimationEnd }: GameTimerProps) {
     const progress = timeLeft / maxTime;
-    const hasVibratedDanger = useRef(false);
-
-    useEffect(() => {
-        if (timeLeft > 5) {
-            hasVibratedDanger.current = false;
-        }
-    }, [timeLeft]);
+    const pulseAnim = useRef(new Animated.Value(1)).current;
 
     const getTimerColor = () => {
         if (progress > 0.5) return colors.mint;
@@ -28,11 +23,25 @@ export default function GameTimer({ timeLeft, maxTime, timeWon, onTimeGainAnimat
     };
 
     useEffect(() => {
-        if (timeLeft <= 5 && timeLeft > 0 && !hasVibratedDanger.current) {
+        if (timeLeft <= 5 && timeLeft > 0) {
+            // L'impact lourd se déclenche à chaque seconde sous les 5s
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-            hasVibratedDanger.current = true;
+
+            // Animation de battement de coeur sur le texte
+            Animated.sequence([
+                Animated.timing(pulseAnim, {
+                    toValue: 1.3,
+                    duration: 150,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(pulseAnim, {
+                    toValue: 1,
+                    duration: 150,
+                    useNativeDriver: true,
+                })
+            ]).start();
         }
-    }, [timeLeft]);
+    }, [timeLeft, pulseAnim]);
 
     return (
         <View style={styles.wrapper}>
@@ -43,9 +52,17 @@ export default function GameTimer({ timeLeft, maxTime, timeWon, onTimeGainAnimat
                 }]} />
                 <TimeGainIndicator timeWon={timeWon} onAnimationEnd={onTimeGainAnimationEnd} />
             </View>
-            <Text style={[styles.timeText, { color: getTimerColor() }]}>
+            <Animated.Text 
+                style={[
+                    styles.timeText, 
+                    { 
+                        color: getTimerColor(),
+                        transform: [{ scale: pulseAnim }]
+                    }
+                ]}
+            >
                 {timeLeft}s
-            </Text>
+            </Animated.Text>
         </View>
     );
 }
@@ -61,7 +78,7 @@ const styles = StyleSheet.create({
         height: 10,
         borderRadius: borderRadius.xl,
         backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        overflow: 'visible', // Pour voir l'animation sortir de la barre
+        overflow: 'visible',
     },
     bar: {
         height: '100%',
