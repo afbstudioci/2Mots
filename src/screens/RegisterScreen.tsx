@@ -1,199 +1,210 @@
-import React, { useState, useRef, useEffect } from 'react';
+//src/screens/RegisterScreen.tsx
+import React, { useState } from 'react';
 import {
-    View, Text, StyleSheet, TouchableOpacity,
-    KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ScrollView
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  ActivityIndicator,
+  Dimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { typography, colors, spacing, borderRadius } from '../theme/theme';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { RootStackParamList } from '../../App';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import CustomInput from '../components/common/CustomInput';
+import ScreenWrapper from '../components/layout/ScreenWrapper';
+import CustomAlert from '../components/common/CustomAlert';
 import PasswordValidator from '../components/auth/PasswordValidator';
-import ServerWakeUpLoader from '../components/auth/ServerWakeUpLoader';
+import AuthInput from '../components/auth/AuthInput';
 
-type RegisterScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Register'>;
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-export default function RegisterScreen({ navigation }: { navigation: RegisterScreenNavigationProp }) {
-    const [loginIdentifier, setLoginIdentifier] = useState('');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
-    const [errorMessage, setErrorMessage] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    
-    const { register } = useAuth();
-    const { themeColors } = useTheme();
+const RegisterScreen = ({ navigation }: any) => {
+  const [loginState, setLoginState] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [alert, setAlert] = useState<{ visible: boolean; title: string; message: string; type: 'success' | 'error' }>({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'error',
+  });
 
-    const scrollViewRef = useRef<ScrollView>(null);
+  const { register } = useAuth();
+  const { themeColors } = useTheme();
 
-    useEffect(() => {
-        const keyboardEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-        const keyboardSubscription = Keyboard.addListener(keyboardEvent, () => {
-            setTimeout(() => {
-                scrollViewRef.current?.scrollToEnd({ animated: true });
-            }, 100);
-        });
+  const handleRegister = async () => {
+    if (!loginState || !email || !password) {
+      setAlert({
+        visible: true,
+        title: 'Champs incomplets',
+        message: 'Veuillez remplir tous les champs pour créer votre compte.',
+        type: 'error',
+      });
+      return;
+    }
 
-        return () => {
-            keyboardSubscription.remove();
-        };
-    }, []);
+    setLoading(true);
+    try {
+      await register({ login: loginState, email, password });
+    } catch (err: any) {
+      setAlert({
+        visible: true,
+        title: 'Erreur d\'inscription',
+        message: err.message || 'Une erreur est survenue lors de la création du compte.',
+        type: 'error',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const handleRegister = async () => {
-        setErrorMessage('');
-        
-        if (!loginIdentifier || !email || !password) {
-            setErrorMessage('Veuillez remplir tous les champs');
-            return;
-        }
+  return (
+    <ScreenWrapper>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.flex}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          bounces={false}
+        >
+          <View style={styles.mainContainer}>
+            <View style={styles.header}>
+              <Text style={[styles.title, { color: themeColors.text }]}>Créer un compte</Text>
+              <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+                Rejoignez la communauté et défiez votre logique.
+              </Text>
+            </View>
 
-        setIsSubmitting(true);
-        Keyboard.dismiss();
+            <View style={styles.form}>
+              <AuthInput
+                label="Pseudo"
+                placeholder="Comment doit-on vous appeler ?"
+                value={loginState}
+                onChangeText={setLoginState}
+                autoCapitalize="none"
+              />
 
-        try {
-            await register({ login: loginIdentifier, email, password });
-        } catch (error: any) {
-            setErrorMessage(error.message || "Erreur lors de l'inscription");
-            setIsSubmitting(false);
-        }
-    };
+              <AuthInput
+                label="Adresse Email"
+                placeholder="votre@email.com"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
 
-    return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }} edges={['top', 'bottom']}>
-            <KeyboardAvoidingView
-                style={[styles.container, { backgroundColor: themeColors.background }]}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            >
-                {isSubmitting && <ServerWakeUpLoader />}
+              <AuthInput
+                label="Mot de passe"
+                placeholder="Choisissez un mot de passe robuste"
+                value={password}
+                onChangeText={setPassword}
+                isPassword
+              />
 
-                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                    <ScrollView
-                        ref={scrollViewRef}
-                        contentContainerStyle={styles.scrollContent}
-                        keyboardShouldPersistTaps="handled"
-                        showsVerticalScrollIndicator={false}
-                    >
-                        <Text style={[styles.title, { color: themeColors.primary }]}>INSCRIPTION</Text>
-                        <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>Rejoignez l'aventure 2Mots</Text>
+              <View style={styles.validatorContainer}>
+                <PasswordValidator password={password} />
+              </View>
 
-                        {errorMessage ? (
-                            <View style={styles.errorBox}>
-                                <Text style={styles.errorText}>{errorMessage}</Text>
-                            </View>
-                        ) : null}
+              <TouchableOpacity
+                style={[styles.registerButton, { backgroundColor: themeColors.primary }]}
+                onPress={handleRegister}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.registerButtonText}>S'inscrire</Text>
+                )}
+              </TouchableOpacity>
 
-                        <View style={styles.inputContainer}>
-                            <CustomInput
-                                value={loginIdentifier}
-                                onChangeText={setLoginIdentifier}
-                                placeholder="Pseudo"
-                                autoCapitalize="none"
-                            />
-                            <CustomInput
-                                value={email}
-                                onChangeText={setEmail}
-                                placeholder="Email"
-                                autoCapitalize="none"
-                                keyboardType="email-address"
-                            />
-                            <CustomInput
-                                value={password}
-                                onChangeText={setPassword}
-                                placeholder="Mot de passe"
-                                secureTextEntry={!showPassword}
-                                iconName={showPassword ? 'eye-outline' : 'eye-off-outline'}
-                                onIconPress={() => setShowPassword(!showPassword)}
-                            />
+              <TouchableOpacity 
+                style={styles.loginLink}
+                onPress={() => navigation.navigate('Login')}
+              >
+                <Text style={[styles.loginLinkText, { color: themeColors.textSecondary }]}>
+                  Déjà un compte ? <Text style={{ color: themeColors.primary, fontWeight: 'bold' }}>Se connecter</Text>
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
-                            <PasswordValidator password={password} />
-                        </View>
-
-                        <TouchableOpacity
-                            style={[styles.button, isSubmitting && styles.buttonDisabled]}
-                            onPress={handleRegister}
-                            disabled={isSubmitting}
-                            activeOpacity={0.8}
-                        >
-                            <Text style={styles.buttonText}>S'INSCRIRE</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={styles.loginLink}
-                            onPress={() => navigation.navigate('Login')}
-                            activeOpacity={0.7}
-                        >
-                            <Text style={[styles.loginLinkText, { color: themeColors.textSecondary }]}>
-                                Déjà un compte ? <Text style={styles.loginLinkHighlight}>Se connecter</Text>
-                            </Text>
-                        </TouchableOpacity>
-                    </ScrollView>
-                </TouchableWithoutFeedback>
-            </KeyboardAvoidingView>
-        </SafeAreaView>
-    );
-}
+      <CustomAlert
+        visible={alert.visible}
+        title={alert.title}
+        message={alert.message}
+        type={alert.type}
+        onClose={() => setAlert({ ...alert, visible: false })}
+      />
+    </ScreenWrapper>
+  );
+};
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    scrollContent: {
-        flexGrow: 1,
-        justifyContent: 'center',
-        paddingHorizontal: spacing.xl,
-        paddingBottom: spacing.xl * 2,
-    },
-    title: {
-        ...typography.titleLarge,
-        marginBottom: spacing.xs,
-    },
-    subtitle: {
-        fontFamily: 'Poppins_400Regular',
-        marginBottom: spacing.xl * 2,
-    },
-    errorBox: {
-        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-        padding: spacing.md,
-        borderRadius: borderRadius.md,
-        borderWidth: 1,
-        borderColor: colors.error,
-        marginBottom: spacing.md,
-    },
-    errorText: {
-        fontFamily: 'Poppins_500Medium',
-        color: colors.error,
-        fontSize: 14,
-        textAlign: 'center',
-    },
-    inputContainer: {
-        marginBottom: spacing.xs,
-    },
-    button: {
-        backgroundColor: colors.coral,
-        paddingVertical: spacing.md,
-        borderRadius: borderRadius.xl,
-        alignItems: 'center',
-        marginTop: spacing.lg,
-    },
-    buttonDisabled: {
-        opacity: 0.6,
-    },
-    buttonText: {
-        ...typography.buttonPrimary,
-        letterSpacing: 1,
-    },
-    loginLink: {
-        marginTop: spacing.lg,
-        alignItems: 'center',
-    },
-    loginLinkText: {
-        fontFamily: 'Poppins_400Regular',
-        fontSize: 14,
-    },
-    loginLinkHighlight: {
-        color: colors.coral,
-        fontFamily: 'Poppins_700Bold',
-    },
+  flex: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  mainContainer: {
+    flex: 1,
+    minHeight: SCREEN_HEIGHT * 0.85,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 32,
+  },
+  header: {
+    marginBottom: 40,
+  },
+  title: {
+    fontSize: 34,
+    fontWeight: 'bold',
+    letterSpacing: -1,
+  },
+  subtitle: {
+    fontSize: 16,
+    marginTop: 8,
+    lineHeight: 22,
+  },
+  form: {
+    width: '100%',
+  },
+  validatorContainer: {
+    marginBottom: 20,
+    marginTop: -8,
+  },
+  registerButton: {
+    height: 60,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  registerButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  loginLink: {
+    marginTop: 32,
+    alignItems: 'center',
+    paddingBottom: 30, // Espace de sécurité pour le scroll final
+  },
+  loginLinkText: {
+    fontSize: 15,
+  },
 });
+
+export default RegisterScreen;

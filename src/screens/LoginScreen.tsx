@@ -1,205 +1,203 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-    View, Text, StyleSheet, TouchableOpacity, 
-    KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ScrollView 
+//src/screens/LoginScreen.tsx
+import React, { useState } from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  ActivityIndicator,
+  Dimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { typography, colors, spacing, borderRadius } from '../theme/theme';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { RootStackParamList } from '../../App';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import CustomInput from '../components/common/CustomInput';
-import ServerWakeUpLoader from '../components/auth/ServerWakeUpLoader';
+import ScreenWrapper from '../components/layout/ScreenWrapper';
+import CustomAlert from '../components/common/CustomAlert';
+import AuthInput from '../components/auth/AuthInput';
 
-type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-export default function LoginScreen({ navigation }: { navigation: LoginScreenNavigationProp }) {
-    const [loginIdentifier, setLoginIdentifier] = useState('');
-    const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
-    const [errorMessage, setErrorMessage] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    
-    const { login } = useAuth();
-    const { themeColors } = useTheme();
+const LoginScreen = ({ navigation }: any) => {
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [alert, setAlert] = useState<{ visible: boolean; title: string; message: string; type: 'success' | 'error' }>({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'error',
+  });
 
-    const scrollViewRef = useRef<ScrollView>(null);
+  const { login } = useAuth();
+  const { themeColors } = useTheme();
 
-    useEffect(() => {
-        const keyboardEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-        const keyboardSubscription = Keyboard.addListener(keyboardEvent, () => {
-            setTimeout(() => {
-                scrollViewRef.current?.scrollToEnd({ animated: true });
-            }, 100);
-        });
+  const handleLogin = async () => {
+    if (!identifier || !password) {
+      setAlert({
+        visible: true,
+        title: 'Champs requis',
+        message: 'Veuillez remplir tous les champs pour vous connecter.',
+        type: 'error',
+      });
+      return;
+    }
 
-        return () => {
-            keyboardSubscription.remove();
-        };
-    }, []);
+    setLoading(true);
+    try {
+      await login({ login: identifier, password });
+    } catch (err: any) {
+      setAlert({
+        visible: true,
+        title: 'Erreur de connexion',
+        message: err.message || 'Identifiants incorrects. Veuillez réessayer.',
+        type: 'error',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const handleLogin = async () => {
-        setErrorMessage('');
-        
-        if (!loginIdentifier || !password) {
-            setErrorMessage('Veuillez remplir tous les champs');
-            return;
-        }
+  return (
+    <ScreenWrapper>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.flex}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          bounces={false}
+        >
+          <View style={styles.mainContainer}>
+            <View style={styles.header}>
+              <Text style={[styles.logoText, { color: themeColors.primary }]}>2MOTS</Text>
+              <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+                Le jeu de réflexion où chaque lien compte.
+              </Text>
+            </View>
 
-        setIsSubmitting(true);
-        Keyboard.dismiss();
+            <View style={styles.form}>
+              <Text style={[styles.formTitle, { color: themeColors.text }]}>Connexion</Text>
+              
+              <AuthInput
+                label="Email ou Pseudo"
+                placeholder="Entrez votre identifiant"
+                value={identifier}
+                onChangeText={setIdentifier}
+                autoCapitalize="none"
+              />
 
-        try {
-            await login({ login: loginIdentifier, password });
-        } catch (error: any) {
-            setErrorMessage(error.message || 'Identifiants incorrects');
-            setIsSubmitting(false);
-        }
-    };
+              <AuthInput
+                label="Mot de passe"
+                placeholder="Entrez votre mot de passe"
+                value={password}
+                onChangeText={setPassword}
+                isPassword
+              />
 
-    return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }} edges={['top', 'bottom']}>
-            <KeyboardAvoidingView 
-                style={[styles.container, { backgroundColor: themeColors.background }]} 
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            >
-                {isSubmitting && <ServerWakeUpLoader />}
+              <TouchableOpacity
+                style={[styles.loginButton, { backgroundColor: themeColors.primary }]}
+                onPress={handleLogin}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.loginButtonText}>Se connecter</Text>
+                )}
+              </TouchableOpacity>
 
-                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                    <ScrollView 
-                        ref={scrollViewRef}
-                        contentContainerStyle={styles.scrollContent}
-                        keyboardShouldPersistTaps="handled"
-                        showsVerticalScrollIndicator={false}
-                    >
-                        <Text style={[styles.title, { color: themeColors.primary }]}>CONNEXION</Text>
-                        <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>Heureux de vous revoir</Text>
+              <TouchableOpacity 
+                style={styles.registerLink}
+                onPress={() => navigation.navigate('Register')}
+              >
+                <Text style={[styles.registerText, { color: themeColors.textSecondary }]}>
+                  Pas encore de compte ? <Text style={{ color: themeColors.primary, fontWeight: 'bold' }}>S'inscrire</Text>
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
-                        {errorMessage ? (
-                            <View style={styles.errorBox}>
-                                <Text style={styles.errorText}>{errorMessage}</Text>
-                            </View>
-                        ) : null}
-
-                        <View style={styles.inputContainer}>
-                            <CustomInput
-                                value={loginIdentifier}
-                                onChangeText={setLoginIdentifier}
-                                placeholder="Pseudo ou Email"
-                                autoCapitalize="none"
-                                keyboardType="email-address"
-                            />
-                            <CustomInput
-                                value={password}
-                                onChangeText={setPassword}
-                                placeholder="Mot de passe"
-                                secureTextEntry={!showPassword}
-                                iconName={showPassword ? 'eye-outline' : 'eye-off-outline'}
-                                onIconPress={() => setShowPassword(!showPassword)}
-                            />
-                        </View>
-
-                        <TouchableOpacity 
-                            style={styles.forgotPasswordLink}
-                            onPress={() => {}}
-                            activeOpacity={0.7}
-                        >
-                            <Text style={[styles.forgotPasswordText, { color: themeColors.textSecondary }]}>Mot de passe oublié ?</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity 
-                            style={[styles.button, isSubmitting && styles.buttonDisabled]} 
-                            onPress={handleLogin}
-                            disabled={isSubmitting}
-                            activeOpacity={0.8}
-                        >
-                            <Text style={styles.buttonText}>SE CONNECTER</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity 
-                            style={styles.registerLink} 
-                            onPress={() => navigation.navigate('Register')}
-                            activeOpacity={0.7}
-                        >
-                            <Text style={[styles.registerLinkText, { color: themeColors.textSecondary }]}>
-                                Nouveau ici ? <Text style={styles.registerLinkHighlight}>Créer un compte</Text>
-                            </Text>
-                        </TouchableOpacity>
-                    </ScrollView>
-                </TouchableWithoutFeedback>
-            </KeyboardAvoidingView>
-        </SafeAreaView>
-    );
-}
+      <CustomAlert
+        visible={alert.visible}
+        title={alert.title}
+        message={alert.message}
+        type={alert.type}
+        onClose={() => setAlert({ ...alert, visible: false })}
+      />
+    </ScreenWrapper>
+  );
+};
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    scrollContent: {
-        flexGrow: 1,
-        justifyContent: 'center',
-        paddingHorizontal: spacing.xl,
-        paddingBottom: spacing.xl * 2,
-    },
-    title: {
-        ...typography.titleLarge,
-        marginBottom: spacing.xs,
-    },
-    subtitle: {
-        fontFamily: 'Poppins_400Regular',
-        marginBottom: spacing.xl * 2,
-    },
-    errorBox: {
-        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-        padding: spacing.md,
-        borderRadius: borderRadius.md,
-        borderWidth: 1,
-        borderColor: colors.error,
-        marginBottom: spacing.md,
-    },
-    errorText: {
-        fontFamily: 'Poppins_500Medium',
-        color: colors.error,
-        fontSize: 14,
-        textAlign: 'center',
-    },
-    inputContainer: {
-        marginBottom: spacing.xs,
-    },
-    forgotPasswordLink: {
-        alignSelf: 'flex-end',
-        marginBottom: spacing.lg,
-    },
-    forgotPasswordText: {
-        fontFamily: 'Poppins_400Regular',
-        fontSize: 14,
-    },
-    button: {
-        backgroundColor: colors.coral,
-        paddingVertical: spacing.md,
-        borderRadius: borderRadius.xl,
-        alignItems: 'center',
-        marginTop: spacing.sm,
-    },
-    buttonDisabled: {
-        opacity: 0.6,
-    },
-    buttonText: {
-        ...typography.buttonPrimary,
-        letterSpacing: 1,
-    },
-    registerLink: {
-        marginTop: spacing.lg,
-        alignItems: 'center',
-    },
-    registerLinkText: {
-        fontFamily: 'Poppins_400Regular',
-        fontSize: 14,
-    },
-    registerLinkHighlight: {
-        color: colors.coral,
-        fontFamily: 'Poppins_700Bold',
-    },
+  flex: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  mainContainer: {
+    flex: 1,
+    minHeight: SCREEN_HEIGHT * 0.8,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 40,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 48,
+  },
+  logoText: {
+    fontSize: 56,
+    fontWeight: '900',
+    letterSpacing: -2,
+  },
+  subtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 22,
+    maxWidth: '85%',
+  },
+  form: {
+    width: '100%',
+  },
+  formTitle: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    marginBottom: 24,
+  },
+  loginButton: {
+    height: 60,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  loginButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  registerLink: {
+    marginTop: 32,
+    alignItems: 'center',
+    paddingBottom: 20, // Espace pour ne pas coller au clavier
+  },
+  registerText: {
+    fontSize: 15,
+  },
 });
+
+export default LoginScreen;
