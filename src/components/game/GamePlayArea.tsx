@@ -1,53 +1,76 @@
 //src/components/game/GamePlayArea.tsx
 import React from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
-import { typography, colors, spacing, borderRadius } from '../../theme/theme';
+import { colors, typography, spacing } from '../../theme/theme';
+import { Ionicons } from '@expo/vector-icons';
 
 interface GamePlayAreaProps {
     timeLeft: number;
     currentPair: any;
-    slideWordsAnim: Animated.Value | Animated.AnimatedInterpolation<number>;
+    slideWordsAnim: Animated.Value;
 }
 
-export default function GamePlayArea({ timeLeft, currentPair, slideWordsAnim }: GamePlayAreaProps) {
-    if (!currentPair) return null;
+export default function GamePlayArea({ currentPair, slideWordsAnim }: GamePlayAreaProps) {
+    // Sécurisation des données si l'API renvoie des noms de champs légèrement différents
+    const word1 = currentPair?.word1 || currentPair?.firstWord || "";
+    const word2 = currentPair?.word2 || currentPair?.secondWord || "";
 
     return (
-        <View style={styles.gameArea}>
-            <Text style={[styles.timerText, timeLeft <= 5 && styles.timerTextDanger]}>
-                {Math.max(0, timeLeft)}s
-            </Text>
-            
-            <Animated.View style={[styles.wordsBox, { transform: [{ translateX: slideWordsAnim }] }]}>
-                <View style={styles.singleWord}>
-                    <Text style={styles.wordTitle}>{currentPair.word1}</Text>
-                </View>
-                <View style={styles.plusContainer}>
-                    <Text style={styles.plusSign}>+</Text>
-                </View>
-                <View style={styles.singleWord}>
-                    <Text style={styles.wordTitle}>{currentPair.word2}</Text>
-                </View>
-            </Animated.View>
-        </View>
+        <Animated.View style={[styles.container, { transform: [{ translateX: slideWordsAnim }] }]}>
+            {/* Premier mot */}
+            <View style={styles.wordRow}>
+                <Ionicons name="leaf-outline" size={32} color={colors.nightBlue} style={styles.icon} />
+                <Text style={styles.wordText} numberOfLines={1} adjustsFontSizeToFit>
+                    {word1}
+                </Text>
+            </View>
+
+            {/* Symbole de liaison */}
+            <View style={styles.linkContainer}>
+                <Text style={styles.linkSymbol}>+</Text>
+            </View>
+
+            {/* Deuxième mot */}
+            <View style={styles.wordRow}>
+                <Ionicons name="nutrition-outline" size={32} color={colors.nightBlue} style={styles.icon} />
+                <Text style={styles.wordText} numberOfLines={1} adjustsFontSizeToFit>
+                    {word2}
+                </Text>
+            </View>
+        </Animated.View>
     );
 }
 
 const styles = StyleSheet.create({
-    gameArea: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl },
-    timerText: { ...typography.titleLarge, color: colors.sand, opacity: 0.6, marginBottom: spacing.xl },
-    timerTextDanger: { color: colors.error, opacity: 1 },
-    wordsBox: {
-        width: '100%', alignItems: 'center', justifyContent: 'center',
+    container: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: spacing.xl,
     },
-    singleWord: { 
-        width: '100%', alignItems: 'center', paddingVertical: spacing.lg,
-        backgroundColor: 'rgba(244, 238, 224, 0.03)', borderRadius: borderRadius.xl,
+    wordRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
-    wordTitle: { fontFamily: 'Poppins_800ExtraBold', fontSize: 28, color: colors.sand, textTransform: 'uppercase', letterSpacing: 1 },
-    plusContainer: {
-        backgroundColor: colors.white, padding: spacing.sm, borderRadius: borderRadius.xl,
-        marginTop: -spacing.md, marginBottom: -spacing.md, zIndex: 10
+    icon: {
+        marginRight: spacing.sm,
+        opacity: 0.8,
     },
-    plusSign: { fontFamily: 'Poppins_700Bold', fontSize: 24, color: colors.coral },
+    wordText: {
+        ...typography.titleHuge,
+        color: colors.nightBlue,
+        textTransform: 'capitalize',
+        lineHeight: 50, // Permet de bien tasser les mots l'un sur l'autre
+    },
+    linkContainer: {
+        marginVertical: spacing.md,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    linkSymbol: {
+        ...typography.titleLarge,
+        color: colors.coral,
+        fontSize: 36,
+    }
 });

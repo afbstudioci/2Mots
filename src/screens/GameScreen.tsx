@@ -166,6 +166,12 @@ export default function GameScreen({ navigation }: { navigation: GameScreenNavig
 
     const currentPair = wordPairs[currentIndex];
 
+    // Calcul de la couleur de la jauge (Vert au début, Corail sur la fin)
+    const timerColor = progressAnim.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [colors.coral, colors.coral, colors.success]
+    });
+
     return (
         <ScreenWrapper>
             <KeyboardAvoidingView 
@@ -173,17 +179,6 @@ export default function GameScreen({ navigation }: { navigation: GameScreenNavig
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             >
                 <GameHeader currentIndex={currentIndex} totalWords={wordPairs.length} />
-
-                <View style={styles.timerContainer}>
-                    <View style={styles.timerTrack} />
-                    <Animated.View style={[styles.timerBar, {
-                        width: progressAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: ['0%', '100%']
-                        }) as any,
-                        backgroundColor: timeLeft > 10 ? colors.coral : colors.error
-                    }]} />
-                </View>
 
                 <GamePlayArea 
                     timeLeft={timeLeft} 
@@ -199,14 +194,44 @@ export default function GameScreen({ navigation }: { navigation: GameScreenNavig
                     isAnimating={isAnimating} 
                     morphInputAnim={morphInputAnim} 
                 />
+
+                {/* La jauge est désormais fixée en bas */}
+                <View style={styles.timerContainer}>
+                    <View style={styles.timerTrack} />
+                    <Animated.View style={[styles.timerBar, {
+                        width: progressAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: ['0%', '100%']
+                        }) as any,
+                        backgroundColor: timerColor
+                    }]} />
+                </View>
             </KeyboardAvoidingView>
         </ScreenWrapper>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1 },
-    timerContainer: { height: 4, width: '100%', position: 'relative' },
-    timerTrack: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.sand, opacity: 0.1 },
-    timerBar: { height: '100%', position: 'absolute', top: 0, left: 0 },
+    container: { 
+        flex: 1,
+        backgroundColor: colors.sand,
+    },
+    timerContainer: { 
+        height: 6, 
+        width: '100%', 
+        position: 'relative',
+        marginBottom: Platform.OS === 'ios' ? 20 : 0, // Dégagement de sécurité en bas
+    },
+    timerTrack: { 
+        ...StyleSheet.absoluteFillObject, 
+        backgroundColor: 'rgba(26, 32, 44, 0.1)' 
+    },
+    timerBar: { 
+        height: '100%', 
+        position: 'absolute', 
+        top: 0, 
+        left: 0,
+        borderTopRightRadius: 3,
+        borderBottomRightRadius: 3,
+    },
 });

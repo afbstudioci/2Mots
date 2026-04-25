@@ -1,62 +1,76 @@
 //src/components/common/CustomInput.tsx
 import React from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet, TextInputProps } from 'react-native';
-import { colors, spacing, borderRadius, shadows } from '../../theme/theme';
+import { View, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
+import { colors, typography, borderRadius, shadows, spacing } from '../../theme/theme';
 import { Ionicons } from '@expo/vector-icons';
 
-interface CustomInputProps extends TextInputProps {
-  iconName?: keyof typeof Ionicons.glyphMap;
-  onIconPress?: () => void;
+interface CustomInputProps {
+    value: string;
+    onChangeText: (text: string) => void;
+    onSubmit: () => void;
+    onHintPress: () => void;
+    placeholder?: string;
+    disabled?: boolean;
 }
 
-export default function CustomInput({ iconName, onIconPress, style, ...props }: CustomInputProps) {
-  return (
-    <View style={styles.container}>
-      <TextInput
-        style={[styles.input, { outlineStyle: 'none' } as any, style]}
-        selectionColor={colors.coral}
-        cursorColor={colors.coral}
-        placeholderTextColor="#4A5568"
-        underlineColorAndroid="transparent" // Tue definitivement la ligne bleue Android
-        autoCorrect={false}
-        {...props}
-      />
-      {iconName && (
-        <TouchableOpacity 
-          style={styles.iconButton} 
-          onPress={onIconPress} 
-          disabled={!onIconPress}
-          activeOpacity={0.7}
-        >
-          <Ionicons name={iconName} size={22} color="#4A5568" />
-        </TouchableOpacity>
-      )}
-    </View>
-  );
+export default function CustomInput({ 
+    value, 
+    onChangeText, 
+    onSubmit, 
+    onHintPress, 
+    placeholder = "Quel est le lien ?",
+    disabled = false
+}: CustomInputProps) {
+    return (
+        <View style={styles.container}>
+            <TextInput
+                style={styles.input}
+                value={value}
+                onChangeText={onChangeText}
+                onSubmitEditing={onSubmit}
+                placeholder={placeholder}
+                placeholderTextColor="rgba(26, 32, 44, 0.4)"
+                editable={!disabled}
+                autoCorrect={false}
+                returnKeyType="done"
+            />
+            
+            <TouchableOpacity 
+                style={styles.hintButton} 
+                onPress={onHintPress}
+                activeOpacity={0.7}
+                disabled={disabled}
+            >
+                <Ionicons name="bulb" size={24} color={colors.coral} />
+            </TouchableOpacity>
+        </View>
+    );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#242B3A',
-    borderRadius: borderRadius.lg,
-    marginBottom: spacing.md,
-    ...shadows.soft,
-    width: '100%',
-  },
-  input: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    fontFamily: 'Poppins_500Medium',
-    fontSize: 16,
-    color: colors.sand,
-    minHeight: 55, // Garantit que le texte ne deborde pas
-  },
-  iconButton: {
-    padding: spacing.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+    container: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.white,
+        borderRadius: borderRadius.xl,
+        marginHorizontal: spacing.lg,
+        paddingLeft: spacing.lg,
+        paddingRight: spacing.sm,
+        height: 60,
+        ...shadows.soft(false),
+    },
+    input: {
+        flex: 1,
+        ...typography.bodyMedium,
+        color: colors.nightBlue,
+        height: '100%',
+    },
+    hintButton: {
+        width: 44,
+        height: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(255, 127, 80, 0.1)', // Corail très transparent
+        borderRadius: borderRadius.xl,
+    }
 });

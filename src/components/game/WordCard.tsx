@@ -1,97 +1,72 @@
 //src/components/game/WordCard.tsx
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
-import { colors, typography, spacing, borderRadius, shadows } from '../../theme/theme';
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { colors, typography, spacing } from '../../theme/theme';
+import { Ionicons } from '@expo/vector-icons';
 
 interface WordCardProps {
-  word1: string;
-  word2: string;
-  expectedType: string;
+    word1: string;
+    word2: string;
 }
 
-const WordCard: React.FC<WordCardProps> = ({ word1, word2, expectedType }) => {
-  const translateY = useRef(new Animated.Value(30)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
+export default function WordCard({ word1, word2 }: WordCardProps) {
+    return (
+        <View style={styles.container}>
+            {/* Premier mot */}
+            <View style={styles.wordRow}>
+                <Ionicons name="leaf-outline" size={32} color={colors.nightBlue} style={styles.icon} />
+                <Text style={styles.wordText} numberOfLines={1} adjustsFontSizeToFit>
+                    {word1}
+                </Text>
+            </View>
 
-  useEffect(() => {
-    opacity.setValue(0);
-    translateY.setValue(30);
+            {/* Symbole de liaison */}
+            <View style={styles.linkContainer}>
+                <Text style={styles.linkSymbol}>+</Text>
+            </View>
 
-    Animated.parallel([
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-      Animated.spring(translateY, {
-        toValue: 0,
-        friction: 12,
-        tension: 90,
-        useNativeDriver: true,
-      })
-    ]).start();
-  }, [word1, word2]); 
-
-  return (
-    <Animated.View style={[styles.card, { opacity, transform: [{ translateY }] }]}>
-      <View style={styles.typeContainer}>
-        <Text style={styles.typeText}>{expectedType}</Text>
-      </View>
-      <View style={styles.wordsContainer}>
-        <Text style={styles.word} numberOfLines={1} adjustsFontSizeToFit>
-          {word1.toUpperCase()}
-        </Text>
-        <View style={styles.separator} />
-        <Text style={styles.word} numberOfLines={1} adjustsFontSizeToFit>
-          {word2.toUpperCase()}
-        </Text>
-      </View>
-    </Animated.View>
-  );
-};
+            {/* Deuxième mot */}
+            <View style={styles.wordRow}>
+                <Ionicons name="nutrition-outline" size={32} color={colors.nightBlue} style={styles.icon} />
+                <Text style={styles.wordText} numberOfLines={1} adjustsFontSizeToFit>
+                    {word2}
+                </Text>
+            </View>
+        </View>
+    );
+}
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#242B3A', 
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    alignItems: 'center',
-    width: '100%',
-    ...shadows.soft,
-  },
-  typeContainer: {
-    backgroundColor: 'rgba(247, 245, 240, 0.08)',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.xl,
-    marginBottom: spacing.lg,
-  },
-  typeText: {
-    ...typography.bodyMedium,
-    color: colors.coral,
-    fontSize: 14,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  wordsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  word: {
-    ...typography.titleLarge,
-    color: colors.sand,
-    flex: 1,
-    textAlign: 'center',
-  },
-  separator: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.coral,
-    marginHorizontal: spacing.md,
-  },
+    container: {
+        width: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: spacing.xl,
+    },
+    wordRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: spacing.md,
+    },
+    icon: {
+        marginRight: spacing.sm,
+        opacity: 0.8,
+    },
+    wordText: {
+        ...typography.titleHuge,
+        color: colors.nightBlue,
+        textTransform: 'capitalize',
+        lineHeight: 50,
+    },
+    linkContainer: {
+        marginVertical: spacing.sm,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    linkSymbol: {
+        ...typography.titleLarge,
+        color: colors.coral,
+        fontSize: 36,
+    }
 });
-
-export default WordCard;
