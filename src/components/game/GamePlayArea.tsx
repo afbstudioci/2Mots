@@ -1,76 +1,72 @@
-//src/components/game/GamePlayArea.tsx
 import React from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { colors, typography, spacing } from '../../theme/theme';
-import { Ionicons } from '@expo/vector-icons';
+import DynamicIcon from '../common/DynamicIcon';
 
 interface GamePlayAreaProps {
-    timeLeft: number;
     currentPair: any;
-    slideWordsAnim: Animated.Value;
 }
 
-export default function GamePlayArea({ currentPair, slideWordsAnim }: GamePlayAreaProps) {
-    // Sécurisation des données si l'API renvoie des noms de champs légèrement différents
-    const word1 = currentPair?.word1 || currentPair?.firstWord || "";
-    const word2 = currentPair?.word2 || currentPair?.secondWord || "";
+export default function GamePlayArea({ currentPair }: GamePlayAreaProps) {
+    if (!currentPair) return null;
+
+    const word1 = (currentPair.word1 || "").toUpperCase();
+    const word2 = (currentPair.word2 || "").toUpperCase();
+    const icon1 = currentPair.icon1 || "Ionicons:help-circle-outline";
+    const icon2 = currentPair.icon2 || "Ionicons:help-circle-outline";
 
     return (
-        <Animated.View style={[styles.container, { transform: [{ translateX: slideWordsAnim }] }]}>
-            {/* Premier mot */}
-            <View style={styles.wordRow}>
-                <Ionicons name="leaf-outline" size={32} color={colors.nightBlue} style={styles.icon} />
-                <Text style={styles.wordText} numberOfLines={1} adjustsFontSizeToFit>
-                    {word1}
-                </Text>
+        <View style={styles.container}>
+            {/* Mot 1 : En haut à gauche, icône à droite */}
+            <View style={styles.wordRowLeft}>
+                <Text style={styles.wordText}>{word1}</Text>
+                <DynamicIcon iconString={icon1} size={38} color={colors.white} />
             </View>
 
-            {/* Symbole de liaison */}
+            {/* Symbole + */}
             <View style={styles.linkContainer}>
                 <Text style={styles.linkSymbol}>+</Text>
             </View>
 
-            {/* Deuxième mot */}
-            <View style={styles.wordRow}>
-                <Ionicons name="nutrition-outline" size={32} color={colors.nightBlue} style={styles.icon} />
-                <Text style={styles.wordText} numberOfLines={1} adjustsFontSizeToFit>
-                    {word2}
-                </Text>
+            {/* Mot 2 : En bas à droite, icône à gauche */}
+            <View style={styles.wordRowRight}>
+                <DynamicIcon iconString={icon2} size={38} color={colors.white} />
+                <Text style={styles.wordText}>{word2}</Text>
             </View>
-        </Animated.View>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingHorizontal: spacing.xl,
+        paddingHorizontal: spacing.lg,
     },
-    wordRow: {
+    wordRowLeft: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
+        alignSelf: 'flex-start',
     },
-    icon: {
-        marginRight: spacing.sm,
-        opacity: 0.8,
+    wordRowRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'flex-end',
     },
     wordText: {
         ...typography.titleHuge,
-        color: colors.nightBlue,
-        textTransform: 'capitalize',
-        lineHeight: 50, // Permet de bien tasser les mots l'un sur l'autre
+        color: colors.white,
+        textTransform: 'uppercase',
+        marginHorizontal: spacing.sm,
     },
     linkContainer: {
-        marginVertical: spacing.md,
         alignItems: 'center',
         justifyContent: 'center',
+        marginVertical: spacing.xs,
     },
     linkSymbol: {
         ...typography.titleLarge,
         color: colors.coral,
-        fontSize: 36,
+        fontSize: 40,
     }
 });

@@ -1,33 +1,51 @@
-//src/components/game/GameHeader.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, spacing, borderRadius } from '../../theme/theme';
+import { colors, spacing, borderRadius, typography } from '../../theme/theme';
 
 interface GameHeaderProps {
-    currentIndex: number;
-    totalWords: number;
+    level: number;
+    currentXp: number;
+    xpNeeded: number;
 }
 
-export default function GameHeader({ currentIndex, totalWords }: GameHeaderProps) {
+export default function GameHeader({ level, currentXp, xpNeeded }: GameHeaderProps) {
+    // Calcul du pourcentage de progression vers le prochain niveau
+    const progress = xpNeeded > 0 ? (currentXp / xpNeeded) * 100 : 0;
+
     return (
-        <View style={styles.header}>
-            <Text style={styles.headerText}>Étape</Text>
-            <View style={styles.badgeContainer}>
-                <Text style={styles.badgeText}>{currentIndex + 1} / {totalWords}</Text>
+        <View style={styles.container}>
+            <Text style={styles.levelText}>NIVEAU {level}</Text>
+            <View style={styles.xpTrack}>
+                <View style={[styles.xpBar, { width: `${progress}%` }]} />
             </View>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    header: {
-        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-        paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.md,
+    container: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: spacing.xl,
+        paddingTop: spacing.md, // Laisse de l'espace pour la status bar gérée par ScreenWrapper
+        paddingBottom: spacing.sm,
     },
-    headerText: { fontFamily: 'Poppins_500Medium', color: colors.sand, fontSize: 16, opacity: 0.8 },
-    badgeContainer: {
-        backgroundColor: 'rgba(255, 255, 255, 0.1)', paddingHorizontal: spacing.md,
-        paddingVertical: spacing.xs, borderRadius: borderRadius.xl
+    levelText: {
+        ...typography.titleLarge,
+        color: colors.white,
+        fontSize: 20,
     },
-    badgeText: { fontFamily: 'Poppins_700Bold', color: colors.sand, fontSize: 14 },
+    xpTrack: {
+        width: 100,
+        height: 6,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        borderRadius: borderRadius.xl,
+        overflow: 'hidden',
+    },
+    xpBar: {
+        height: '100%',
+        backgroundColor: colors.mint,
+        borderRadius: borderRadius.xl,
+    }
 });

@@ -1,71 +1,76 @@
-//src/components/game/GameTimer.tsx
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
-import { colors } from '../../theme/theme';
+import { View, StyleSheet, Text } from 'react-native';
+import { colors, spacing, borderRadius, typography } from '../../theme/theme';
+import * as Haptics from 'expo-haptics';
+import TimeGainIndicator from './TimeGainIndicator';
 
 interface GameTimerProps {
-    duration: number; // En secondes (ex: 30)
-    onTimeUp: () => void;
-    isActive: boolean;
+    timeLeft: number;
+    maxTime: number;
+    timeWon: number;
+    onTimeGainAnimationEnd: () => void;
 }
 
-export default function GameTimer({ duration, onTimeUp, isActive }: GameTimerProps) {
-    const animatedWidth = useRef(new Animated.Value(100)).current;
+export default function GameTimer({ timeLeft, maxTime, timeWon, onTimeGainAnimationEnd }: GameTimerProps) {
+    const progress = timeLeft / maxTime;
+    const hasVibratedDanger = useRef(false);
 
     useEffect(() => {
-        animatedWidth.setValue(100);
-
-        if (isActive) {
-            Animated.timing(animatedWidth, {
-                toValue: 0,
-                duration: duration * 1000,
-                useNativeDriver: false, // Obligatoire pour animer la width/backgroundColor
-            }).start(({ finished }) => {
-                if (finished) {
-                    onTimeUp();
-                }
-            });
-        } else {
-            animatedWidth.stopAnimation();
+        if (timeLeft > 5) {
+            hasVibratedDanger.current = false;
         }
-    }, [isActive, duration, animatedWidth]);
+    }, [timeLeft]);
 
-    const interpolatedColor = animatedWidth.interpolate({
-        inputRange: [0, 50, 100],
-        outputRange: [colors.coral, colors.coral, colors.success], // Devient Corail sur la seconde moitié
-    });
+    const getTimerColor = () => {
+        if (progress > 0.5) return colors.mint;
+        if (progress > 0.16) return colors.coral;
+        return colors.error;
+    };
+
+    useEffect(() => {
+        if (timeLeft <= 5 && timeLeft > 0 && !hasVibratedDanger.current) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+            hasVibratedDanger.current = true;
+        }
+    }, [timeLeft]);
 
     return (
-        <View style={styles.container}>
-            <Animated.View 
-                style={[
-                    styles.bar, 
-                    { 
-                        width: animatedWidth.interpolate({
-                            inputRange: [0, 100],
-                            outputRange: ['0%', '100%']
-                        }),
-                        backgroundColor: interpolatedColor
-                    }
-                ]} 
-            />
+        <View style={styles.wrapper}>
+            <View style={styles.container}>
+                <View style={[styles.bar, { 
+                    width: `${progress * 100}%`, 
+                    backgroundColor: getTimerColor() 
+                }]} />
+                <TimeGainIndicator timeWon={timeWon} onAnimationEnd={onTimeGainAnimationEnd} />
+            </View>
+            <Text style={[styles.timeText, { color: getTimerColor() }]}>
+                {timeLeft}s
+            </Text>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
+    wrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: spacing.md,
+    },
     container: {
-        width: '100%',
-        height: 8,
-        backgroundColor: 'rgba(26, 32, 44, 0.1)', // Bleu nuit très transparent
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        zIndex: 10,
+        flex: 1,
+        height: 10,
+        borderRadius: borderRadius.xl,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        overflow: 'visible', // Pour voir l'animation sortir de la barre
     },
     bar: {
         height: '100%',
-        borderBottomRightRadius: 4,
-        borderTopRightRadius: 4,
+        borderRadius: borderRadius.xl,
+    },
+    timeText: {
+        ...typography.titleLarge,
+        fontSize: 20,
+        marginLeft: spacing.md,
+        minWidth: 40,
     }
 });
