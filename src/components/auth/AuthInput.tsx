@@ -6,44 +6,66 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  TextInputProps,
 } from 'react-native';
-import { useTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../context/ThemeContext';
+import { borderRadius, colors } from '../../theme/theme';
 
-interface AuthInputProps extends TextInputProps {
+interface AuthInputProps {
   label: string;
-  icon?: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  placeholder?: string;
   isPassword?: boolean;
+  keyboardType?: 'default' | 'email-address' | 'numeric';
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  error?: string;
+  onFocus?: () => void;
 }
 
 const AuthInput: React.FC<AuthInputProps> = ({
   label,
-  secureTextEntry,
+  value,
+  onChangeText,
+  placeholder,
   isPassword,
-  ...props
+  keyboardType = 'default',
+  autoCapitalize = 'none',
+  error,
+  onFocus,
 }) => {
-  const { themeColors } = useTheme();
   const [showPassword, setShowPassword] = useState(false);
-
-  // Détermine si on doit masquer le texte
-  const isTextSecure = isPassword ? !showPassword : secureTextEntry;
+  const { themeColors } = useTheme();
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.label, { color: themeColors.text }]}>{label}</Text>
-      <View style={[styles.inputWrapper, { backgroundColor: themeColors.surface }]}>
+      <Text style={[styles.label, { color: themeColors.textSecondary }]}>
+        {label}
+      </Text>
+      <View
+        style={[
+          styles.inputContainer,
+          {
+            backgroundColor: themeColors.surface,
+            borderColor: error ? colors.error : themeColors.border,
+          },
+        ]}
+      >
         <TextInput
           style={[styles.input, { color: themeColors.text }]}
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
           placeholderTextColor={themeColors.textSecondary}
-          secureTextEntry={isTextSecure}
-          {...props}
+          secureTextEntry={isPassword && !showPassword}
+          keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize}
+          onFocus={onFocus}
         />
         {isPassword && (
           <TouchableOpacity
-            style={styles.eyeButton}
             onPress={() => setShowPassword(!showPassword)}
-            activeOpacity={0.7}
+            style={styles.eyeIcon}
           >
             <Ionicons
               name={showPassword ? 'eye-off-outline' : 'eye-outline'}
@@ -53,6 +75,7 @@ const AuthInput: React.FC<AuthInputProps> = ({
           </TouchableOpacity>
         )}
       </View>
+      {error && <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>}
     </View>
   );
 };
@@ -60,34 +83,33 @@ const AuthInput: React.FC<AuthInputProps> = ({
 const styles = StyleSheet.create({
   container: {
     marginBottom: 20,
-    width: '100%',
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
     marginBottom: 8,
-    marginLeft: 4,
+    fontWeight: '600',
+    marginLeft: 16,
   },
-  inputWrapper: {
+  inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 58,
-    borderRadius: 20, // Bords très arrondis
-    paddingHorizontal: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    height: 60,
+    borderWidth: 1,
+    borderRadius: borderRadius.xl,
+    paddingHorizontal: 20,
   },
   input: {
     flex: 1,
-    height: '100%',
     fontSize: 16,
+    height: '100%',
   },
-  eyeButton: {
-    padding: 8,
-    marginLeft: 8,
+  eyeIcon: {
+    padding: 4,
+  },
+  errorText: {
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 16,
   },
 });
 

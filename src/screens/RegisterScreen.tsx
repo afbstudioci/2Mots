@@ -1,5 +1,5 @@
-// src/screens/RegisterScreen.tsx
-import React, { useState, useCallback, useRef } from 'react';
+//src/screens/RegisterScreen.tsx
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -15,15 +15,17 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import CustomAlert from '../components/common/CustomAlert';
-import PasswordValidator from '../components/auth/PasswordValidator';
 import AuthInput from '../components/auth/AuthInput';
+import { borderRadius } from '../theme/theme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const RegisterScreen = ({ navigation }: any) => {
-  const [loginState, setLoginState] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+  });
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState<{
     visible: boolean;
@@ -38,21 +40,22 @@ const RegisterScreen = ({ navigation }: any) => {
   });
 
   const scrollRef = useRef<ScrollView>(null);
-
   const { register } = useAuth();
   const { themeColors } = useTheme();
 
-  const scrollToBottom = useCallback(() => {
+  const scrollToInput = () => {
     setTimeout(() => {
       scrollRef.current?.scrollToEnd({ animated: true });
-    }, 150);
-  }, []);
+    }, 100);
+  };
 
   const handleRegister = async () => {
-    if (!loginState || !email || !password) {
+    const { username, email, password } = formData;
+
+    if (!username || !email || !password) {
       setAlert({
         visible: true,
-        title: 'Champs incomplets',
+        title: 'Champs requis',
         message: 'Veuillez remplir tous les champs pour créer votre compte.',
         type: 'error',
       });
@@ -61,14 +64,19 @@ const RegisterScreen = ({ navigation }: any) => {
 
     setLoading(true);
     try {
-      await register({ login: loginState, email, password });
+      await register({ username, email, password });
+      setAlert({
+        visible: true,
+        title: 'Compte créé',
+        message: 'Votre compte a été créé avec succès ! Connectez-vous dès maintenant.',
+        type: 'success',
+      });
+      setTimeout(() => navigation.navigate('Login'), 2000);
     } catch (err: any) {
       setAlert({
         visible: true,
-        title: "Erreur d'inscription",
-        message:
-          err.message ||
-          'Une erreur est survenue lors de la création du compte.',
+        title: 'Erreur',
+        message: err.message || 'Une erreur est survenue lors de l\'inscription.',
         type: 'error',
       });
     } finally {
@@ -79,8 +87,9 @@ const RegisterScreen = ({ navigation }: any) => {
   return (
     <ScreenWrapper>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flex}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 25}
       >
         <ScrollView
           ref={scrollRef}
@@ -91,48 +100,40 @@ const RegisterScreen = ({ navigation }: any) => {
         >
           <View style={styles.mainContainer}>
             <View style={styles.header}>
-              <Text style={[styles.title, { color: themeColors.text }]}>
-                Créer un compte
+              <Text style={[styles.logoText, { color: themeColors.primary }]}>
+                S'INSCRIRE
               </Text>
-              <Text
-                style={[styles.subtitle, { color: themeColors.textSecondary }]}
-              >
-                Rejoignez la communauté et défiez votre logique.
+              <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+                Rejoignez la communauté et commencez à lier les mots.
               </Text>
             </View>
 
             <View style={styles.form}>
               <AuthInput
                 label="Pseudo"
-                placeholder="Comment doit-on vous appeler ?"
-                value={loginState}
-                onChangeText={setLoginState}
-                autoCapitalize="none"
-                onFocus={scrollToBottom}
+                placeholder="Choisissez un pseudo"
+                value={formData.username}
+                onChangeText={(text) => setFormData({ ...formData, username: text })}
+                onFocus={scrollToInput}
               />
 
               <AuthInput
-                label="Adresse Email"
-                placeholder="votre@email.com"
-                value={email}
-                onChangeText={setEmail}
+                label="Email"
+                placeholder="Votre adresse email"
+                value={formData.email}
+                onChangeText={(text) => setFormData({ ...formData, email: text })}
                 keyboardType="email-address"
-                autoCapitalize="none"
-                onFocus={scrollToBottom}
+                onFocus={scrollToInput}
               />
 
               <AuthInput
                 label="Mot de passe"
-                placeholder="Choisissez un mot de passe robuste"
-                value={password}
-                onChangeText={setPassword}
+                placeholder="Créez un mot de passe"
+                value={formData.password}
+                onChangeText={(text) => setFormData({ ...formData, password: text })}
                 isPassword
-                onFocus={scrollToBottom}
+                onFocus={scrollToInput}
               />
-
-              <View style={styles.validatorContainer}>
-                <PasswordValidator password={password} />
-              </View>
 
               <TouchableOpacity
                 style={[
@@ -145,7 +146,7 @@ const RegisterScreen = ({ navigation }: any) => {
                 {loading ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.registerButtonText}>S'inscrire</Text>
+                  <Text style={styles.registerButtonText}>Créer mon compte</Text>
                 )}
               </TouchableOpacity>
 
@@ -153,16 +154,9 @@ const RegisterScreen = ({ navigation }: any) => {
                 style={styles.loginLink}
                 onPress={() => navigation.navigate('Login')}
               >
-                <Text
-                  style={[
-                    styles.loginLinkText,
-                    { color: themeColors.textSecondary },
-                  ]}
-                >
+                <Text style={[styles.loginLinkText, { color: themeColors.textSecondary }]}>
                   Déjà un compte ?{' '}
-                  <Text
-                    style={{ color: themeColors.primary, fontWeight: 'bold' }}
-                  >
+                  <Text style={{ color: themeColors.primary, fontWeight: 'bold' }}>
                     Se connecter
                   </Text>
                 </Text>
@@ -189,45 +183,42 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 40,
   },
   mainContainer: {
     flex: 1,
-    minHeight: SCREEN_HEIGHT * 0.85,
-    justifyContent: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 32,
+    paddingVertical: 40,
   },
   header: {
-    marginBottom: 40,
+    alignItems: 'center',
+    marginBottom: 32,
+    marginTop: 20,
   },
-  title: {
-    fontSize: 34,
-    fontWeight: 'bold',
+  logoText: {
+    fontSize: 40,
+    fontWeight: '900',
     letterSpacing: -1,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
+    textAlign: 'center',
     marginTop: 8,
-    lineHeight: 22,
+    lineHeight: 20,
   },
   form: {
     width: '100%',
   },
-  validatorContainer: {
-    marginBottom: 20,
-    marginTop: -8,
-  },
   registerButton: {
     height: 60,
-    borderRadius: 30,
+    borderRadius: borderRadius.xl,
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 16,
+    elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
-    elevation: 5,
   },
   registerButtonText: {
     color: '#FFFFFF',
@@ -235,9 +226,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   loginLink: {
-    marginTop: 32,
+    marginTop: 24,
     alignItems: 'center',
-    paddingBottom: 20,
+    paddingBottom: 40,
   },
   loginLinkText: {
     fontSize: 15,

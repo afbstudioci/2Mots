@@ -1,5 +1,5 @@
-// src/screens/LoginScreen.tsx
-import React, { useState, useCallback, useRef } from 'react';
+//src/screens/LoginScreen.tsx
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -16,6 +16,7 @@ import { useTheme } from '../context/ThemeContext';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import CustomAlert from '../components/common/CustomAlert';
 import AuthInput from '../components/auth/AuthInput';
+import { borderRadius } from '../theme/theme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -36,15 +37,14 @@ const LoginScreen = ({ navigation }: any) => {
   });
 
   const scrollRef = useRef<ScrollView>(null);
-
   const { login } = useAuth();
   const { themeColors } = useTheme();
 
-  const scrollToBottom = useCallback(() => {
+  const scrollToInput = () => {
     setTimeout(() => {
       scrollRef.current?.scrollToEnd({ animated: true });
-    }, 150);
-  }, []);
+    }, 100);
+  };
 
   const handleLogin = async () => {
     if (!identifier || !password) {
@@ -75,8 +75,9 @@ const LoginScreen = ({ navigation }: any) => {
   return (
     <ScreenWrapper>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flex}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 25}
       >
         <ScrollView
           ref={scrollRef}
@@ -88,27 +89,21 @@ const LoginScreen = ({ navigation }: any) => {
           <View style={styles.mainContainer}>
             <View style={styles.header}>
               <Text style={[styles.logoText, { color: themeColors.primary }]}>
-                2MOTS
+                SE CONNECTER
               </Text>
-              <Text
-                style={[styles.subtitle, { color: themeColors.textSecondary }]}
-              >
+              <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
                 Le jeu de réflexion où chaque lien compte.
               </Text>
             </View>
 
             <View style={styles.form}>
-              <Text style={[styles.formTitle, { color: themeColors.text }]}>
-                Connexion
-              </Text>
-
               <AuthInput
                 label="Email ou Pseudo"
                 placeholder="Entrez votre identifiant"
                 value={identifier}
                 onChangeText={setIdentifier}
                 autoCapitalize="none"
-                onFocus={scrollToBottom}
+                onFocus={scrollToInput}
               />
 
               <AuthInput
@@ -117,8 +112,17 @@ const LoginScreen = ({ navigation }: any) => {
                 value={password}
                 onChangeText={setPassword}
                 isPassword
-                onFocus={scrollToBottom}
+                onFocus={scrollToInput}
               />
+
+              <TouchableOpacity 
+                onPress={() => {/* Navigation vers récupération */}}
+                style={styles.forgotPassword}
+              >
+                <Text style={[styles.forgotPasswordText, { color: themeColors.primary }]}>
+                  Mot de passe oublié ?
+                </Text>
+              </TouchableOpacity>
 
               <TouchableOpacity
                 style={[
@@ -139,13 +143,9 @@ const LoginScreen = ({ navigation }: any) => {
                 style={styles.registerLink}
                 onPress={() => navigation.navigate('Register')}
               >
-                <Text
-                  style={[styles.registerText, { color: themeColors.textSecondary }]}
-                >
+                <Text style={[styles.registerText, { color: themeColors.textSecondary }]}>
                   Pas encore de compte ?{' '}
-                  <Text
-                    style={{ color: themeColors.primary, fontWeight: 'bold' }}
-                  >
+                  <Text style={{ color: themeColors.primary, fontWeight: 'bold' }}>
                     S'inscrire
                   </Text>
                 </Text>
@@ -172,7 +172,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 40,
   },
   mainContainer: {
     flex: 1,
@@ -186,9 +185,9 @@ const styles = StyleSheet.create({
     marginBottom: 48,
   },
   logoText: {
-    fontSize: 56,
+    fontSize: 40,
     fontWeight: '900',
-    letterSpacing: -2,
+    letterSpacing: -1,
   },
   subtitle: {
     fontSize: 16,
@@ -200,22 +199,25 @@ const styles = StyleSheet.create({
   form: {
     width: '100%',
   },
-  formTitle: {
-    fontSize: 26,
-    fontWeight: 'bold',
+  forgotPassword: {
+    alignSelf: 'flex-end',
     marginBottom: 24,
+    marginTop: -8,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   loginButton: {
     height: 60,
-    borderRadius: 30,
+    borderRadius: borderRadius.xl,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 16,
+    elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
-    elevation: 5,
   },
   loginButtonText: {
     color: '#FFFFFF',
