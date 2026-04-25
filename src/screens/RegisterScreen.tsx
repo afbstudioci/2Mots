@@ -1,5 +1,5 @@
-//src/screens/RegisterScreen.tsx
-import React, { useState } from 'react';
+// src/screens/RegisterScreen.tsx
+import React, { useState, useCallback, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -25,15 +25,28 @@ const RegisterScreen = ({ navigation }: any) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [alert, setAlert] = useState<{ visible: boolean; title: string; message: string; type: 'success' | 'error' }>({
+  const [alert, setAlert] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error';
+  }>({
     visible: false,
     title: '',
     message: '',
     type: 'error',
   });
 
+  const scrollRef = useRef<ScrollView>(null);
+
   const { register } = useAuth();
   const { themeColors } = useTheme();
+
+  const scrollToBottom = useCallback(() => {
+    setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }, 150);
+  }, []);
 
   const handleRegister = async () => {
     if (!loginState || !email || !password) {
@@ -52,8 +65,10 @@ const RegisterScreen = ({ navigation }: any) => {
     } catch (err: any) {
       setAlert({
         visible: true,
-        title: 'Erreur d\'inscription',
-        message: err.message || 'Une erreur est survenue lors de la création du compte.',
+        title: "Erreur d'inscription",
+        message:
+          err.message ||
+          'Une erreur est survenue lors de la création du compte.',
         type: 'error',
       });
     } finally {
@@ -67,7 +82,8 @@ const RegisterScreen = ({ navigation }: any) => {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flex}
       >
-        <ScrollView 
+        <ScrollView
+          ref={scrollRef}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -75,8 +91,12 @@ const RegisterScreen = ({ navigation }: any) => {
         >
           <View style={styles.mainContainer}>
             <View style={styles.header}>
-              <Text style={[styles.title, { color: themeColors.text }]}>Créer un compte</Text>
-              <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+              <Text style={[styles.title, { color: themeColors.text }]}>
+                Créer un compte
+              </Text>
+              <Text
+                style={[styles.subtitle, { color: themeColors.textSecondary }]}
+              >
                 Rejoignez la communauté et défiez votre logique.
               </Text>
             </View>
@@ -88,6 +108,7 @@ const RegisterScreen = ({ navigation }: any) => {
                 value={loginState}
                 onChangeText={setLoginState}
                 autoCapitalize="none"
+                onFocus={scrollToBottom}
               />
 
               <AuthInput
@@ -97,6 +118,7 @@ const RegisterScreen = ({ navigation }: any) => {
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                onFocus={scrollToBottom}
               />
 
               <AuthInput
@@ -105,6 +127,7 @@ const RegisterScreen = ({ navigation }: any) => {
                 value={password}
                 onChangeText={setPassword}
                 isPassword
+                onFocus={scrollToBottom}
               />
 
               <View style={styles.validatorContainer}>
@@ -112,7 +135,10 @@ const RegisterScreen = ({ navigation }: any) => {
               </View>
 
               <TouchableOpacity
-                style={[styles.registerButton, { backgroundColor: themeColors.primary }]}
+                style={[
+                  styles.registerButton,
+                  { backgroundColor: themeColors.primary },
+                ]}
                 onPress={handleRegister}
                 disabled={loading}
               >
@@ -123,12 +149,22 @@ const RegisterScreen = ({ navigation }: any) => {
                 )}
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.loginLink}
                 onPress={() => navigation.navigate('Login')}
               >
-                <Text style={[styles.loginLinkText, { color: themeColors.textSecondary }]}>
-                  Déjà un compte ? <Text style={{ color: themeColors.primary, fontWeight: 'bold' }}>Se connecter</Text>
+                <Text
+                  style={[
+                    styles.loginLinkText,
+                    { color: themeColors.textSecondary },
+                  ]}
+                >
+                  Déjà un compte ?{' '}
+                  <Text
+                    style={{ color: themeColors.primary, fontWeight: 'bold' }}
+                  >
+                    Se connecter
+                  </Text>
                 </Text>
               </TouchableOpacity>
             </View>
@@ -153,6 +189,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: 40,
   },
   mainContainer: {
     flex: 1,
@@ -183,7 +220,7 @@ const styles = StyleSheet.create({
   },
   registerButton: {
     height: 60,
-    borderRadius: 24,
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -200,7 +237,7 @@ const styles = StyleSheet.create({
   loginLink: {
     marginTop: 32,
     alignItems: 'center',
-    paddingBottom: 30, // Espace de sécurité pour le scroll final
+    paddingBottom: 20,
   },
   loginLinkText: {
     fontSize: 15,

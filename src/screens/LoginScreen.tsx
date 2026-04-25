@@ -1,5 +1,5 @@
-//src/screens/LoginScreen.tsx
-import React, { useState } from 'react';
+// src/screens/LoginScreen.tsx
+import React, { useState, useCallback, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -23,15 +23,28 @@ const LoginScreen = ({ navigation }: any) => {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [alert, setAlert] = useState<{ visible: boolean; title: string; message: string; type: 'success' | 'error' }>({
+  const [alert, setAlert] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error';
+  }>({
     visible: false,
     title: '',
     message: '',
     type: 'error',
   });
 
+  const scrollRef = useRef<ScrollView>(null);
+
   const { login } = useAuth();
   const { themeColors } = useTheme();
+
+  const scrollToBottom = useCallback(() => {
+    setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }, 150);
+  }, []);
 
   const handleLogin = async () => {
     if (!identifier || !password) {
@@ -64,9 +77,9 @@ const LoginScreen = ({ navigation }: any) => {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flex}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -74,21 +87,28 @@ const LoginScreen = ({ navigation }: any) => {
         >
           <View style={styles.mainContainer}>
             <View style={styles.header}>
-              <Text style={[styles.logoText, { color: themeColors.primary }]}>2MOTS</Text>
-              <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+              <Text style={[styles.logoText, { color: themeColors.primary }]}>
+                2MOTS
+              </Text>
+              <Text
+                style={[styles.subtitle, { color: themeColors.textSecondary }]}
+              >
                 Le jeu de réflexion où chaque lien compte.
               </Text>
             </View>
 
             <View style={styles.form}>
-              <Text style={[styles.formTitle, { color: themeColors.text }]}>Connexion</Text>
-              
+              <Text style={[styles.formTitle, { color: themeColors.text }]}>
+                Connexion
+              </Text>
+
               <AuthInput
                 label="Email ou Pseudo"
                 placeholder="Entrez votre identifiant"
                 value={identifier}
                 onChangeText={setIdentifier}
                 autoCapitalize="none"
+                onFocus={scrollToBottom}
               />
 
               <AuthInput
@@ -97,10 +117,14 @@ const LoginScreen = ({ navigation }: any) => {
                 value={password}
                 onChangeText={setPassword}
                 isPassword
+                onFocus={scrollToBottom}
               />
 
               <TouchableOpacity
-                style={[styles.loginButton, { backgroundColor: themeColors.primary }]}
+                style={[
+                  styles.loginButton,
+                  { backgroundColor: themeColors.primary },
+                ]}
                 onPress={handleLogin}
                 disabled={loading}
               >
@@ -111,12 +135,19 @@ const LoginScreen = ({ navigation }: any) => {
                 )}
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.registerLink}
                 onPress={() => navigation.navigate('Register')}
               >
-                <Text style={[styles.registerText, { color: themeColors.textSecondary }]}>
-                  Pas encore de compte ? <Text style={{ color: themeColors.primary, fontWeight: 'bold' }}>S'inscrire</Text>
+                <Text
+                  style={[styles.registerText, { color: themeColors.textSecondary }]}
+                >
+                  Pas encore de compte ?{' '}
+                  <Text
+                    style={{ color: themeColors.primary, fontWeight: 'bold' }}
+                  >
+                    S'inscrire
+                  </Text>
                 </Text>
               </TouchableOpacity>
             </View>
@@ -141,6 +172,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: 40,
   },
   mainContainer: {
     flex: 1,
@@ -175,7 +207,7 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     height: 60,
-    borderRadius: 24,
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 16,
@@ -193,7 +225,7 @@ const styles = StyleSheet.create({
   registerLink: {
     marginTop: 32,
     alignItems: 'center',
-    paddingBottom: 20, // Espace pour ne pas coller au clavier
+    paddingBottom: 20,
   },
   registerText: {
     fontSize: 15,
