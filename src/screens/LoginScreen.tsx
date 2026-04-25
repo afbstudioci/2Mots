@@ -8,7 +8,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
   Dimensions,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
@@ -16,6 +15,7 @@ import { useTheme } from '../context/ThemeContext';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import CustomAlert from '../components/common/CustomAlert';
 import AuthInput from '../components/auth/AuthInput';
+import ServerWakeUpLoader from '../components/auth/ServerWakeUpLoader';
 import { borderRadius } from '../theme/theme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -74,6 +74,8 @@ const LoginScreen = ({ navigation }: any) => {
 
   return (
     <ScreenWrapper>
+      {loading && <ServerWakeUpLoader />}
+      
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flex}
@@ -132,11 +134,7 @@ const LoginScreen = ({ navigation }: any) => {
                 onPress={handleLogin}
                 disabled={loading}
               >
-                {loading ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.loginButtonText}>Se connecter</Text>
-                )}
+                <Text style={styles.loginButtonText}>Se connecter</Text>
               </TouchableOpacity>
 
               <TouchableOpacity

@@ -4,11 +4,11 @@ import { colors, typography, borderRadius, spacing } from '../../theme/theme';
 import { useTheme } from '../../context/ThemeContext';
 
 const MESSAGES = [
-    "Reveil du serveur...",
-    "Echauffement des processeurs...",
-    "Preparation de vos defis...",
-    "Connexion securisee...",
-    "Presque la...",
+    "Réveil du serveur...",
+    "Échauffement des processeurs...",
+    "Préparation de vos défis...",
+    "Connexion sécurisée...",
+    "Presque là...",
 ];
 
 const ServerWakeUpLoader = () => {
@@ -61,7 +61,7 @@ const ServerWakeUpLoader = () => {
             <View style={styles.overlay}>
                 <View style={[styles.container, { backgroundColor: themeColors.card }]}>
                     
-                    {/* Indicateur Visuel Anime */}
+                    {/* Indicateur Visuel Animé */}
                     <View style={styles.animationContainer}>
                         <Animated.View style={[
                             styles.pulseCircle, 
@@ -78,7 +78,7 @@ const ServerWakeUpLoader = () => {
                     </Animated.Text>
                     
                     <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-                        Le serveur demarre sa session
+                        Le serveur démarre sa session
                     </Text>
 
                 </View>
