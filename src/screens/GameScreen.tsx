@@ -84,6 +84,41 @@ export default function GameScreen({ navigation }: { navigation: GameScreenNavig
 
     useEffect(() => { fetchWords(true); }, []);
 
+    // GESTION DE LA FIN DE PARTIE (Mise à jour des dépendances pour éviter les closures vides)
+    const triggerGameOver = useCallback(() => {
+        if (isGameOver) return;
+        setIsGameOver(true);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        
+        // Capture du mot en cours sur lequel le temps s'est écoulé
+        const currentPair = wordPairs[currentIndex];
+        if (currentPair) {
+            sessionAnswersRef.current.push({
+                wordPairId: currentPair._id,
+                answer: answer.trim() || "Temps écoulé",
+                timeSpent: 30, // Temps maximum écoulé
+                isCorrect: false,
+                accuracy: 0
+            });
+        }
+
+        api.post('/game/validate', { answers: sessionAnswersRef.current })
+            .then(res => {
+                const result = res.data.data;
+                const formattedDetails = sessionAnswersRef.current.map(ans => ({
+                    word: ans.answer || "Passé", 
+                    accuracy: ans.accuracy || 0, 
+                    label: ans.isCorrect ? "SUCCÈS" : "ÉCHEC"
+                }));
+                navigation.replace('GameOver', { 
+                    score: result.totalScore, 
+                    details: formattedDetails,
+                    corrections: result.corrections || []
+                });
+            })
+            .catch(() => navigation.replace('Home'));
+    }, [isGameOver, navigation, wordPairs, currentIndex, answer]);
+
     useEffect(() => {
         if (isLoading || isGameOver || timeLeft <= 0) return;
 
@@ -99,7 +134,7 @@ export default function GameScreen({ navigation }: { navigation: GameScreenNavig
         }, 1000);
 
         return () => { if (timerRef.current) clearInterval(timerRef.current); };
-    }, [isLoading, isGameOver, currentIndex]);
+    }, [isLoading, isGameOver, currentIndex, triggerGameOver]);
 
     useFocusEffect(
         useCallback(() => {
@@ -118,7 +153,17 @@ export default function GameScreen({ navigation }: { navigation: GameScreenNavig
     }, [currentIndex, wordPairs.length]);
 
     const submitAnswer = async () => {
-        if (!answer.trim() || isChecking || isGameOver) return;
+        console.log("[DEBUG] Bouton cliqué. Réponse actuelle :", answer);
+        
+        if (!answer.trim()) {
+            console.log("[DEBUG] Blocage : Le champ est vide.");
+            return;
+        }
+        if (isChecking || isGameOver) {
+            console.log("[DEBUG] Blocage : isChecking=", isChecking, " isGameOver=", isGameOver);
+            return;
+        }
+
         setIsChecking(true);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 
@@ -126,6 +171,7 @@ export default function GameScreen({ navigation }: { navigation: GameScreenNavig
         const timeSpent = 30 - Math.max(0, timeLeft);
 
         try {
+            console.log("[DEBUG] Envoi au backend...");
             const response = await api.post('/game/check', {
                 wordPairId: currentPair._id,
                 answer: answer.trim(),
@@ -152,7 +198,7 @@ export default function GameScreen({ navigation }: { navigation: GameScreenNavig
                 setIsChecking(false);
             }
         } catch (error) { 
-            console.error('Erreur vérification :', error);
+            console.error('[DEBUG] Erreur vérification API :', error);
             setIsChecking(false); 
         }
     };
@@ -167,28 +213,6 @@ export default function GameScreen({ navigation }: { navigation: GameScreenNavig
             });
         });
     };
-
-    const triggerGameOver = useCallback(() => {
-        if (isGameOver) return;
-        setIsGameOver(true);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        
-        api.post('/game/validate', { answers: sessionAnswersRef.current })
-            .then(res => {
-                const result = res.data.data;
-                const formattedDetails = sessionAnswersRef.current.map(ans => ({
-                    word: ans.answer || "Passé", 
-                    accuracy: ans.accuracy || 0, 
-                    label: ans.isCorrect ? "SUCCÈS" : "ÉCHEC"
-                }));
-                navigation.replace('GameOver', { 
-                    score: result.totalScore, 
-                    details: formattedDetails,
-                    corrections: result.corrections || []
-                });
-            })
-            .catch(() => navigation.replace('Home'));
-    }, [isGameOver, navigation]);
 
     const handleTimeGainEnd = () => setTimeWon(0);
 
@@ -215,7 +239,6 @@ export default function GameScreen({ navigation }: { navigation: GameScreenNavig
                     />
                 </View>
 
-                {/* Ajout du ScrollView pour permettre de scroller quand le clavier est ouvert */}
                 <ScrollView 
                     contentContainerStyle={styles.scrollContent}
                     keyboardShouldPersistTaps="handled"

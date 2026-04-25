@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
+//src/components/game/GameInputArea.tsx
+import React from 'react';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Keyboard } from 'react-native';
 import { colors, typography, borderRadius, shadows, spacing } from '../../theme/theme';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -18,7 +19,7 @@ export default function GameInputArea({
     answer, setAnswer, submitAnswer, expectedType, clue, onHintPress, isAnimating
 }: GameInputAreaProps) {
     
-    const [hintUsed, setHintUsed] = useState(false);
+    const [hintUsed, setHintUsed] = React.useState(false);
 
     const handleHint = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -26,11 +27,15 @@ export default function GameInputArea({
         onHintPress();
     };
 
-    // CORRECTION GRAMMATICALE FRANCAISE
+    const handleSubmission = () => {
+        // Sécurité : on masque le clavier et on lance la vérification
+        Keyboard.dismiss();
+        submitAnswer();
+    };
+
     const formatExpectedType = (type: string) => {
         if (!type) return "";
         const lower = type.toLowerCase().trim();
-        // Seules ces catégories sont féminines en français
         const feminineTypes = ["préposition", "conjonction", "déterminant"];
         const article = feminineTypes.some(t => lower.includes(t)) ? "une" : "un";
         return `${article} ${lower}`;
@@ -52,15 +57,20 @@ export default function GameInputArea({
                     style={styles.input}
                     value={answer}
                     onChangeText={setAnswer}
-                    onSubmitEditing={submitAnswer}
+                    onSubmitEditing={handleSubmission}
                     placeholder="Quel est le lien ?"
                     placeholderTextColor="rgba(26, 32, 44, 0.4)"
                     editable={!isAnimating}
                     autoCorrect={false}
-                    returnKeyType="done"
+                    returnKeyType="send"
                 />
                 
-                <TouchableOpacity style={styles.sendButton} onPress={submitAnswer} activeOpacity={0.8} disabled={isAnimating}>
+                <TouchableOpacity 
+                    style={[styles.sendButton, isAnimating && styles.sendButtonDisabled]} 
+                    onPress={handleSubmission} 
+                    activeOpacity={0.8} 
+                    disabled={isAnimating}
+                >
                     <Ionicons name="arrow-forward" size={24} color={colors.white} />
                 </TouchableOpacity>
             </View>
@@ -120,6 +130,10 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         backgroundColor: colors.coral,
         borderRadius: borderRadius.xl,
+    },
+    sendButtonDisabled: {
+        backgroundColor: colors.sand,
+        opacity: 0.5,
     },
     hintCard: {
         flexDirection: 'row',
