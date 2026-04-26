@@ -9,12 +9,12 @@ interface PasswordValidatorProps {
 
 export default function PasswordValidator({ password }: PasswordValidatorProps) {
     const rules = [
-        { id: 'length', label: 'Au moins 8 caracteres', isValid: password.length >= 8 },
+        { id: 'length', label: 'Au moins 8 caractères', isValid: password.length >= 8 },
         { id: 'uppercase', label: 'Au moins une majuscule', isValid: /[A-Z]/.test(password) },
         { id: 'number', label: 'Au moins un chiffre', isValid: /[0-9]/.test(password) },
     ];
 
-    // Ne s'affiche que si l'utilisateur a commence a taper
+    // Ne s'affiche que si l'utilisateur a commencé a taper
     if (password.length === 0) return null;
 
     return (

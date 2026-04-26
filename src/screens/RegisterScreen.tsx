@@ -16,13 +16,15 @@ import ScreenWrapper from '../components/layout/ScreenWrapper';
 import CustomAlert from '../components/common/CustomAlert';
 import AuthInput from '../components/auth/AuthInput';
 import ServerWakeUpLoader from '../components/auth/ServerWakeUpLoader';
+import PasswordValidator from '../components/auth/PasswordValidator';
 import { borderRadius } from '../theme/theme';
+import { useKeyboard } from '../hooks/useKeyboard';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const RegisterScreen = ({ navigation }: any) => {
   const [formData, setFormData] = useState({
-    username: '',
+    login: '', 
     email: '',
     password: '',
   });
@@ -42,17 +44,13 @@ const RegisterScreen = ({ navigation }: any) => {
   const scrollRef = useRef<ScrollView>(null);
   const { register } = useAuth();
   const { themeColors } = useTheme();
-
-  const scrollToInput = () => {
-    setTimeout(() => {
-      scrollRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-  };
+  
+  const { isKeyboardVisible } = useKeyboard();
 
   const handleRegister = async () => {
-    const { username, email, password } = formData;
+    const { login, email, password } = formData;
 
-    if (!username || !email || !password) {
+    if (!login || !email || !password) {
       setAlert({
         visible: true,
         title: 'Champs requis',
@@ -62,9 +60,20 @@ const RegisterScreen = ({ navigation }: any) => {
       return;
     }
 
+    const isPasswordValid = password.length >= 8 && /[A-Z]/.test(password) && /[0-9]/.test(password);
+    if (!isPasswordValid) {
+      setAlert({
+        visible: true,
+        title: 'Sécurité du mot de passe',
+        message: 'Votre mot de passe ne respecte pas tous les critères de sécurité affichés.',
+        type: 'error',
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      await register({ username, email, password });
+      await register({ login, email, password });
       setAlert({
         visible: true,
         title: 'Compte créé',
@@ -101,22 +110,24 @@ const RegisterScreen = ({ navigation }: any) => {
           bounces={false}
         >
           <View style={styles.mainContainer}>
-            <View style={styles.header}>
-              <Text style={[styles.logoText, { color: themeColors.primary }]}>
-                S'INSCRIRE
-              </Text>
-              <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-                Rejoignez la communauté et commencez à lier les mots.
-              </Text>
-            </View>
+            
+            {!isKeyboardVisible && (
+              <View style={styles.header}>
+                <Text style={[styles.logoText, { color: themeColors.primary }]}>
+                  S'INSCRIRE
+                </Text>
+                <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+                  Rejoignez la communauté et commencez à lier les mots.
+                </Text>
+              </View>
+            )}
 
             <View style={styles.form}>
               <AuthInput
                 label="Pseudo"
                 placeholder="Choisissez un pseudo"
-                value={formData.username}
-                onChangeText={(text) => setFormData({ ...formData, username: text })}
-                onFocus={scrollToInput}
+                value={formData.login}
+                onChangeText={(text) => setFormData({ ...formData, login: text })}
               />
 
               <AuthInput
@@ -125,7 +136,6 @@ const RegisterScreen = ({ navigation }: any) => {
                 value={formData.email}
                 onChangeText={(text) => setFormData({ ...formData, email: text })}
                 keyboardType="email-address"
-                onFocus={scrollToInput}
               />
 
               <AuthInput
@@ -134,8 +144,9 @@ const RegisterScreen = ({ navigation }: any) => {
                 value={formData.password}
                 onChangeText={(text) => setFormData({ ...formData, password: text })}
                 isPassword
-                onFocus={scrollToInput}
               />
+
+              <PasswordValidator password={formData.password} />
 
               <TouchableOpacity
                 style={[
@@ -185,20 +196,21 @@ const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingVertical: 40,
+    paddingVertical: 20, // Réduit pour donner de la marge en haut et en bas
+    justifyContent: 'center', // Centre parfaitement le contenu
   },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
-    marginTop: 20,
+    marginBottom: 24, // Réduit
+    marginTop: 10, // Réduit
   },
   logoText: {
-    fontSize: 40,
+    fontSize: 34, // Légèrement réduit pour respirer
     fontWeight: '900',
     letterSpacing: -1,
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 14, // Réduit
     textAlign: 'center',
     marginTop: 8,
     lineHeight: 20,
@@ -207,7 +219,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   registerButton: {
-    height: 60,
+    height: 55, // Hauteur affinée
     borderRadius: borderRadius.xl,
     justifyContent: 'center',
     alignItems: 'center',
@@ -220,16 +232,16 @@ const styles = StyleSheet.create({
   },
   registerButtonText: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 17, // Réduit légèrement
     fontWeight: 'bold',
   },
   loginLink: {
-    marginTop: 24,
+    marginTop: 20,
     alignItems: 'center',
-    paddingBottom: 40,
+    paddingBottom: 20, // Évite la collision avec la barre de navigation du téléphone
   },
   loginLinkText: {
-    fontSize: 15,
+    fontSize: 14,
   },
 });
 

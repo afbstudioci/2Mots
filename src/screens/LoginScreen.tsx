@@ -1,5 +1,5 @@
 //src/screens/LoginScreen.tsx
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -17,6 +17,7 @@ import CustomAlert from '../components/common/CustomAlert';
 import AuthInput from '../components/auth/AuthInput';
 import ServerWakeUpLoader from '../components/auth/ServerWakeUpLoader';
 import { borderRadius } from '../theme/theme';
+import { useKeyboard } from '../hooks/useKeyboard';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -36,15 +37,11 @@ const LoginScreen = ({ navigation }: any) => {
     type: 'error',
   });
 
-  const scrollRef = useRef<ScrollView>(null);
   const { login } = useAuth();
   const { themeColors } = useTheme();
-
-  const scrollToInput = () => {
-    setTimeout(() => {
-      scrollRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-  };
+  
+  // Utilisation de notre hook pour surveiller le clavier
+  const { isKeyboardVisible } = useKeyboard();
 
   const handleLogin = async () => {
     if (!identifier || !password) {
@@ -82,21 +79,24 @@ const LoginScreen = ({ navigation }: any) => {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 25}
       >
         <ScrollView
-          ref={scrollRef}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           bounces={false}
         >
           <View style={styles.mainContainer}>
-            <View style={styles.header}>
-              <Text style={[styles.logoText, { color: themeColors.primary }]}>
-                SE CONNECTER
-              </Text>
-              <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-                Le jeu de réflexion où chaque lien compte.
-              </Text>
-            </View>
+            
+            {/* Le bloc header disparaît si le clavier est actif pour libérer la place */}
+            {!isKeyboardVisible && (
+              <View style={styles.header}>
+                <Text style={[styles.logoText, { color: themeColors.primary }]}>
+                  SE CONNECTER
+                </Text>
+                <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+                  Le jeu de réflexion où chaque lien compte.
+                </Text>
+              </View>
+            )}
 
             <View style={styles.form}>
               <AuthInput
@@ -105,7 +105,7 @@ const LoginScreen = ({ navigation }: any) => {
                 value={identifier}
                 onChangeText={setIdentifier}
                 autoCapitalize="none"
-                onFocus={scrollToInput}
+                // onFocus={scrollToInput} a été supprimé pour laisser faire le KeyboardAvoidingView
               />
 
               <AuthInput
@@ -114,7 +114,6 @@ const LoginScreen = ({ navigation }: any) => {
                 value={password}
                 onChangeText={setPassword}
                 isPassword
-                onFocus={scrollToInput}
               />
 
               <TouchableOpacity 
@@ -173,22 +172,23 @@ const styles = StyleSheet.create({
   },
   mainContainer: {
     flex: 1,
-    minHeight: SCREEN_HEIGHT * 0.8,
+    // minHeight supprimé pour ne pas forcer l'étirement vers le bas
     justifyContent: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 40,
+    paddingVertical: 20, // Réduit pour mieux respirer
   },
   header: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 24, // Réduit
+    marginTop: 10, // Réduit
   },
   logoText: {
-    fontSize: 40,
+    fontSize: 34, // Légèrement réduit pour respirer
     fontWeight: '900',
     letterSpacing: -1,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14, // Réduit
     textAlign: 'center',
     marginTop: 8,
     lineHeight: 22,
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   loginButton: {
-    height: 60,
+    height: 55, // Hauteur affinée
     borderRadius: borderRadius.xl,
     justifyContent: 'center',
     alignItems: 'center',
@@ -219,16 +219,16 @@ const styles = StyleSheet.create({
   },
   loginButtonText: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 17, // Réduit légèrement
     fontWeight: 'bold',
   },
   registerLink: {
-    marginTop: 32,
+    marginTop: 20, // Réduit
     alignItems: 'center',
-    paddingBottom: 20,
+    paddingBottom: 20, // Évite la collision avec la barre de navigation du téléphone
   },
   registerText: {
-    fontSize: 15,
+    fontSize: 14, // Réduit légèrement
   },
 });
 

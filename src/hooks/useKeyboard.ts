@@ -2,10 +2,6 @@
 import { useState, useEffect } from 'react';
 import { Keyboard, KeyboardEvent, Platform } from 'react-native';
 
-/**
- * Hook Senior++ pour la gestion granulaire du clavier.
- * Permet d'ajuster l'interface dynamiquement pour eviter les chevauchements.
- */
 export const useKeyboard = () => {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
