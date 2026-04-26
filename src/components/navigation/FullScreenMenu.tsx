@@ -1,6 +1,6 @@
 //src/components/navigation/FullScreenMenu.tsx
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Animated, Modal, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -9,8 +9,6 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { colors, spacing, borderRadius, typography } from '../../theme/theme';
 import { RootStackParamList } from '../../../App';
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('screen');
 
 const appConfig = require('../../../app.json');
 const APP_VERSION = appConfig.expo.version || '1.0.0';
@@ -115,14 +113,14 @@ export default function FullScreenMenu() {
                 transparent 
                 visible={isOpen} 
                 animationType="none" 
-                statusBarTranslucent 
+                statusBarTranslucent={true} 
                 navigationBarTranslucent={true}
             >
                 <Animated.View style={[styles.menuContainer, { opacity: fadeAnim }]}>
                     
                     <View style={[
                         StyleSheet.absoluteFillObject, 
-                        { backgroundColor: themeColors.background, bottom: -150 }
+                        { backgroundColor: themeColors.background }
                     ]} />
 
                     <Pressable onPress={toggleMenu} style={[styles.actionButton, { top: insets.top + spacing.sm }]}>
@@ -180,13 +178,16 @@ const styles = StyleSheet.create({
     hamburgerContainer: { alignItems: 'flex-end', width: 24 },
     hamburgerLine: { width: 24, height: 2.5, borderRadius: 2, marginVertical: 3 },
     crossLine: { width: 26, height: 2.5, borderRadius: 2, position: 'absolute' },
+    
+    // CORRECTION : L'ancrage absolu aux 4 coins
     menuContainer: { 
         position: 'absolute',
         top: 0,
+        bottom: 0,
         left: 0,
-        width: SCREEN_WIDTH,
-        height: SCREEN_HEIGHT,
+        right: 0,
     },
+    
     menuContent: { flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%', marginTop: -40 },
     animatedItemContainer: { alignItems: 'center' },
     menuItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.md, marginVertical: spacing.xs },

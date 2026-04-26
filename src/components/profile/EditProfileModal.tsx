@@ -104,10 +104,19 @@ export default function EditProfileModal({ visible, onClose }: EditProfileModalP
   const displayAvatar = avatarUri || user?.avatar;
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
-      <View style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.8)' }]}>
+    <Modal 
+      visible={visible} 
+      animationType="slide" 
+      transparent={true} 
+      onRequestClose={onClose}
+      statusBarTranslucent={true}
+      navigationBarTranslucent={true}
+    >
+      <View style={styles.overlay}>
+        <TouchableOpacity style={StyleSheet.absoluteFillObject} onPress={onClose} activeOpacity={1} />
+        
         <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
           style={[styles.modalContent, { backgroundColor: themeColors.background }]}
         >
           <View style={styles.header}>
@@ -169,8 +178,20 @@ export default function EditProfileModal({ visible, onClose }: EditProfileModalP
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'flex-end' },
-  modalContent: { height: '90%', borderTopLeftRadius: borderRadius.xl, borderTopRightRadius: borderRadius.xl, paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)' },
+  
+  // CORRECTION : L'ancrage absolu
+  modalContent: { 
+      position: 'absolute',
+      bottom: 0,
+      width: '100%',
+      height: '90%', 
+      borderTopLeftRadius: borderRadius.xl, 
+      borderTopRightRadius: borderRadius.xl, 
+      paddingHorizontal: spacing.lg, 
+      paddingBottom: spacing.xxl + 20,
+  },
+  
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)', marginBottom: spacing.md },
   cancelText: { ...typography.bodyMedium, fontSize: 16 },
   title: { ...typography.titleMedium, fontSize: 18 },
