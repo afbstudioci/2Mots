@@ -2,7 +2,9 @@
 import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated, Pressable } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { colors } from '../../theme/theme';
+import { useTheme } from '../../context/ThemeContext';
+import { useFeedback } from '../../hooks/useFeedback';
+import { spacing, typography } from '../../theme/theme';
 
 interface PlayButtonProps {
     onPress: () => void;
@@ -11,10 +13,12 @@ interface PlayButtonProps {
 const NUM_PARTICLES = 12;
 
 const PlayButton: React.FC<PlayButtonProps> = ({ onPress }) => {
+    const { themeColors } = useTheme();
+    const { triggerVibration } = useFeedback();
+
     const scalePressAnim = useRef(new Animated.Value(1)).current;
     const breatheAnim = useRef(new Animated.Value(1)).current;
 
-    // Creation des references pour les 12 particules du feu d'artifice
     const particles = useRef(
         Array.from({ length: NUM_PARTICLES }).map(() => ({
             translateXY: new Animated.ValueXY({ x: 0, y: 0 }),
@@ -84,8 +88,10 @@ const PlayButton: React.FC<PlayButtonProps> = ({ onPress }) => {
         }).start();
     };
 
-    const handlePressOut = async () => {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    const handlePressOut = () => {
+        // CORRECTION : Utilisation de notre moteur pour respecter les paramètres
+        triggerVibration(Haptics.ImpactFeedbackStyle.Heavy);
+        
         fireParticles();
         
         Animated.spring(scalePressAnim, {
@@ -102,7 +108,6 @@ const PlayButton: React.FC<PlayButtonProps> = ({ onPress }) => {
             ).start();
         });
 
-        // Delai pour laisser l'explosion se voir avant la transition
         setTimeout(() => {
             onPress();
         }, 300);
@@ -110,13 +115,15 @@ const PlayButton: React.FC<PlayButtonProps> = ({ onPress }) => {
 
     return (
         <View style={styles.container}>
-            {/* Le systeme de particules en arriere plan */}
+            {/* Particules synchronisées sur la couleur primaire du thème */}
             {particles.map((particle, i) => (
                 <Animated.View
                     key={i}
                     style={[
                         styles.particle,
                         {
+                            backgroundColor: themeColors.primary,
+                            shadowColor: themeColors.primary,
                             opacity: particle.opacity,
                             transform: [
                                 { translateX: particle.translateXY.x },
@@ -133,10 +140,14 @@ const PlayButton: React.FC<PlayButtonProps> = ({ onPress }) => {
                     <Pressable
                         onPressIn={handlePressIn}
                         onPressOut={handlePressOut}
-                        style={styles.playButtonWrapper}
+                        style={[styles.playButtonWrapper, { shadowColor: themeColors.primary }]}
                     >
-                        <View style={styles.playButtonInner}>
-                            <Text style={styles.playButtonText}>JOUER</Text>
+                        <View style={[styles.playButtonInner, { 
+                            backgroundColor: themeColors.primary,
+                            borderColor: 'rgba(255, 255, 255, 0.2)' 
+                        }]}>
+                            {/* Le texte prend la couleur du fond pour un look découpé moderne */}
+                            <Text style={[styles.playButtonText, { color: themeColors.background }]}>JOUER</Text>
                         </View>
                     </Pressable>
                 </Animated.View>
@@ -155,34 +166,28 @@ const styles = StyleSheet.create({
         width: 12,
         height: 12,
         borderRadius: 6,
-        backgroundColor: colors.coral,
-        shadowColor: colors.coral,
         shadowRadius: 10,
         shadowOpacity: 1,
         elevation: 10,
     },
     playButtonWrapper: {
         borderRadius: 100,
-        shadowColor: colors.coral,
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.6,
         shadowRadius: 30,
         elevation: 20,
     },
     playButtonInner: {
-        backgroundColor: colors.coral,
         width: 200,
         height: 200,
         borderRadius: 100,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 4,
-        borderColor: 'rgba(247, 245, 240, 0.2)',
     },
     playButtonText: {
         fontFamily: 'Poppins_900Black',
         fontSize: 38,
-        color: colors.nightBlue,
         letterSpacing: 3,
     },
 });

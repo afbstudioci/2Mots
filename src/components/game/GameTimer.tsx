@@ -1,93 +1,141 @@
 //src/components/game/GameTimer.tsx
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
-import { colors, spacing, borderRadius, typography } from '../../theme/theme';
-import * as Haptics from 'expo-haptics';
-import TimeGainIndicator from './TimeGainIndicator';
+import { StyleSheet, View, Text, Animated } from 'react-native';
+import { useTheme } from '../../context/ThemeContext'; // Import crucial
+import { useFeedback } from '../../hooks/useFeedback';
+import { spacing, typography, colors } from '../../theme/theme';
 
 interface GameTimerProps {
     timeLeft: number;
-    maxTime: number;
-    timeWon: number;
-    onTimeGainAnimationEnd: () => void;
+    maxTime: number; 
+    timeWon?: number; 
+    onTimeGainAnimationEnd?: () => void;
 }
 
-export default function GameTimer({ timeLeft, maxTime, timeWon, onTimeGainAnimationEnd }: GameTimerProps) {
-    const progress = timeLeft / maxTime;
-    const pulseAnim = useRef(new Animated.Value(1)).current;
-
-    const getTimerColor = () => {
-        if (progress > 0.5) return colors.mint;
-        if (progress > 0.16) return colors.coral;
-        return colors.error;
-    };
+export default function GameTimer({ 
+    timeLeft, 
+    maxTime, 
+    timeWon = 0, 
+    onTimeGainAnimationEnd 
+}: GameTimerProps) {
+    // FIX ICI : On extrait bien isDark pour pouvoir l'utiliser plus bas
+    const { themeColors, isDark } = useTheme(); 
+    const { triggerVibration } = useFeedback();
+    
+    const progressAnim = useRef(new Animated.Value(1)).current;
+    const bonusAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        if (timeLeft <= 5 && timeLeft > 0) {
-            // L'impact lourd se déclenche à chaque seconde sous les 5s
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        Animated.timing(progressAnim, {
+            toValue: timeLeft / maxTime,
+            duration: 500,
+            useNativeDriver: false,
+        }).start();
 
-            // Animation de battement de coeur sur le texte
-            Animated.sequence([
-                Animated.timing(pulseAnim, {
-                    toValue: 1.3,
-                    duration: 150,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(pulseAnim, {
-                    toValue: 1,
-                    duration: 150,
-                    useNativeDriver: true,
-                })
-            ]).start();
+        if (timeLeft <= 5 && timeLeft > 0) {
+            triggerVibration();
         }
-    }, [timeLeft, pulseAnim]);
+    }, [timeLeft, maxTime]);
+
+    useEffect(() => {
+        if (timeWon > 0) {
+            bonusAnim.setValue(0);
+            Animated.sequence([
+                Animated.spring(bonusAnim, { toValue: 1, useNativeDriver: true }),
+                Animated.timing(bonusAnim, { toValue: 0, duration: 1000, delay: 500, useNativeDriver: true })
+            ]).start(() => {
+                if (onTimeGainAnimationEnd) onTimeGainAnimationEnd();
+            });
+        }
+    }, [timeWon]);
+
+    const isLowTime = timeLeft <= 5;
+    const progressWidth = progressAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['0%', '100%'],
+    });
+
+    const bonusOpacity = bonusAnim;
+    const bonusTranslateY = bonusAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, -20],
+    });
 
     return (
-        <View style={styles.wrapper}>
-            <View style={styles.container}>
-                <View style={[styles.bar, { 
-                    width: `${progress * 100}%`, 
-                    backgroundColor: getTimerColor() 
-                }]} />
-                <TimeGainIndicator timeWon={timeWon} onAnimationEnd={onTimeGainAnimationEnd} />
-            </View>
-            <Animated.Text 
-                style={[
+        <View style={styles.container}>
+            <View style={styles.header}>
+                <View style={styles.leftHeader}>
+                    <Text style={[styles.label, { color: themeColors.textSecondary }]}>TEMPS</Text>
+                    {timeWon > 0 && (
+                        <Animated.Text style={[
+                            styles.bonusText, 
+                            { opacity: bonusOpacity, transform: [{ translateY: bonusTranslateY }] }
+                        ]}>
+                            +{timeWon}s
+                        </Animated.Text>
+                    )}
+                </View>
+                <Text style={[
                     styles.timeText, 
-                    { 
-                        color: getTimerColor(),
-                        transform: [{ scale: pulseAnim }]
-                    }
-                ]}
-            >
-                {timeLeft}s
-            </Animated.Text>
+                    { color: isLowTime ? colors.error : themeColors.primary }
+                ]}>
+                    {timeLeft}s
+                </Text>
+            </View>
+            
+            {/* Utilisation de isDark corrigée */}
+            <View style={[styles.barBackground, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
+                <Animated.View 
+                    style={[
+                        styles.progressBar, 
+                        { 
+                            width: progressWidth,
+                            backgroundColor: isLowTime ? colors.error : colors.mint 
+                        }
+                    ]} 
+                />
+            </View>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    wrapper: {
+    container: {
+        width: '100%',
+        marginBottom: spacing.lg,
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-end',
+        marginBottom: spacing.xs,
+    },
+    leftHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: spacing.md,
     },
-    container: {
-        flex: 1,
-        height: 10,
-        borderRadius: borderRadius.xl,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        overflow: 'visible',
+    label: {
+        ...typography.bodySmall,
+        letterSpacing: 1,
+        marginRight: spacing.sm,
     },
-    bar: {
-        height: '100%',
-        borderRadius: borderRadius.xl,
+    bonusText: {
+        color: colors.mint,
+        fontWeight: 'bold',
+        fontSize: 14,
     },
     timeText: {
         ...typography.titleLarge,
         fontSize: 20,
-        marginLeft: spacing.md,
-        minWidth: 40,
-    }
+    },
+    barBackground: {
+        height: 8,
+        width: '100%',
+        borderRadius: 4,
+        overflow: 'hidden',
+    },
+    progressBar: {
+        height: '100%',
+        borderRadius: 4,
+    },
 });

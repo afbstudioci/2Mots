@@ -7,6 +7,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+// IMPORT du nouveau context de paramètres
+import { SettingsProvider } from './src/context/SettingsContext';
 
 // Screens
 import SplashScreen from './src/screens/SplashScreen';
@@ -52,7 +54,6 @@ const AppNavigator = () => {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        // Suppression de animation: 'fade' pour utiliser la transition native sans flash
         contentStyle: { backgroundColor: themeColors.background }, 
       }}
     >
@@ -105,7 +106,6 @@ const AppNavigator = () => {
 const AppContent = () => {
   const { isDark, themeColors } = useTheme();
 
-  // Création d'un thème React Navigation synchronisé pour éviter les fonds blancs lors des transitions
   const navigationTheme = {
     ...(isDark ? NavDarkTheme : DefaultTheme),
     colors: {
@@ -136,9 +136,12 @@ const AppContent = () => {
 export default function App() {
   return (
     <AuthProvider>
-      <ThemeProvider>
-        <AppContent />
-      </ThemeProvider>
+      {/* On ajoute SettingsProvider pour que le ThemeProvider puisse lire les paramètres locaux */}
+      <SettingsProvider>
+        <ThemeProvider>
+          <AppContent />
+        </ThemeProvider>
+      </SettingsProvider>
     </AuthProvider>
   );
 }
