@@ -1,9 +1,9 @@
 //src/screens/GameScreen.tsx
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { View, StyleSheet, KeyboardAvoidingView, Platform, Animated, Dimensions, ScrollView } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useGameLogic } from '../hooks/useGameLogic';
-import { spacing } from '../theme/theme';
+import { spacing, colors } from '../theme/theme';
 
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import GameLoading from '../components/game/GameLoading';
@@ -57,6 +57,19 @@ export default function GameScreen({ navigation }: any) {
         }
     };
 
+    // Animations pour les orbes de fond
+    const orb1Anim = useRef(new Animated.Value(0)).current;
+    const orb2Anim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        Animated.loop(
+            Animated.timing(orb1Anim, { toValue: 1, duration: 15000, useNativeDriver: true })
+        ).start();
+        Animated.loop(
+            Animated.timing(orb2Anim, { toValue: 1, duration: 20000, useNativeDriver: true })
+        ).start();
+    }, []);
+
     if (isLoading) return <GameLoading />;
     
     if (errorMessage || wordPairs.length === 0) {
@@ -65,8 +78,36 @@ export default function GameScreen({ navigation }: any) {
 
     return (
         <ScreenWrapper style={{ backgroundColor: themeColors.background }}>
+            {/* Arrière-plan Immersif : Orbes flottants */}
+            <View style={StyleSheet.absoluteFillObject}>
+                <Animated.View style={[
+                    styles.orb, 
+                    { 
+                        backgroundColor: colors.coral, 
+                        top: -100, 
+                        left: -50,
+                        transform: [
+                            { translateY: orb1Anim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 100, 0] }) },
+                            { scale: orb1Anim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 1.2, 1] }) }
+                        ]
+                    }
+                ]} />
+                <Animated.View style={[
+                    styles.orb, 
+                    { 
+                        backgroundColor: colors.mint, 
+                        bottom: -150, 
+                        right: -100,
+                        transform: [
+                            { translateY: orb2Anim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, -120, 0] }) },
+                            { scale: orb2Anim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 1.3, 1] }) }
+                        ]
+                    }
+                ]} />
+            </View>
+
             <KeyboardAvoidingView 
-                style={{ flex: 1, backgroundColor: themeColors.background }} 
+                style={{ flex: 1 }} 
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
             >
@@ -130,4 +171,11 @@ const styles = StyleSheet.create({
         alignItems: 'center', 
         paddingVertical: spacing.xl 
     },
+    orb: {
+        position: 'absolute',
+        width: width * 1.5,
+        height: width * 1.5,
+        borderRadius: width * 0.75,
+        opacity: 0.05, // Effet subtil
+    }
 });

@@ -15,9 +15,17 @@ export default function GameHeader({ level, currentXp, xpNeeded }: GameHeaderPro
     const progress = xpNeeded > 0 ? (currentXp / xpNeeded) * 100 : 0;
 
     return (
-        <View style={styles.container}>
+        <View style={[
+            styles.container, 
+            { 
+                backgroundColor: themeColors.card,
+                borderColor: themeColors.cardBorder,
+                borderWidth: themeColors.cardBorderWidth,
+                shadowColor: themeColors.text
+            }
+        ]}>
             <Text style={[styles.levelText, { color: themeColors.text }]}>NIVEAU {level}</Text>
-            <View style={[styles.xpTrack, { backgroundColor: themeColors.overlayMedium }]}>
+            <View style={[styles.xpTrack, { backgroundColor: themeColors.overlayLight }]}>
                 <View style={[styles.xpBar, { width: `${progress}%` }]} />
             </View>
         </View>
@@ -29,9 +37,15 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: spacing.xl,
-        paddingTop: spacing.md, // Laisse de l'espace pour la status bar gérée par ScreenWrapper
-        paddingBottom: spacing.sm,
+        marginHorizontal: spacing.xl,
+        marginTop: spacing.md, 
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.md,
+        borderRadius: borderRadius.xl,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        elevation: 5,
     },
     levelText: {
         ...typography.titleLarge,

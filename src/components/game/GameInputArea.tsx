@@ -3,8 +3,9 @@ import React, { useState, useImperativeHandle, useRef } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Keyboard, Animated } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { colors, typography, borderRadius, shadows, spacing } from '../../theme/theme';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useNavigation } from '@react-navigation/native';
 
 export interface GameInputAreaRef {
     triggerShake: () => void;
@@ -25,6 +26,7 @@ export default function GameInputArea({
     answer, setAnswer, submitAnswer, expectedType, clue, onHintPress, isAnimating, actionRef
 }: GameInputAreaProps) {
     const { themeColors } = useTheme();
+    const navigation = useNavigation<any>();
     
     const [hintUsed, setHintUsed] = useState(false);
     const [isError, setIsError] = useState(false);
@@ -111,11 +113,26 @@ export default function GameInputArea({
                 </TouchableOpacity>
             </Animated.View>
 
-            <TouchableOpacity style={[styles.hintCard, { backgroundColor: themeColors.card, borderColor: themeColors.cardBorder, borderWidth: themeColors.cardBorderWidth }]} onPress={handleHint} activeOpacity={0.7} disabled={isAnimating}>
-                <Ionicons name="bulb" size={22} color={colors.coral} />
-                <Text style={[styles.hintText, { color: themeColors.text }]}>
-                    {hintUsed && clue ? clue : "Indice logique"}
-                </Text>
+            {/* L'indice logique mis en évidence de façon permanente */}
+            {clue ? (
+                <View style={[styles.logicalHintContainer, { backgroundColor: themeColors.overlayLight, borderColor: themeColors.overlayMedium }]}>
+                    <Ionicons name="bulb" size={20} color={colors.coral} style={{ marginRight: spacing.sm }} />
+                    <Text style={[styles.hintText, { color: themeColors.text }]}>{clue}</Text>
+                </View>
+            ) : null}
+
+            {/* Nouveau : L'indice Premium (Lettres) */}
+            <TouchableOpacity 
+                style={[styles.premiumHintBtn, { backgroundColor: themeColors.card, borderColor: colors.mint, borderWidth: 1 }]} 
+                onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    navigation.navigate('Shop');
+                }} 
+                activeOpacity={0.7}
+            >
+                <MaterialCommunityIcons name="magic-staff" size={20} color={colors.mint} style={{ marginRight: spacing.sm }} />
+                <Text style={[styles.premiumHintText, { color: colors.mint }]}>Dévoiler une lettre (Payant)</Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.mint} style={{ marginLeft: 'auto' }} />
             </TouchableOpacity>
         </View>
     );
@@ -174,18 +191,32 @@ const styles = StyleSheet.create({
         backgroundColor: colors.sand,
         opacity: 0.5,
     },
-    hintCard: {
+    logicalHintContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: spacing.md,
-        paddingVertical: spacing.md,
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.lg,
+        borderRadius: borderRadius.md,
+        borderWidth: 1,
+    },
+    premiumHintBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: spacing.md,
+        paddingVertical: spacing.sm,
         paddingHorizontal: spacing.lg,
         borderRadius: borderRadius.md,
     },
+    premiumHintText: {
+        ...typography.bodySmall,
+        fontWeight: '700',
+    },
     hintText: {
         ...typography.bodySmall,
-        marginLeft: spacing.sm,
         fontWeight: '600',
+        flex: 1,
+        textAlign: 'center',
     }
 });
