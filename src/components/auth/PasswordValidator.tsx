@@ -14,7 +14,6 @@ export default function PasswordValidator({ password }: PasswordValidatorProps) 
         { id: 'number', label: 'Au moins un chiffre', isValid: /[0-9]/.test(password) },
     ];
 
-    // Ne s'affiche que si l'utilisateur a commencé a taper
     if (password.length === 0) return null;
 
     return (
@@ -34,18 +33,18 @@ export default function PasswordValidator({ password }: PasswordValidatorProps) 
 const styles = StyleSheet.create({
     container: {
         marginTop: spacing.xs,
-        marginBottom: spacing.md,
+        marginBottom: spacing.xs, // Réduit de md à xs pour gagner de la place
         paddingHorizontal: spacing.sm,
     },
     ruleRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: spacing.xs,
+        marginBottom: 2, // Espace minimal entre les lignes
     },
     indicator: {
-        width: 12,
-        height: 12,
-        borderRadius: 6,
+        width: 10, // Réduit légèrement
+        height: 10,
+        borderRadius: 5,
         borderWidth: 1.5,
         marginRight: spacing.sm,
     },
@@ -59,7 +58,7 @@ const styles = StyleSheet.create({
     },
     ruleText: {
         fontFamily: 'Poppins_400Regular',
-        fontSize: 12,
+        fontSize: 11, // Réduit de 12 à 11
         color: '#4A5568',
     },
     ruleTextValid: {
