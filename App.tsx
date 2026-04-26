@@ -7,10 +7,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
-// IMPORT du nouveau context de paramètres
 import { SettingsProvider } from './src/context/SettingsContext';
 
-// Screens
 import SplashScreen from './src/screens/SplashScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
@@ -23,6 +21,9 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import ShopScreen from './src/screens/ShopScreen';
 import MissionsScreen from './src/screens/MissionsScreen';
 import FriendsScreen from './src/screens/FriendsScreen';
+import ContactScreen from './src/screens/ContactScreen';
+import RulesScreen from './src/screens/RulesScreen';
+import PrivacyScreen from './src/screens/PrivacyScreen';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -41,6 +42,9 @@ export type RootStackParamList = {
   Shop: undefined;
   Missions: undefined;
   Friends: undefined;
+  Contact: undefined;
+  Rules: undefined;
+  Privacy: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -62,7 +66,7 @@ const AppNavigator = () => {
           {(props) => <SplashScreen {...props} onFinish={() => setIsSplashDone(true)} />}
         </Stack.Screen>
       ) : user ? (
-        <>
+        <Stack.Group>
           <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="Game" component={GameScreen} />
           <Stack.Screen name="GameOver" component={GameOverScreen} />
@@ -72,9 +76,12 @@ const AppNavigator = () => {
           <Stack.Screen name="Shop" component={ShopScreen} />
           <Stack.Screen name="Missions" component={MissionsScreen} />
           <Stack.Screen name="Friends" component={FriendsScreen} />
-        </>
+          <Stack.Screen name="Contact" component={ContactScreen} />
+          <Stack.Screen name="Rules" component={RulesScreen} />
+          <Stack.Screen name="Privacy" component={PrivacyScreen} />
+        </Stack.Group>
       ) : (
-        <>
+        <Stack.Group>
           <Stack.Screen 
             name="Login" 
             component={LoginScreen} 
@@ -97,7 +104,7 @@ const AppNavigator = () => {
               headerBackTitle: '',
             }}
           />
-        </>
+        </Stack.Group>
       )}
     </Stack.Navigator>
   );
@@ -136,7 +143,6 @@ const AppContent = () => {
 export default function App() {
   return (
     <AuthProvider>
-      {/* On ajoute SettingsProvider pour que le ThemeProvider puisse lire les paramètres locaux */}
       <SettingsProvider>
         <ThemeProvider>
           <AppContent />
