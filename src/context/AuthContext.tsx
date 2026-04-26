@@ -11,6 +11,7 @@ interface AuthContextData {
   register: (userData: any) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  updateProfile: (formData: any) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -51,8 +52,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await api.get('/auth/me');
       const freshUser = response.data.data.user;
       
-      // FIX ANTI-ZOMBIE : On s'assure que le token n'a pas ete detruit (par un logout)
-      // pendant que cette requete reseau etait en vol.
       const currentToken = await getToken();
       if (currentToken) {
         await saveUser(freshUser);
@@ -93,15 +92,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await refreshProfileSilently();
   };
 
+  // NOUVELLE FONCTION : Mise à jour du profil avec gestion FormData
+  const updateProfile = async (formData: any) => {
+    try {
+      const response = await api.put('/auth/me', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      const updatedUser = response.data.data.user;
+      
+      await saveUser(updatedUser);
+      setUser(updatedUser);
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Erreur lors de la mise à jour du profil');
+    }
+  };
+
   const logout = async () => {
     try {
-      // 1. Coupe-circuit immediat : On detruit la session locale avant tout
       await clearTokens();
-      
-      // 2. UI Optimiste : On kick l'utilisateur instantanement vers LoginScreen
       setUser(null);
-      
-      // 3. Arriere-plan : On previent le serveur silencieusement sans bloquer l'UI
       api.post('/auth/logout').catch(() => {});
     } catch (e) {
       console.error('Erreur lors de la deconnexion', e);
@@ -109,7 +120,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshProfile }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshProfile, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );
