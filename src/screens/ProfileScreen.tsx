@@ -18,7 +18,6 @@ export default function ProfileScreen() {
     const [isEditModalVisible, setEditModalVisible] = useState(false);
 
     useEffect(() => {
-        // Rafraichissement silencieux au montage pour s'assurer que les stats sont a jour
         refreshProfile();
     }, []);
 
@@ -28,7 +27,6 @@ export default function ProfileScreen() {
         setRefreshing(false);
     };
 
-    // CORRECTION : Remplacement de username par login
     const pseudo = user?.login || 'Joueur';
     const initial = pseudo.charAt(0).toUpperCase();
 
@@ -40,7 +38,6 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
                 <Text style={[styles.headerTitle, { color: themeColors.text }]}>MON PROFIL</Text>
                 
-                {/* Remplacement du headerSpacer par le bouton d'édition */}
                 <TouchableOpacity onPress={() => setEditModalVisible(true)} style={styles.editButton}>
                     <Ionicons name="settings-outline" size={24} color={themeColors.text} />
                 </TouchableOpacity>
@@ -58,7 +55,6 @@ export default function ProfileScreen() {
                 }
             >
                 <View style={[styles.avatarContainer, { backgroundColor: themeColors.surface }]}>
-                    {/* Gestion de l'affichage de l'image de profil Cloudinary */}
                     {user?.avatar ? (
                         <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
                     ) : (
@@ -75,7 +71,6 @@ export default function ProfileScreen() {
                     {user?.email || 'email@exemple.com'}
                 </Text>
 
-                {/* Bouton d'édition central */}
                 <TouchableOpacity 
                     style={[styles.editProfileButton, { backgroundColor: themeColors.surface }]}
                     onPress={() => setEditModalVisible(true)}
@@ -84,7 +79,14 @@ export default function ProfileScreen() {
                     <Text style={[styles.editProfileText, { color: themeColors.primary }]}>Modifier le profil</Text>
                 </TouchableOpacity>
 
+                {/* Conteneur de stats passé en grille 2x2 pour accueillir 4 éléments */}
                 <View style={styles.statsContainer}>
+                    <View style={[styles.statCard, { backgroundColor: themeColors.card }]}>
+                        <Text style={[styles.statValue, { color: themeColors.primary }]}>
+                            {user?.rank ? `#${user.rank}` : '-'}
+                        </Text>
+                        <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>RANG</Text>
+                    </View>
                     <View style={[styles.statCard, { backgroundColor: themeColors.card }]}>
                         <Text style={[styles.statValue, { color: themeColors.primary }]}>{user?.level || 1}</Text>
                         <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>NIVEAU</Text>
@@ -100,7 +102,6 @@ export default function ProfileScreen() {
                 </View>
             </ScrollView>
 
-            {/* Intégration de la modale */}
             <EditProfileModal 
                 visible={isEditModalVisible} 
                 onClose={() => setEditModalVisible(false)} 
@@ -122,8 +123,22 @@ const styles = StyleSheet.create({
     email: { ...typography.bodyMedium, marginBottom: spacing.xl },
     editProfileButton: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: 30, marginBottom: spacing.xl },
     editProfileText: { ...typography.buttonPrimary, fontSize: 14, marginLeft: spacing.sm },
-    statsContainer: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', gap: spacing.sm },
-    statCard: { flex: 1, alignItems: 'center', paddingVertical: spacing.lg, borderRadius: borderRadius.lg },
+    
+    // NOUVELLE GRILLE 2x2
+    statsContainer: { 
+        flexDirection: 'row', 
+        flexWrap: 'wrap', 
+        justifyContent: 'space-between', 
+        width: '100%' 
+    },
+    statCard: { 
+        width: '48%', // 48% permet de laisser 4% d'espace (gap) entre les deux colonnes
+        alignItems: 'center', 
+        paddingVertical: spacing.lg, 
+        borderRadius: borderRadius.lg, 
+        marginBottom: spacing.md 
+    },
+    
     statValue: { ...typography.titleHuge, fontSize: 28, lineHeight: 34 },
     statLabel: { ...typography.bodySmall, letterSpacing: 1, marginTop: 4 },
 });
