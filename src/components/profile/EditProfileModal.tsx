@@ -119,7 +119,7 @@ export default function EditProfileModal({ visible, onClose }: EditProfileModalP
           behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
           style={[styles.modalContent, { backgroundColor: themeColors.background }]}
         >
-          <View style={styles.header}>
+          <View style={[styles.header, { borderBottomColor: themeColors.overlayLight }]}>
             <TouchableOpacity onPress={onClose} disabled={loading}>
               <Text style={[styles.cancelText, { color: themeColors.textSecondary }]}>Annuler</Text>
             </TouchableOpacity>
@@ -139,7 +139,7 @@ export default function EditProfileModal({ visible, onClose }: EditProfileModalP
                     {login.charAt(0).toUpperCase()}
                   </Text>
                 )}
-                <View style={[styles.editIconBadge, { backgroundColor: themeColors.primary }]}>
+                <View style={[styles.editIconBadge, { backgroundColor: themeColors.primary, borderColor: themeColors.background }]}>
                   <Ionicons name="camera" size={14} color="#FFF" />
                 </View>
               </View>
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
       paddingBottom: spacing.xxl + 20,
   },
   
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)', marginBottom: spacing.md },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.md, borderBottomWidth: 1, marginBottom: spacing.md },
   cancelText: { ...typography.bodyMedium, fontSize: 16 },
   title: { ...typography.titleMedium, fontSize: 18 },
   saveText: { ...typography.buttonPrimary, fontSize: 16 },
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   avatarContainer: { width: 100, height: 100, borderRadius: 50, borderWidth: 2, justifyContent: 'center', alignItems: 'center', position: 'relative' },
   avatarImage: { width: 96, height: 96, borderRadius: 48 },
   avatarTextPlaceholder: { fontSize: 40, fontFamily: 'Lexend-Bold' },
-  editIconBadge: { position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#000' },
+  editIconBadge: { position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', borderWidth: 2 },
   changePhotoText: { marginTop: spacing.sm, ...typography.bodyMedium, fontSize: 14 },
   formSection: { width: '100%' },
   passwordSection: { marginTop: spacing.lg },

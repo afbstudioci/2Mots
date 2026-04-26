@@ -6,11 +6,13 @@ import { RootStackParamList } from '../../App';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
+import { useTheme } from '../context/ThemeContext';
 
 type GameOverScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'GameOver'>;
 
 export default function GameOverScreen({ route, navigation }: { route: any, navigation: GameOverScreenNavigationProp }) {
     const { score, details, corrections } = route.params;
+    const { themeColors } = useTheme();
 
     useEffect(() => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -23,7 +25,7 @@ export default function GameOverScreen({ route, navigation }: { route: any, navi
             <View style={styles.container}>
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
                     
-                    <Text style={styles.scoreLabel}>SCORE FINAL</Text>
+                    <Text style={[styles.scoreLabel, { color: themeColors.textSecondary }]}>SCORE FINAL</Text>
                     <Text style={styles.scoreValue}>{score}</Text>
 
                     {corrections && corrections.length > 0 && (
@@ -31,7 +33,7 @@ export default function GameOverScreen({ route, navigation }: { route: any, navi
                             <Text style={styles.correctionsTitle}>{correctionTitle}</Text>
                             {corrections.map((item: any, index: number) => (
                                 <View key={index} style={styles.correctionItem}>
-                                    <Text style={styles.correctionPair}>
+                                    <Text style={[styles.correctionPair, { color: themeColors.text }]}>
                                         {item.word1.toUpperCase()} + {item.word2.toUpperCase()}
                                     </Text>
                                     <Text style={styles.correctionExpected}>
@@ -42,7 +44,7 @@ export default function GameOverScreen({ route, navigation }: { route: any, navi
                         </View>
                     )}
 
-                    <View style={styles.cardContainer}>
+                    <View style={[styles.cardContainer, { backgroundColor: themeColors.overlayLight }]}>
                         {details.map((item: any, index: number) => {
                             const isHighAccuracy = item.accuracy >= 80;
                             const accuracyColor = isHighAccuracy ? colors.success : colors.coral;
@@ -52,17 +54,18 @@ export default function GameOverScreen({ route, navigation }: { route: any, navi
                                     key={index} 
                                     style={[
                                         styles.detailRow, 
-                                        index === details.length - 1 && styles.lastRow
+                                        index === details.length - 1 && styles.lastRow,
+                                        { borderBottomColor: themeColors.overlayLight }
                                     ]}
                                 >
                                     <View style={styles.wordContainer}>
-                                        <Text style={styles.word} numberOfLines={1}>{item.word}</Text>
+                                        <Text style={[styles.word, { color: themeColors.text }]} numberOfLines={1}>{item.word}</Text>
                                     </View>
                                     <View style={styles.statsContainer}>
                                         <Text style={[styles.accuracy, { color: accuracyColor }]}>
                                             {item.accuracy}%
                                         </Text>
-                                        <Text style={styles.label}>{item.label}</Text>
+                                        <Text style={[styles.label, { color: themeColors.textSecondary }]}>{item.label}</Text>
                                     </View>
                                 </View>
                             );
@@ -84,7 +87,7 @@ export default function GameOverScreen({ route, navigation }: { route: any, navi
                         activeOpacity={0.6}
                         onPress={() => navigation.replace('Home')}
                     >
-                        <Text style={styles.homeText}>RETOUR À L'ACCUEIL</Text>
+                        <Text style={[styles.homeText, { color: themeColors.text }]}>RETOUR À L'ACCUEIL</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -104,7 +107,6 @@ const styles = StyleSheet.create({
     },
     scoreLabel: {
         fontFamily: 'Poppins_700Bold',
-        color: colors.sand,
         fontSize: 18,
         letterSpacing: 4,
         opacity: 0.6,
@@ -140,7 +142,6 @@ const styles = StyleSheet.create({
     },
     correctionPair: {
         fontFamily: 'Poppins_500Medium',
-        color: colors.sand,
         fontSize: 14,
         opacity: 0.8,
     },
@@ -152,7 +153,6 @@ const styles = StyleSheet.create({
     },
     cardContainer: {
         width: '100%',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
         borderRadius: 32, 
         padding: spacing.xl,
     },
@@ -162,7 +162,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: spacing.lg,
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255, 255, 255, 0.05)',
     },
     lastRow: {
         borderBottomWidth: 0,
@@ -173,7 +172,6 @@ const styles = StyleSheet.create({
     },
     word: {
         fontFamily: 'Poppins_700Bold',
-        color: colors.sand,
         fontSize: 18,
         textTransform: 'uppercase',
     },
@@ -186,8 +184,7 @@ const styles = StyleSheet.create({
     },
     label: {
         fontFamily: 'Poppins_500Medium',
-        color: colors.sand,
-        opacity: 0.5,
+        opacity: 0.8,
         fontSize: 12,
         letterSpacing: 1,
         marginTop: 2,
@@ -219,7 +216,6 @@ const styles = StyleSheet.create({
     },
     homeText: {
         ...typography.buttonPrimary,
-        color: colors.sand,
         fontSize: 14,
         letterSpacing: 1,
         opacity: 0.7,

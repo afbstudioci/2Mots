@@ -99,7 +99,7 @@ export default function FullScreenMenu() {
             {!isOpen && (
                 <Pressable 
                     onPress={toggleMenu} 
-                    style={[styles.actionButton, { top: insets.top + spacing.sm }]}
+                    style={[styles.actionButton, { top: insets.top + spacing.sm, backgroundColor: themeColors.overlay }]}
                 >
                     <View style={styles.hamburgerContainer}>
                         <View style={[styles.hamburgerLine, { backgroundColor: themeColors.text }]} />
@@ -123,7 +123,7 @@ export default function FullScreenMenu() {
                         { backgroundColor: themeColors.background }
                     ]} />
 
-                    <Pressable onPress={toggleMenu} style={[styles.actionButton, { top: insets.top + spacing.sm }]}>
+                    <Pressable onPress={toggleMenu} style={[styles.actionButton, { top: insets.top + spacing.sm, backgroundColor: themeColors.overlay }]}>
                         <Animated.View style={[styles.crossLine, { backgroundColor: themeColors.text, transform: [{ rotate: rotate1 }] }]} />
                         <Animated.View style={[styles.crossLine, { backgroundColor: themeColors.text, transform: [{ rotate: rotate2 }] }]} />
                     </Pressable>
@@ -134,23 +134,43 @@ export default function FullScreenMenu() {
                                 key={item.id} 
                                 style={[styles.animatedItemContainer, { opacity: itemFadeAnims[index], transform: [{ translateY: itemSlideAnims[index] }] }]}
                             >
-                                <Pressable style={styles.menuItem} onPress={() => handleNavigation(item.id)}>
-                                    <Ionicons name={item.icon as any} size={28} color={themeColors.textSecondary} style={styles.menuIcon} />
+                                <Pressable 
+                                    style={({ pressed }) => [
+                                        styles.menuItem, 
+                                        { 
+                                            backgroundColor: themeColors.card,
+                                            borderColor: themeColors.cardBorder,
+                                            borderWidth: themeColors.cardBorderWidth,
+                                            transform: [{ scale: pressed ? 0.95 : 1 }]
+                                        }
+                                    ]} 
+                                    onPress={() => handleNavigation(item.id)}
+                                >
+                                    <View style={[styles.menuIconContainer, { backgroundColor: themeColors.overlayLight }]}>
+                                        <Ionicons name={item.icon as any} size={24} color={themeColors.primary} />
+                                    </View>
                                     <Text style={[styles.menuText, { color: themeColors.text }]}>{item.label}</Text>
+                                    <Ionicons name="chevron-forward" size={20} color={themeColors.textSecondary} style={{ marginLeft: 'auto' }} />
                                 </Pressable>
                             </Animated.View>
                         ))}
                     </View>
 
                     <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.xl }]}>
-                        <Pressable style={styles.logoutButton} onPress={handleLogout}>
-                            <Ionicons name="log-out-outline" size={20} color={colors.error} style={styles.logoutIcon} />
+                        <Pressable 
+                            style={({ pressed }) => [
+                                styles.logoutButton, 
+                                { transform: [{ scale: pressed ? 0.95 : 1 }] }
+                            ]} 
+                            onPress={handleLogout}
+                        >
+                            <Ionicons name="log-out-outline" size={22} color={colors.error} style={styles.logoutIcon} />
                             <Text style={[styles.logoutText, { color: colors.error }]}>Se déconnecter</Text>
                         </Pressable>
                         
                         <View style={styles.versionContainer}>
                             <Text style={[styles.brandText, { color: themeColors.text }]}>2Mots</Text>
-                            <View style={[styles.versionBadge, { backgroundColor: 'rgba(255, 255, 255, 0.05)' }]}>
+                            <View style={[styles.versionBadge, { backgroundColor: themeColors.overlay }]}>
                                 <Text style={[styles.versionText, { color: themeColors.textSecondary }]}>
                                     v{APP_VERSION}
                                 </Text>
@@ -172,7 +192,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         zIndex: 100,
-        backgroundColor: 'rgba(255, 255, 255, 0.03)',
         borderRadius: 25,
     },
     hamburgerContainer: { alignItems: 'flex-end', width: 24 },
@@ -188,12 +207,25 @@ const styles = StyleSheet.create({
         right: 0,
     },
     
-    menuContent: { flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%', marginTop: -40 },
-    animatedItemContainer: { alignItems: 'center' },
-    menuItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.md, marginVertical: spacing.xs },
-    menuIcon: { marginRight: spacing.md },
-    menuText: { ...typography.titleHuge, fontSize: 32, letterSpacing: 1 },
-    footer: { width: '100%', alignItems: 'center' },
+    menuContent: { flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%', paddingHorizontal: spacing.xl },
+    animatedItemContainer: { alignItems: 'center', width: '100%' },
+    menuItem: { 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        width: '100%', 
+        paddingVertical: spacing.md, 
+        paddingHorizontal: spacing.lg, 
+        marginVertical: spacing.sm,
+        borderRadius: borderRadius.lg,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 3,
+    },
+    menuIconContainer: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginRight: spacing.md },
+    menuText: { ...typography.buttonPrimary, fontSize: 18, letterSpacing: 0.5 },
+    footer: { width: '100%', alignItems: 'center', paddingHorizontal: spacing.xl },
     logoutButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.md, paddingHorizontal: spacing.xl, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: borderRadius.xl, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.2)', marginBottom: spacing.lg },
     logoutIcon: { marginRight: spacing.sm },
     logoutText: { ...typography.buttonPrimary, fontSize: 16, letterSpacing: 0.5 },

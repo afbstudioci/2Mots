@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { typography, colors, spacing } from '../theme/theme';
+import { useTheme } from '../context/ThemeContext';
 import Svg, { Path } from 'react-native-svg';
 
 interface SplashScreenProps {
@@ -12,6 +13,7 @@ interface SplashScreenProps {
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 export default function SplashScreen({ onFinish }: SplashScreenProps) {
+  const { themeColors } = useTheme();
   const [progress, setProgress] = useState(0);
   
   // Valeurs d'animation
@@ -97,7 +99,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
         
         <View style={styles.centerBlock}>
@@ -130,8 +132,8 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
         </View>
         
         <View style={styles.bottomBlock}>
-          <View style={styles.progressBarBackground}>
-            <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
+          <View style={[styles.progressBarBackground, { backgroundColor: themeColors.overlayLight }]}>
+            <View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: themeColors.text }]} />
           </View>
         </View>
 
@@ -143,7 +145,6 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.nightBlue,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -183,13 +184,11 @@ const styles = StyleSheet.create({
   progressBarBackground: {
     width: 100,
     height: 4,
-    backgroundColor: 'rgba(247, 245, 240, 0.1)',
     borderRadius: 10,
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: colors.sand,
     borderRadius: 10,
   }
 });

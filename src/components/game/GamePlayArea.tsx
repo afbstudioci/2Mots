@@ -1,6 +1,7 @@
 //src/components/game/GamePlayArea.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 import { colors, typography, spacing } from '../../theme/theme';
 
 interface GamePlayAreaProps {
@@ -8,6 +9,7 @@ interface GamePlayAreaProps {
 }
 
 export default function GamePlayArea({ currentPair }: GamePlayAreaProps) {
+    const { themeColors } = useTheme();
     if (!currentPair) return null;
 
     const word1 = (currentPair.word1 || "").toUpperCase();
@@ -16,9 +18,9 @@ export default function GamePlayArea({ currentPair }: GamePlayAreaProps) {
     return (
         <View style={styles.container}>
             {/* Carte du Haut (Mot 1) */}
-            <View style={styles.card}>
+            <View style={[styles.card, { backgroundColor: themeColors.card, borderColor: themeColors.cardBorder, borderWidth: themeColors.cardBorderWidth, shadowColor: themeColors.text }]}>
                 <Text 
-                    style={styles.wordText} 
+                    style={[styles.wordText, { color: themeColors.text }]} 
                     numberOfLines={1} 
                     adjustsFontSizeToFit={true}
                     minimumFontScale={0.5}
@@ -33,9 +35,9 @@ export default function GamePlayArea({ currentPair }: GamePlayAreaProps) {
             </View>
 
             {/* Carte du Bas (Mot 2) */}
-            <View style={styles.card}>
+            <View style={[styles.card, { backgroundColor: themeColors.card, borderColor: themeColors.cardBorder, borderWidth: themeColors.cardBorderWidth, shadowColor: themeColors.text }]}>
                 <Text 
-                    style={styles.wordText} 
+                    style={[styles.wordText, { color: themeColors.text }]} 
                     numberOfLines={1} 
                     adjustsFontSizeToFit={true}
                     minimumFontScale={0.5}
@@ -62,10 +64,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.lg,
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.08)',
         minHeight: 110, // Assure une belle prestance sans forcer sur le padding
-        shadowColor: colors.white,
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.04,
         shadowRadius: 16,
@@ -73,7 +72,6 @@ const styles = StyleSheet.create({
     },
     wordText: {
         ...typography.titleHuge,
-        color: colors.white,
         textTransform: 'uppercase',
         textAlign: 'center',
         letterSpacing: 6,

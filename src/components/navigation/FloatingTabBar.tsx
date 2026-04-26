@@ -73,7 +73,7 @@ const TabItem = ({ item, isActive, onPress, themeColors }: any) => {
                 <Animated.View style={[
                     styles.activeBubble, 
                     { 
-                        backgroundColor: 'rgba(255, 127, 80, 0.15)',
+                        backgroundColor: themeColors.overlayLight,
                         opacity: activeBubbleAnim,
                         transform: [{ 
                             scale: activeBubbleAnim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }) 

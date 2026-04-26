@@ -20,6 +20,12 @@ export const getPalette = (isDark: boolean) => ({
     textSecondary: isDark ? 'rgba(247, 245, 240, 0.6)' : 'rgba(26, 32, 44, 0.6)',
     border: isDark ? '#2D3748' : '#E2E8F0',
     card: isDark ? '#242B3A' : colors.white,
+    overlay: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+    overlayLight: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+    overlayMedium: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)',
+    overlayStrong: isDark ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.3)',
+    cardBorder: isDark ? '#2D3748' : colors.coral,
+    cardBorderWidth: isDark ? 1 : 2,
 });
 
 export const spacing = {

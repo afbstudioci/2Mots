@@ -2,11 +2,13 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { useTheme } from '../../context/ThemeContext';
 import { typography, colors, spacing } from '../../theme/theme';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 export default function GameLoading() {
+    const { themeColors } = useTheme();
     const cardTranslateX = useRef(new Animated.Value(40)).current; // Ecart de depart
     const lineDrawAnim = useRef(new Animated.Value(100)).current;
     const shockwaveScale = useRef(new Animated.Value(0)).current;
@@ -50,17 +52,18 @@ export default function GameLoading() {
     }, []);
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: themeColors.background }]}>
             
             {/* L'Onde de choc centrale */}
             <Animated.View style={[styles.shockwave, { 
                 transform: [{ scale: shockwaveScale }],
-                opacity: shockwaveOpacity
+                opacity: shockwaveOpacity,
+                backgroundColor: themeColors.overlayLight
             }]} />
 
             <View style={styles.connectionBox}>
-                <Animated.View style={[styles.wordCard, { transform: [{ translateX: cardTranslateX }] }]}>
-                    <Text style={styles.word}>IDÉE</Text>
+                <Animated.View style={[styles.wordCard, { transform: [{ translateX: cardTranslateX }], backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
+                    <Text style={[styles.word, { color: themeColors.text }]}>IDÉE</Text>
                 </Animated.View>
 
                 {/* La chaine qui relie les cartes */}
@@ -81,13 +84,14 @@ export default function GameLoading() {
                 <Animated.View style={[styles.wordCard, { 
                     transform: [{ 
                         translateX: cardTranslateX.interpolate({ inputRange: [0, 40], outputRange: [0, -40] }) 
-                    }] 
+                    }],
+                    backgroundColor: themeColors.card, borderColor: themeColors.border
                 }]}>
-                    <Text style={styles.word}>LIEN</Text>
+                    <Text style={[styles.word, { color: themeColors.text }]}>LIEN</Text>
                 </Animated.View>
             </View>
 
-            <Text style={styles.loadingText}>Connexion logique en cours...</Text>
+            <Text style={[styles.loadingText, { color: themeColors.text }]}>Connexion logique en cours...</Text>
         </View>
     );
 }
@@ -106,7 +110,6 @@ const styles = StyleSheet.create({
         borderRadius: 50,
         borderWidth: 2,
         borderColor: colors.coral,
-        backgroundColor: 'rgba(255, 111, 97, 0.1)',
     },
     connectionBox: {
         flexDirection: 'row',
@@ -115,21 +118,17 @@ const styles = StyleSheet.create({
         zIndex: 10,
     },
     wordCard: {
-        backgroundColor: colors.nightBlue,
         paddingVertical: spacing.md,
         paddingHorizontal: spacing.lg,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: 'rgba(247, 245, 240, 0.2)',
-        shadowColor: colors.nightBlue,
         shadowRadius: 10,
-        shadowOpacity: 0.8,
+        shadowOpacity: 0.1,
         elevation: 5,
     },
     word: {
         fontFamily: 'Poppins_700Bold',
         fontSize: 16,
-        color: colors.sand,
         letterSpacing: 2,
     },
     svgContainer: {
@@ -141,7 +140,6 @@ const styles = StyleSheet.create({
     },
     loadingText: {
         ...typography.bodyMedium,
-        color: colors.sand,
         opacity: 0.6,
         marginTop: spacing.xl,
         letterSpacing: 1,

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
 import { colors, spacing } from '../theme/theme';
 import api from '../services/api';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
@@ -13,6 +14,7 @@ export default function LeaderboardScreen() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
     const navigation = useNavigation();
+    const { themeColors } = useTheme();
 
     // Animation de fondu uniquement (pas de slide)
     const screenFadeAnim = useRef(new Animated.Value(0)).current;
@@ -53,8 +55,8 @@ export default function LeaderboardScreen() {
 
     const renderRisingStarsHeader = () => (
         <View style={styles.risingStarsContainer}>
-            <Text style={styles.risingStarsText}>ÉTOILES MONTANTES</Text>
-            <Ionicons name="trending-up" size={18} color="rgba(255,255,255,0.4)" />
+            <Text style={[styles.risingStarsText, { color: themeColors.textSecondary }]}>ÉTOILES MONTANTES</Text>
+            <Ionicons name="trending-up" size={18} color={themeColors.textSecondary} />
         </View>
     );
 
@@ -132,7 +134,7 @@ const styles = StyleSheet.create({
         marginBottom: spacing.md,
     },
     risingStarsText: {
-        fontFamily: 'Poppins_700Bold', color: 'rgba(255,255,255,0.4)', fontSize: 12, letterSpacing: 2
+        fontFamily: 'Poppins_700Bold', fontSize: 12, letterSpacing: 2
     },
     listContent: { paddingBottom: spacing.xl * 3 },
 });

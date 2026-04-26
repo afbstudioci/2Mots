@@ -1,7 +1,8 @@
 //src/components/game/WordCard.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, typography, spacing } from '../../theme/theme';
+import { useTheme } from '../../context/ThemeContext';
+import { typography, spacing, colors } from '../../theme/theme';
 import { Ionicons } from '@expo/vector-icons';
 
 interface WordCardProps {
@@ -10,20 +11,21 @@ interface WordCardProps {
 }
 
 export default function WordCard({ word1, word2 }: WordCardProps) {
+    const { themeColors } = useTheme();
     return (
         <View style={styles.container}>
-            <View style={styles.card}>
-                <Ionicons name="leaf-outline" size={40} color={colors.white} />
-                <Text style={styles.wordText} numberOfLines={1} adjustsFontSizeToFit>{word1}</Text>
+            <View style={[styles.card, { backgroundColor: themeColors.card, borderColor: themeColors.cardBorder, borderWidth: themeColors.cardBorderWidth }]}>
+                <Ionicons name="leaf-outline" size={40} color={themeColors.text} />
+                <Text style={[styles.wordText, { color: themeColors.text }]} numberOfLines={1} adjustsFontSizeToFit>{word1}</Text>
             </View>
 
             <View style={styles.linkContainer}>
                 <Text style={styles.linkSymbol}>+</Text>
             </View>
 
-            <View style={styles.card}>
-                <Ionicons name="nutrition-outline" size={40} color={colors.white} />
-                <Text style={styles.wordText} numberOfLines={1} adjustsFontSizeToFit>{word2}</Text>
+            <View style={[styles.card, { backgroundColor: themeColors.card, borderColor: themeColors.cardBorder, borderWidth: themeColors.cardBorderWidth }]}>
+                <Ionicons name="nutrition-outline" size={40} color={themeColors.text} />
+                <Text style={[styles.wordText, { color: themeColors.text }]} numberOfLines={1} adjustsFontSizeToFit>{word2}</Text>
             </View>
         </View>
     );
@@ -39,7 +41,6 @@ const styles = StyleSheet.create({
     },
     card: {
         flex: 1,
-        backgroundColor: colors.nightBlue,
         borderRadius: 20,
         paddingVertical: spacing.lg,
         paddingHorizontal: spacing.sm,
@@ -49,7 +50,6 @@ const styles = StyleSheet.create({
     },
     wordText: {
         ...typography.titleLarge,
-        color: colors.white,
         textTransform: 'uppercase',
         marginTop: spacing.sm,
         textAlign: 'center',

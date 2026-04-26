@@ -12,13 +12,13 @@ export default function RulesScreen() {
     const navigation = useNavigation();
 
     const RuleItem = ({ icon, title, description }: { icon: any, title: string, description: string }) => (
-        <View style={[styles.rulecardBg, { backgroundColor: themeColors.cardBgBg, borderColor: themeColors.cardBgBorder, borderWidth: themeColors.cardBgBorderWidth }]}>
+        <View style={[styles.rulecardBg, { backgroundColor: themeColors.card, borderColor: themeColors.cardBorder, borderWidth: themeColors.cardBorderWidth }]}>
             <View style={[styles.iconContainer, { backgroundColor: themeColors.primary + '20' }]}>
                 <Ionicons name={icon} size={24} color={themeColors.primary} />
             </View>
             <View style={styles.ruleTextContent}>
-                <Text style={[styles.ruleTitle, { color: themeColors.cardBgText }]}>{title}</Text>
-                <Text style={[styles.ruleDescription, { color: themeColors.cardBgText, opacity: 0.7 }]}>{description}</Text>
+                <Text style={[styles.ruleTitle, { color: themeColors.text }]}>{title}</Text>
+                <Text style={[styles.ruleDescription, { color: themeColors.textSecondary }]}>{description}</Text>
             </View>
         </View>
     );

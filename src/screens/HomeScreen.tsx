@@ -39,10 +39,11 @@ const HomeScreen = ({ navigation }: { navigation: HomeScreenNavigationProp }) =>
             Animated.spring(slideAnim, { toValue: 0, tension: 40, friction: 7, useNativeDriver: true })
         ]).start();
 
+        // Pulsation du bouton JOUER (Battement de coeur continu)
         Animated.loop(
             Animated.sequence([
-                Animated.timing(breathAnim, { toValue: 1.03, duration: 1500, useNativeDriver: true }),
-                Animated.timing(breathAnim, { toValue: 1, duration: 1500, useNativeDriver: true })
+                Animated.timing(breathAnim, { toValue: 1.05, duration: 1200, useNativeDriver: true }),
+                Animated.timing(breathAnim, { toValue: 1, duration: 1200, useNativeDriver: true })
             ])
         ).start();
     }, [breathAnim, fadeAnim, slideAnim]);
@@ -68,15 +69,16 @@ const HomeScreen = ({ navigation }: { navigation: HomeScreenNavigationProp }) =>
             <View style={styles.container}>
                 
                 <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-                    <Text style={[styles.greetingText, { color: themeColors.text }]}>Bonjour, {user?.login}</Text>
+                    <Text style={[styles.greetingText, { color: themeColors.textSecondary }]}>Bienvenue,</Text>
+                    <Text style={[styles.userNameText, { color: themeColors.text }]}>{user?.login}</Text>
                     
                     <View style={styles.badgesContainer}>
-                        <View style={[styles.badge, { backgroundColor: themeColors.card }]}>
+                        <View style={[styles.badge, { backgroundColor: themeColors.card, borderColor: themeColors.cardBorder, borderWidth: themeColors.cardBorderWidth }]}>
                             <Text style={[styles.badgeLabel, { color: themeColors.textSecondary }]}>Record </Text>
                             <Text style={[styles.badgeValue, { color: themeColors.text }]}>{user?.bestScore || 0}</Text>
                         </View>
                         
-                        <View style={[styles.badge, styles.kevsBadge, { backgroundColor: 'rgba(255, 215, 0, 0.1)' }]}>
+                        <View style={[styles.badge, styles.kevsBadge, { backgroundColor: 'rgba(255, 215, 0, 0.1)', borderColor: themeColors.cardBorderWidth === 2 ? themeColors.cardBorder : 'rgba(255, 215, 0, 0.3)', borderWidth: themeColors.cardBorderWidth }]}>
                             <Text style={[styles.badgeLabel, { color: '#FFD700' }]}>Kevs </Text>
                             <Text style={[styles.badgeValue, { color: '#FFD700' }]}>{user?.kevs || 0}</Text>
                         </View>
@@ -84,6 +86,10 @@ const HomeScreen = ({ navigation }: { navigation: HomeScreenNavigationProp }) =>
                 </Animated.View>
 
                 <View style={styles.centerContainer}>
+                    {/* Ombres pulsantes decoratives */}
+                    <Animated.View style={[styles.playButtonGlow, { transform: [{ scale: breathAnim }], opacity: 0.6 }]} />
+                    <Animated.View style={[styles.playButtonGlow, { transform: [{ scale: breathAnim }], opacity: 0.3, width: 220, height: 220 }]} />
+                    
                     <Animated.View style={{ transform: [{ scale: breathAnim }] }}>
                         <Animated.View style={{ transform: [{ scale: scalePressAnim }] }}>
                             <Pressable
@@ -122,9 +128,16 @@ const styles = StyleSheet.create({
     },
     greetingText: {
         fontFamily: 'Poppins_500Medium',
-        fontSize: 14,
-        marginBottom: spacing.xs,
+        fontSize: 16,
         paddingLeft: spacing.xs,
+        letterSpacing: 1,
+    },
+    userNameText: {
+        fontFamily: 'Poppins_800ExtraBold',
+        fontSize: 32,
+        marginBottom: spacing.md,
+        paddingLeft: spacing.xs,
+        letterSpacing: 0.5,
     },
     badgesContainer: {
         flexDirection: 'row',
@@ -157,12 +170,27 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginTop: -50, 
     },
+    playButtonGlow: {
+        position: 'absolute',
+        width: 180,
+        height: 180,
+        borderRadius: 90,
+        backgroundColor: colors.coral,
+        zIndex: 0,
+    },
     playButton: {
         backgroundColor: colors.coral,
         paddingVertical: spacing.lg,
         paddingHorizontal: 80,
         borderRadius: borderRadius.xl,
-        ...shadows.soft(true),
+        zIndex: 10,
+        shadowColor: colors.coral,
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.5,
+        shadowRadius: 20,
+        elevation: 10,
+        borderWidth: 2,
+        borderColor: 'rgba(255, 255, 255, 0.3)', // Reflet premium interne
     },
     playButtonText: {
         fontFamily: 'Poppins_900Black',

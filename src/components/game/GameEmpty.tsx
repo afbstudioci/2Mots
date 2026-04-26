@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { typography, colors, spacing, borderRadius } from '../../theme/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 interface GameEmptyProps {
     message: string;
@@ -9,6 +10,7 @@ interface GameEmptyProps {
 }
 
 export default function GameEmpty({ message, onBack }: GameEmptyProps) {
+    const { themeColors } = useTheme();
     const dropTear = useRef(new Animated.Value(0)).current;
     const fadeTear = useRef(new Animated.Value(1)).current;
 
@@ -30,10 +32,10 @@ export default function GameEmpty({ message, onBack }: GameEmptyProps) {
     }, []);
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: themeColors.background }]}>
             <View style={styles.iconContainer}>
                 {/* Visage endormi/triste */}
-                <Svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke={colors.sand} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <Svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke={themeColors.text} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <Circle cx="12" cy="12" r="10" />
                     <Path d="M8 15h8" /> 
                     <Path d="M9 9h.01" /> 
@@ -48,7 +50,7 @@ export default function GameEmpty({ message, onBack }: GameEmptyProps) {
                 </Animated.View>
             </View>
 
-            <Text style={styles.errorText}>{message}</Text>
+            <Text style={[styles.errorText, { color: themeColors.text }]}>{message}</Text>
 
             <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.8}>
                 <Text style={styles.buttonText}>RETOUR</Text>
@@ -63,7 +65,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         paddingHorizontal: spacing.xl,
-        backgroundColor: colors.nightBlue,
     },
     iconContainer: {
         marginBottom: spacing.xl,
@@ -77,7 +78,6 @@ const styles = StyleSheet.create({
     },
     errorText: {
         fontFamily: 'Poppins_500Medium',
-        color: colors.sand,
         fontSize: 16,
         textAlign: 'center',
         marginBottom: spacing.xl * 2,

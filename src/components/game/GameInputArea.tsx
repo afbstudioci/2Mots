@@ -1,6 +1,7 @@
 //src/components/game/GameInputArea.tsx
 import React, { useState, useImperativeHandle, useRef } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Keyboard, Animated } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 import { colors, typography, borderRadius, shadows, spacing } from '../../theme/theme';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -23,6 +24,7 @@ interface GameInputAreaProps {
 export default function GameInputArea({ 
     answer, setAnswer, submitAnswer, expectedType, clue, onHintPress, isAnimating, actionRef
 }: GameInputAreaProps) {
+    const { themeColors } = useTheme();
     
     const [hintUsed, setHintUsed] = useState(false);
     const [isError, setIsError] = useState(false);
@@ -64,9 +66,9 @@ export default function GameInputArea({
     return (
         <View style={styles.container}>
             {expectedType ? (
-                <View style={styles.typePill}>
-                    <Ionicons name="information-circle" size={16} color={colors.nightBlue} />
-                    <Text style={styles.typeText}>
+                <View style={[styles.typePill, { backgroundColor: themeColors.overlayLight }]}>
+                    <Ionicons name="information-circle" size={16} color={themeColors.text} />
+                    <Text style={[styles.typeText, { color: themeColors.text }]}>
                         La solution est {formatExpectedType(expectedType)}
                     </Text>
                 </View>
@@ -109,9 +111,9 @@ export default function GameInputArea({
                 </TouchableOpacity>
             </Animated.View>
 
-            <TouchableOpacity style={styles.hintCard} onPress={handleHint} activeOpacity={0.7} disabled={isAnimating}>
+            <TouchableOpacity style={[styles.hintCard, { backgroundColor: themeColors.card, borderColor: themeColors.cardBorder, borderWidth: themeColors.cardBorderWidth }]} onPress={handleHint} activeOpacity={0.7} disabled={isAnimating}>
                 <Ionicons name="bulb" size={22} color={colors.coral} />
-                <Text style={styles.hintText}>
+                <Text style={[styles.hintText, { color: themeColors.text }]}>
                     {hintUsed && clue ? clue : "Indice logique"}
                 </Text>
             </TouchableOpacity>
@@ -129,7 +131,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         alignSelf: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.15)',
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.xs,
         borderRadius: borderRadius.xl,
@@ -137,7 +138,6 @@ const styles = StyleSheet.create({
     },
     typeText: {
         ...typography.bodySmall,
-        color: colors.white,
         marginLeft: spacing.xs,
         fontWeight: '700',
     },
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
         paddingLeft: spacing.lg,
         paddingRight: spacing.xs,
         height: 60,
-        ...shadows.float(),
+        ...shadows.float(false),
         borderWidth: 2,
         borderColor: 'transparent',
     },
@@ -179,16 +179,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: spacing.md,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
         paddingVertical: spacing.md,
         paddingHorizontal: spacing.lg,
         borderRadius: borderRadius.md,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.2)',
     },
     hintText: {
         ...typography.bodySmall,
-        color: colors.white,
         marginLeft: spacing.sm,
         fontWeight: '600',
     }

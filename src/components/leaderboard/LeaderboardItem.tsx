@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity, LayoutAnimation, UIManager, Platform, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../context/ThemeContext';
 import { colors, spacing } from '../../theme/theme';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -20,6 +21,7 @@ interface LeaderboardItemProps {
 }
 
 export default function LeaderboardItem({ rank, user, index }: LeaderboardItemProps) {
+    const { themeColors } = useTheme();
     const [expanded, setExpanded] = useState(false);
     
     // Animations d'entrée
@@ -63,7 +65,7 @@ export default function LeaderboardItem({ rank, user, index }: LeaderboardItemPr
         if (rank === 1) return { backgroundColor: '#FFB84D', textColor: '#332200' };
         if (rank === 2) return { backgroundColor: '#81E6D9', textColor: '#00332E' };
         if (rank === 3) return { backgroundColor: '#F6A87C', textColor: '#4A200B' };
-        return { backgroundColor: '#242938', textColor: colors.sand };
+        return { backgroundColor: themeColors.card, textColor: themeColors.text };
     };
 
     const cardConfig = getCardStyle();
@@ -96,6 +98,7 @@ export default function LeaderboardItem({ rank, user, index }: LeaderboardItemPr
                 style={[
                     styles.card, 
                     { backgroundColor: cardConfig.backgroundColor },
+                    !isPodium && { borderColor: themeColors.cardBorder, borderWidth: themeColors.cardBorderWidth },
                     isPodium ? styles.cardPodium : styles.cardStandard,
                     expanded && styles.cardExpanded,
                     // Ombre renforcée pour le Top 1
@@ -117,7 +120,7 @@ export default function LeaderboardItem({ rank, user, index }: LeaderboardItemPr
                             </View>
                         </View>
                     ) : (
-                        <Text style={styles.rankTextStandard}>{rank}</Text>
+                        <Text style={[styles.rankTextStandard, { color: themeColors.textSecondary }]}>{rank}</Text>
                     )}
 
                     {!isPodium && renderAvatar(false)}
@@ -154,12 +157,12 @@ export default function LeaderboardItem({ rank, user, index }: LeaderboardItemPr
 
                 {/* DETAILS AU CLIC */}
                 {expanded && (
-                    <View style={[styles.detailsContainer, { borderTopColor: isPodium ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.05)' }]}>
+                    <View style={[styles.detailsContainer, { borderTopColor: isPodium ? 'rgba(0,0,0,0.1)' : themeColors.overlayLight }]}>
                         <View style={styles.detailItem}>
                             <Text style={[styles.detailValue, { color: cardConfig.textColor }]}>{user.level || 1}</Text>
                             <Text style={[styles.detailLabel, { color: cardConfig.textColor, opacity: 0.6 }]}>Niveau</Text>
                         </View>
-                        <View style={[styles.divider, { backgroundColor: isPodium ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.05)' }]} />
+                        <View style={[styles.divider, { backgroundColor: isPodium ? 'rgba(0,0,0,0.1)' : themeColors.overlayLight }]} />
                         <View style={styles.detailItem}>
                             <Text style={[styles.detailValue, { color: cardConfig.textColor }]}>{user.xp || 0}</Text>
                             <Text style={[styles.detailLabel, { color: cardConfig.textColor, opacity: 0.6 }]}>XP Total</Text>
@@ -231,7 +234,7 @@ const styles = StyleSheet.create({
         borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)'
     },
     rankTextPodium: { fontFamily: 'Poppins_700Bold', color: colors.white, fontSize: 12 },
-    rankTextStandard: { fontFamily: 'Poppins_800ExtraBold', color: 'rgba(255,255,255,0.2)', fontSize: 20, width: 25, textAlign: 'center' },
+    rankTextStandard: { fontFamily: 'Poppins_800ExtraBold', fontSize: 20, width: 25, textAlign: 'center' },
 
     // CORRECTION DES NOMS LONGS : flex 1 pour prendre l'espace restant, flexShrink pour s'écraser
     infoContainer: { 

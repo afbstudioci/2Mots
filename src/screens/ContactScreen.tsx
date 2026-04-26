@@ -54,9 +54,9 @@ export default function ContactScreen() {
             style={[
                 styles.cardBg, 
                 { 
-                    backgroundColor: themeColors.cardBgBg, 
-                    borderColor: themeColors.cardBgBorder,
-                    borderWidth: themeColors.cardBgBorderWidth
+                    backgroundColor: themeColors.card, 
+                    borderColor: themeColors.cardBorder,
+                    borderWidth: themeColors.cardBorderWidth
                 }
             ]} 
             activeOpacity={0.7}
@@ -66,10 +66,10 @@ export default function ContactScreen() {
                 <Ionicons name={icon} size={28} color={color} />
             </View>
             <View style={styles.cardBgContent}>
-                <Text style={[styles.cardBgTitle, { color: themeColors.cardBgText }]}>{title}</Text>
-                <Text style={[styles.cardBgSubtitle, { color: themeColors.cardBgText, opacity: 0.6 }]}>{subtitle}</Text>
+                <Text style={[styles.cardBgTitle, { color: themeColors.text }]}>{title}</Text>
+                <Text style={[styles.cardBgSubtitle, { color: themeColors.textSecondary }]}>{subtitle}</Text>
             </View>
-            <Ionicons name="open-outline" size={20} color={themeColors.cardBgText} />
+            <Ionicons name="open-outline" size={20} color={themeColors.textSecondary} />
         </TouchableOpacity>
     );
 

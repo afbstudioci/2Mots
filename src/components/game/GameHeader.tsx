@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 import { colors, spacing, borderRadius, typography } from '../../theme/theme';
 
 interface GameHeaderProps {
@@ -9,13 +10,14 @@ interface GameHeaderProps {
 }
 
 export default function GameHeader({ level, currentXp, xpNeeded }: GameHeaderProps) {
+    const { themeColors } = useTheme();
     // Calcul du pourcentage de progression vers le prochain niveau
     const progress = xpNeeded > 0 ? (currentXp / xpNeeded) * 100 : 0;
 
     return (
         <View style={styles.container}>
-            <Text style={styles.levelText}>NIVEAU {level}</Text>
-            <View style={styles.xpTrack}>
+            <Text style={[styles.levelText, { color: themeColors.text }]}>NIVEAU {level}</Text>
+            <View style={[styles.xpTrack, { backgroundColor: themeColors.overlayMedium }]}>
                 <View style={[styles.xpBar, { width: `${progress}%` }]} />
             </View>
         </View>
@@ -33,13 +35,11 @@ const styles = StyleSheet.create({
     },
     levelText: {
         ...typography.titleLarge,
-        color: colors.white,
         fontSize: 20,
     },
     xpTrack: {
         width: 100,
         height: 6,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
         borderRadius: borderRadius.xl,
         overflow: 'hidden',
     },

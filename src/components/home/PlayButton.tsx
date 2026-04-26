@@ -144,7 +144,7 @@ const PlayButton: React.FC<PlayButtonProps> = ({ onPress }) => {
                     >
                         <View style={[styles.playButtonInner, { 
                             backgroundColor: themeColors.primary,
-                            borderColor: 'rgba(255, 255, 255, 0.2)' 
+                            borderColor: themeColors.overlayMedium 
                         }]}>
                             {/* Le texte prend la couleur du fond pour un look découpé moderne */}
                             <Text style={[styles.playButtonText, { color: themeColors.background }]}>JOUER</Text>

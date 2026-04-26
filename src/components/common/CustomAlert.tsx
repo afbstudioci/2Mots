@@ -2,6 +2,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Modal, View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { colors, typography, borderRadius, shadows, spacing } from '../../theme/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 interface CustomAlertProps {
     visible: boolean;
@@ -20,6 +21,7 @@ export default function CustomAlert({
     type = 'info', 
     buttonText = 'OK' 
 }: CustomAlertProps) {
+    const { themeColors } = useTheme();
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const scaleAnim = useRef(new Animated.Value(0.9)).current;
 
@@ -57,11 +59,11 @@ export default function CustomAlert({
     return (
         <Modal transparent visible={visible} animationType="none" onRequestClose={onClose}>
             <View style={styles.overlay}>
-                <Animated.View style={[styles.alertBox, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
+                <Animated.View style={[styles.alertBox, { backgroundColor: themeColors.card, opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
                     <View style={[styles.indicator, { backgroundColor: getIndicatorColor() }]} />
                     
-                    <Text style={styles.title}>{title}</Text>
-                    <Text style={styles.message}>{message}</Text>
+                    <Text style={[styles.title, { color: themeColors.text }]}>{title}</Text>
+                    <Text style={[styles.message, { color: themeColors.text }]}>{message}</Text>
                     
                     <TouchableOpacity style={styles.button} onPress={onClose} activeOpacity={0.8}>
                         <Text style={styles.buttonText}>{buttonText}</Text>
@@ -81,7 +83,6 @@ const styles = StyleSheet.create({
         padding: spacing.xl,
     },
     alertBox: {
-        backgroundColor: colors.sand,
         width: '100%',
         borderRadius: borderRadius.lg,
         padding: spacing.xl,
@@ -97,13 +98,11 @@ const styles = StyleSheet.create({
     title: {
         ...typography.titleLarge,
         fontSize: 24,
-        color: colors.nightBlue,
         textAlign: 'center',
         marginBottom: spacing.sm,
     },
     message: {
         ...typography.bodyMedium,
-        color: colors.nightBlue,
         textAlign: 'center',
         opacity: 0.7,
         marginBottom: spacing.xl,

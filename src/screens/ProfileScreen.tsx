@@ -54,7 +54,7 @@ export default function ProfileScreen() {
                     />
                 }
             >
-                <View style={[styles.avatarContainer, { backgroundColor: themeColors.surface }]}>
+                <View style={[styles.avatarContainer, { backgroundColor: themeColors.surface, borderColor: themeColors.overlayMedium }]}>
                     {user?.avatar ? (
                         <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
                     ) : (
@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     editButton: { padding: spacing.xs },
     headerTitle: { ...typography.buttonPrimary, fontSize: 18, letterSpacing: 2 },
     scrollContent: { alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.xxl },
-    avatarContainer: { width: 120, height: 120, borderRadius: 60, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.md, borderWidth: 2, borderColor: 'rgba(255, 255, 255, 0.1)', overflow: 'hidden' },
+    avatarContainer: { width: 120, height: 120, borderRadius: 60, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.md, borderWidth: 2, overflow: 'hidden' },
     avatarImage: { width: '100%', height: '100%' },
     avatarText: { ...typography.titleHuge, fontSize: 48 },
     username: { ...typography.titleLarge, fontSize: 24, marginBottom: 4 },

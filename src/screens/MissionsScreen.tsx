@@ -29,7 +29,7 @@ export default function MissionsScreen() {
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 {MISSIONS.map((mission) => (
-                    <View key={mission.id} style={[styles.missionCard, { backgroundColor: themeColors.card }]}>
+                    <View key={mission.id} style={[styles.missionCard, { backgroundColor: themeColors.card, borderColor: themeColors.cardBorder, borderWidth: themeColors.cardBorderWidth }]}>
                         <View style={styles.missionInfo}>
                             <Text style={[styles.missionTitle, { color: mission.completed ? colors.mint : themeColors.text }]}>
                                 {mission.title.toUpperCase()}
@@ -90,8 +90,6 @@ const styles = StyleSheet.create({
         borderRadius: borderRadius.lg,
         padding: spacing.lg,
         marginBottom: spacing.md,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)',
     },
     missionInfo: { marginBottom: spacing.md },
     missionTitle: { ...typography.buttonPrimary, fontSize: 16, marginBottom: 4 },
