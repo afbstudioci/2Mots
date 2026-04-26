@@ -1,4 +1,3 @@
-//src/components/game/GameLoading.tsx
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
@@ -7,60 +6,90 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function GameLoading() {
     const { themeColors } = useTheme();
-    const rotate1 = useRef(new Animated.Value(0)).current;
-    const rotate2 = useRef(new Animated.Value(0)).current;
-    const scaleAnim = useRef(new Animated.Value(0.8)).current;
+    
+    // Animation de rotation de l'icône
+    const rotateAnim = useRef(new Animated.Value(0)).current;
+    
+    // Animations de "ripple" (vagues radar)
+    const ripple1 = useRef(new Animated.Value(0)).current;
+    const ripple2 = useRef(new Animated.Value(0)).current;
+    const ripple3 = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
+        // Rotation infinie de l'icône
         Animated.loop(
-            Animated.timing(rotate1, { toValue: 1, duration: 3000, easing: Easing.linear, useNativeDriver: true })
+            Animated.timing(rotateAnim, {
+                toValue: 1,
+                duration: 4000,
+                easing: Easing.linear,
+                useNativeDriver: true
+            })
         ).start();
 
-        Animated.loop(
-            Animated.timing(rotate2, { toValue: 1, duration: 4000, easing: Easing.linear, useNativeDriver: true })
-        ).start();
+        // Fonction pour lancer une vague
+        const startRipple = (anim: Animated.Value, delay: number) => {
+            Animated.loop(
+                Animated.sequence([
+                    Animated.delay(delay),
+                    Animated.timing(anim, {
+                        toValue: 1,
+                        duration: 2500,
+                        easing: Easing.out(Easing.ease),
+                        useNativeDriver: true
+                    }),
+                    Animated.timing(anim, {
+                        toValue: 0,
+                        duration: 0,
+                        useNativeDriver: true
+                    })
+                ])
+            ).start();
+        };
 
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(scaleAnim, { toValue: 1.1, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                Animated.timing(scaleAnim, { toValue: 0.8, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true })
-            ])
-        ).start();
+        // Lancement décalé des vagues
+        startRipple(ripple1, 0);
+        startRipple(ripple2, 800);
+        startRipple(ripple3, 1600);
+
     }, []);
+
+    const createRippleStyle = (anim: Animated.Value) => {
+        return {
+            transform: [{
+                scale: anim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.5, 3] // Grandit jusqu'à 3 fois la taille
+                })
+            }],
+            opacity: anim.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0.8, 0.3, 0] // S'estompe au fur et à mesure
+            })
+        };
+    };
 
     return (
         <View style={[styles.container, { backgroundColor: themeColors.background }]}>
             
             <View style={styles.animationWrapper}>
-                {/* Lueur centrale */}
-                <Animated.View style={[styles.glow, { transform: [{ scale: scaleAnim }], backgroundColor: colors.coral }]} />
+                
+                {/* Les 3 vagues radar */}
+                <Animated.View style={[styles.rippleRing, createRippleStyle(ripple1), { borderColor: colors.coral }]} />
+                <Animated.View style={[styles.rippleRing, createRippleStyle(ripple2), { borderColor: colors.mint }]} />
+                <Animated.View style={[styles.rippleRing, createRippleStyle(ripple3), { borderColor: colors.coral }]} />
 
-                {/* Anneaux mystiques */}
-                <Animated.View style={[
-                    styles.ring, 
-                    { 
-                        borderColor: colors.mint, 
-                        transform: [
-                            { rotateX: '60deg' },
-                            { rotateZ: rotate1.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }
-                        ]
-                    }
-                ]} />
-                <Animated.View style={[
-                    styles.ring, 
-                    { 
-                        borderColor: colors.coral, 
-                        transform: [
-                            { rotateY: '60deg' },
-                            { rotateZ: rotate2.interpolate({ inputRange: [0, 1], outputRange: ['360deg', '0deg'] }) }
-                        ]
-                    }
-                ]} />
-
-                <Ionicons name="sparkles" size={32} color={colors.white} style={styles.icon} />
+                {/* Icône Centrale qui tourne */}
+                <Animated.View style={{ 
+                    transform: [{ 
+                        rotate: rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) 
+                    }] 
+                }}>
+                    <Ionicons name="aperture-outline" size={64} color={themeColors.text} />
+                </Animated.View>
+                
             </View>
 
-            <Text style={[styles.loadingText, { color: themeColors.text }]}>Création de l'Arène...</Text>
+            <Text style={[styles.loadingText, { color: themeColors.text }]}>CONNEXION LOGIQUE...</Text>
         </View>
     );
 }
@@ -70,7 +99,6 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: colors.nightBlue,
     },
     animationWrapper: {
         width: 150,
@@ -78,35 +106,18 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    glow: {
+    rippleRing: {
         position: 'absolute',
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        opacity: 0.3,
-        shadowColor: colors.coral,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 1,
-        shadowRadius: 20,
-        elevation: 10,
-    },
-    ring: {
-        position: 'absolute',
-        width: 120,
-        height: 120,
-        borderRadius: 60,
+        width: 80,
+        height: 80,
+        borderRadius: 40,
         borderWidth: 2,
-    },
-    icon: {
-        position: 'absolute',
-        zIndex: 10,
     },
     loadingText: {
         ...typography.bodyMedium,
         fontFamily: 'Poppins_700Bold',
-        opacity: 0.8,
-        marginTop: spacing.xl * 2,
-        letterSpacing: 2,
-        textTransform: 'uppercase',
+        opacity: 0.6,
+        marginTop: spacing.xl * 3,
+        letterSpacing: 3,
     }
 });

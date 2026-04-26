@@ -77,8 +77,8 @@ export default function GameScreen({ navigation }: any) {
         if (timeLeft <= 5 && timeLeft > 0) {
             Animated.loop(
                 Animated.sequence([
-                    Animated.timing(panicAnim, { toValue: 1, duration: 300, useNativeDriver: false }),
-                    Animated.timing(panicAnim, { toValue: 0, duration: 700, useNativeDriver: false })
+                    Animated.timing(panicAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+                    Animated.timing(panicAnim, { toValue: 0, duration: 700, useNativeDriver: true })
                 ])
             ).start();
         } else {
@@ -132,7 +132,7 @@ export default function GameScreen({ navigation }: any) {
                 style={[
                     StyleSheet.absoluteFillObject, 
                     { 
-                        borderWidth: panicAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 8] }), 
+                        borderWidth: 8, 
                         borderColor: colors.error,
                         opacity: panicAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.8] }),
                         zIndex: 100
