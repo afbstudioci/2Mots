@@ -1,6 +1,6 @@
 //src/screens/GameOverScreen.tsx
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated } from 'react-native';
 import { typography, colors, spacing } from '../theme/theme';
 import { RootStackParamList } from '../../App';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -14,9 +14,37 @@ export default function GameOverScreen({ route, navigation }: { route: any, navi
     const { score, details, corrections } = route.params;
     const { themeColors } = useTheme();
 
+    // Animation du score
+    const [displayScore, setDisplayScore] = useState(0);
+    const scoreAnim = useRef(new Animated.Value(0)).current;
+
+    // Animation des détails
+    const listAnim = useRef(new Animated.Value(0)).current;
+
     useEffect(() => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }, []);
+
+        // Animation de la liste
+        Animated.timing(listAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+        }).start();
+
+        // Compteur de Score animé
+        scoreAnim.addListener(({ value }) => {
+            setDisplayScore(Math.floor(value));
+        });
+        Animated.timing(scoreAnim, {
+            toValue: score,
+            duration: 1500, // Durée du comptage
+            useNativeDriver: false,
+        }).start();
+
+        return () => {
+            scoreAnim.removeAllListeners();
+        };
+    }, [score]);
 
     const correctionTitle = corrections && corrections.length > 1 ? "RÉPONSES ATTENDUES" : "RÉPONSE ATTENDUE";
 
@@ -26,7 +54,7 @@ export default function GameOverScreen({ route, navigation }: { route: any, navi
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
                     
                     <Text style={[styles.scoreLabel, { color: themeColors.textSecondary }]}>SCORE FINAL</Text>
-                    <Text style={styles.scoreValue}>{score}</Text>
+                    <Text style={styles.scoreValue}>{displayScore}</Text>
 
                     {corrections && corrections.length > 0 && (
                         <View style={styles.correctionsWrapper}>
@@ -49,13 +77,26 @@ export default function GameOverScreen({ route, navigation }: { route: any, navi
                             const isHighAccuracy = item.accuracy >= 80;
                             const accuracyColor = isHighAccuracy ? colors.success : colors.coral;
 
+                            const itemTranslateY = listAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [50 + index * 20, 0]
+                            });
+                            const itemOpacity = listAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 1]
+                            });
+
                             return (
-                                <View 
+                                <Animated.View 
                                     key={index} 
                                     style={[
                                         styles.detailRow, 
                                         index === details.length - 1 && styles.lastRow,
-                                        { borderBottomColor: themeColors.overlayLight }
+                                        { 
+                                            borderBottomColor: themeColors.overlayLight,
+                                            opacity: itemOpacity,
+                                            transform: [{ translateY: itemTranslateY }]
+                                        }
                                     ]}
                                 >
                                     <View style={styles.wordContainer}>
@@ -67,7 +108,7 @@ export default function GameOverScreen({ route, navigation }: { route: any, navi
                                         </Text>
                                         <Text style={[styles.label, { color: themeColors.textSecondary }]}>{item.label}</Text>
                                     </View>
-                                </View>
+                                </Animated.View>
                             );
                         })}
                     </View>

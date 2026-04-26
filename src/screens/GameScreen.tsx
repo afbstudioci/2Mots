@@ -23,7 +23,7 @@ export default function GameScreen({ navigation }: any) {
     const {
         wordPairs, currentIndex, setCurrentIndex, timeLeft, answer, setAnswer,
         isLoading, errorMessage, isChecking, setIsChecking, userLevel, 
-        currentXp, xpNeeded, timeWon, setTimeWon, successTrigger, submitAnswer
+        currentXp, xpNeeded, timeWon, setTimeWon, successTrigger, lastAccuracy, submitAnswer
     } = useGameLogic(navigation);
 
     const slideWordsAnim = useRef(new Animated.Value(0)).current;
@@ -70,6 +70,23 @@ export default function GameScreen({ navigation }: any) {
         ).start();
     }, []);
 
+    // Animations pour le Panic Mode (5 dernières secondes)
+    const panicAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        if (timeLeft <= 5 && timeLeft > 0) {
+            Animated.loop(
+                Animated.sequence([
+                    Animated.timing(panicAnim, { toValue: 1, duration: 300, useNativeDriver: false }),
+                    Animated.timing(panicAnim, { toValue: 0, duration: 700, useNativeDriver: false })
+                ])
+            ).start();
+        } else {
+            panicAnim.stopAnimation();
+            panicAnim.setValue(0);
+        }
+    }, [timeLeft]);
+
     if (isLoading) return <GameLoading />;
     
     if (errorMessage || wordPairs.length === 0) {
@@ -89,7 +106,9 @@ export default function GameScreen({ navigation }: any) {
                         transform: [
                             { translateY: orb1Anim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 100, 0] }) },
                             { scale: orb1Anim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 1.2, 1] }) }
-                        ]
+                        ],
+                        // En mode panic, l'orbe devient rouge intense
+                        opacity: panicAnim.interpolate({ inputRange: [0, 1], outputRange: [0.05, 0.2] })
                     }
                 ]} />
                 <Animated.View style={[
@@ -101,10 +120,25 @@ export default function GameScreen({ navigation }: any) {
                         transform: [
                             { translateY: orb2Anim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, -120, 0] }) },
                             { scale: orb2Anim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 1.3, 1] }) }
-                        ]
+                        ],
+                        opacity: panicAnim.interpolate({ inputRange: [0, 1], outputRange: [0.05, 0.1] })
                     }
                 ]} />
             </View>
+
+            {/* Bordure rouge pulsante (Panic Mode) */}
+            <Animated.View 
+                pointerEvents="none" 
+                style={[
+                    StyleSheet.absoluteFillObject, 
+                    { 
+                        borderWidth: panicAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 8] }), 
+                        borderColor: colors.error,
+                        opacity: panicAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.8] }),
+                        zIndex: 100
+                    }
+                ]} 
+            />
 
             <KeyboardAvoidingView 
                 style={{ flex: 1 }} 
@@ -130,8 +164,8 @@ export default function GameScreen({ navigation }: any) {
                     showsVerticalScrollIndicator={false}
                 >
                     <View style={styles.playAreaWrapper}>
-                        {/* Effet d'onde en cas de succès */}
-                        <SuccessRipple trigger={successTrigger} />
+                        {/* Effet d'onde en cas de succès avec la précision */}
+                        <SuccessRipple trigger={successTrigger} accuracy={lastAccuracy} />
                         
                         <Animated.View style={{ transform: [{ translateX: slideWordsAnim }] }}>
                             <GamePlayArea currentPair={wordPairs[currentIndex]} />

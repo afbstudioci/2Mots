@@ -3,11 +3,13 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { AppState, Dimensions } from 'react-native';
 import api from '../services/api';
 import { useFeedback } from './useFeedback';
+import { useAudio } from './useAudio';
 
 const { width } = Dimensions.get('window');
 
 export const useGameLogic = (navigation: any) => {
     const { triggerSuccessVibration, triggerErrorVibration, triggerWarningVibration, triggerVibration } = useFeedback();
+    const { playSuccess, playLevelUp, playGameOver } = useAudio();
 
     const [wordPairs, setWordPairs] = useState<any[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -24,6 +26,7 @@ export const useGameLogic = (navigation: any) => {
     const [xpNeeded, setXpNeeded] = useState(5);
     const [timeWon, setTimeWon] = useState(0);
     const [successTrigger, setSuccessTrigger] = useState(0);
+    const [lastAccuracy, setLastAccuracy] = useState(0);
 
     const sessionAnswersRef = useRef<any[]>([]);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -54,6 +57,7 @@ export const useGameLogic = (navigation: any) => {
         
         setIsGameOver(true);
         triggerWarningVibration(); 
+        playGameOver();
         
         const currentPair = wordPairs[currentIndex];
         if (currentPair) {
@@ -118,8 +122,17 @@ export const useGameLogic = (navigation: any) => {
             const result = response.data.data;
 
             if (result.isCorrect) {
+                setLastAccuracy(result.accuracy);
                 setSuccessTrigger(prev => prev + 1);
                 triggerSuccessVibration();
+                
+                // Si on passe au niveau supérieur, on joue le son LevelUp, sinon le son Succès normal
+                if (result.newLevel > userLevel) {
+                    playLevelUp();
+                } else {
+                    playSuccess();
+                }
+
                 setTimeWon(result.timeWon);
                 setTimeLeft(prev => Math.min(30, prev + result.timeWon));
                 setUserLevel(result.newLevel);
@@ -145,7 +158,7 @@ export const useGameLogic = (navigation: any) => {
     return {
         wordPairs, currentIndex, setCurrentIndex, timeLeft, setTimeLeft,
         answer, setAnswer, isLoading, errorMessage, isChecking, setIsChecking,
-        userLevel, currentXp, xpNeeded, timeWon, setTimeWon, successTrigger,
+        userLevel, currentXp, xpNeeded, timeWon, setTimeWon, successTrigger, lastAccuracy,
         submitAnswer, hasTriggeredGameOver
     };
 };

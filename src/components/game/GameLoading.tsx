@@ -1,97 +1,66 @@
 //src/components/game/GameLoading.tsx
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 import { useTheme } from '../../context/ThemeContext';
 import { typography, colors, spacing } from '../../theme/theme';
-
-const AnimatedPath = Animated.createAnimatedComponent(Path);
+import { Ionicons } from '@expo/vector-icons';
 
 export default function GameLoading() {
     const { themeColors } = useTheme();
-    const cardTranslateX = useRef(new Animated.Value(40)).current; // Ecart de depart
-    const lineDrawAnim = useRef(new Animated.Value(100)).current;
-    const shockwaveScale = useRef(new Animated.Value(0)).current;
-    const shockwaveOpacity = useRef(new Animated.Value(0)).current;
+    const rotate1 = useRef(new Animated.Value(0)).current;
+    const rotate2 = useRef(new Animated.Value(0)).current;
+    const scaleAnim = useRef(new Animated.Value(0.8)).current;
 
     useEffect(() => {
-        const playConnection = () => {
-            Animated.sequence([
-                // 1. Les cartes sont attirees l'une vers l'autre
-                Animated.timing(cardTranslateX, { 
-                    toValue: 0, 
-                    duration: 600, 
-                    easing: Easing.out(Easing.back(1.5)), 
-                    useNativeDriver: true 
-                }),
-                // 2. La chaine se dessine a toute vitesse
-                Animated.timing(lineDrawAnim, { 
-                    toValue: 0, 
-                    duration: 300, 
-                    easing: Easing.linear, 
-                    useNativeDriver: false 
-                }),
-                // 3. Explosion de l'onde de choc (Shockwave)
-                Animated.parallel([
-                    Animated.timing(shockwaveScale, { toValue: 3, duration: 500, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-                    Animated.timing(shockwaveOpacity, { toValue: 0.8, duration: 100, useNativeDriver: true })
-                ]),
-                Animated.timing(shockwaveOpacity, { toValue: 0, duration: 400, useNativeDriver: true }),
-                // 4. Pause pour admirer
-                Animated.delay(600),
-                // 5. Reset global invisible
-                Animated.parallel([
-                    Animated.timing(cardTranslateX, { toValue: 40, duration: 300, useNativeDriver: true }),
-                    Animated.timing(lineDrawAnim, { toValue: 100, duration: 0, useNativeDriver: false }),
-                    Animated.timing(shockwaveScale, { toValue: 0, duration: 0, useNativeDriver: true }),
-                ])
-            ]).start(() => playConnection());
-        };
+        Animated.loop(
+            Animated.timing(rotate1, { toValue: 1, duration: 3000, easing: Easing.linear, useNativeDriver: true })
+        ).start();
 
-        playConnection();
+        Animated.loop(
+            Animated.timing(rotate2, { toValue: 1, duration: 4000, easing: Easing.linear, useNativeDriver: true })
+        ).start();
+
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(scaleAnim, { toValue: 1.1, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                Animated.timing(scaleAnim, { toValue: 0.8, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true })
+            ])
+        ).start();
     }, []);
 
     return (
         <View style={[styles.container, { backgroundColor: themeColors.background }]}>
             
-            {/* L'Onde de choc centrale */}
-            <Animated.View style={[styles.shockwave, { 
-                transform: [{ scale: shockwaveScale }],
-                opacity: shockwaveOpacity,
-                backgroundColor: themeColors.overlayLight
-            }]} />
+            <View style={styles.animationWrapper}>
+                {/* Lueur centrale */}
+                <Animated.View style={[styles.glow, { transform: [{ scale: scaleAnim }], backgroundColor: colors.coral }]} />
 
-            <View style={styles.connectionBox}>
-                <Animated.View style={[styles.wordCard, { transform: [{ translateX: cardTranslateX }], backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
-                    <Text style={[styles.word, { color: themeColors.text }]}>IDÉE</Text>
-                </Animated.View>
+                {/* Anneaux mystiques */}
+                <Animated.View style={[
+                    styles.ring, 
+                    { 
+                        borderColor: colors.mint, 
+                        transform: [
+                            { rotateX: '60deg' },
+                            { rotateZ: rotate1.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }
+                        ]
+                    }
+                ]} />
+                <Animated.View style={[
+                    styles.ring, 
+                    { 
+                        borderColor: colors.coral, 
+                        transform: [
+                            { rotateY: '60deg' },
+                            { rotateZ: rotate2.interpolate({ inputRange: [0, 1], outputRange: ['360deg', '0deg'] }) }
+                        ]
+                    }
+                ]} />
 
-                {/* La chaine qui relie les cartes */}
-                <View style={styles.svgContainer}>
-                    <Svg width="60" height="20" viewBox="0 0 60 20">
-                        <AnimatedPath
-                            d="M 5 10 L 55 10"
-                            stroke={colors.coral}
-                            strokeWidth="4"
-                            strokeLinecap="round"
-                            strokeDasharray="100"
-                            strokeDashoffset={lineDrawAnim}
-                        />
-                    </Svg>
-                </View>
-
-                {/* Note : -1 multiplier pour aller dans l'autre sens */}
-                <Animated.View style={[styles.wordCard, { 
-                    transform: [{ 
-                        translateX: cardTranslateX.interpolate({ inputRange: [0, 40], outputRange: [0, -40] }) 
-                    }],
-                    backgroundColor: themeColors.card, borderColor: themeColors.border
-                }]}>
-                    <Text style={[styles.word, { color: themeColors.text }]}>LIEN</Text>
-                </Animated.View>
+                <Ionicons name="sparkles" size={32} color={colors.white} style={styles.icon} />
             </View>
 
-            <Text style={[styles.loadingText, { color: themeColors.text }]}>Connexion logique en cours...</Text>
+            <Text style={[styles.loadingText, { color: themeColors.text }]}>Création de l'Arène...</Text>
         </View>
     );
 }
@@ -103,45 +72,41 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: colors.nightBlue,
     },
-    shockwave: {
+    animationWrapper: {
+        width: 150,
+        height: 150,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    glow: {
         position: 'absolute',
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        borderWidth: 2,
-        borderColor: colors.coral,
-    },
-    connectionBox: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 10,
-    },
-    wordCard: {
-        paddingVertical: spacing.md,
-        paddingHorizontal: spacing.lg,
-        borderRadius: 12,
-        borderWidth: 1,
-        shadowRadius: 10,
-        shadowOpacity: 0.1,
-        elevation: 5,
-    },
-    word: {
-        fontFamily: 'Poppins_700Bold',
-        fontSize: 16,
-        letterSpacing: 2,
-    },
-    svgContainer: {
         width: 60,
-        height: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 5, // Passe derriere les cartes pour donner l'illusion d'attache
+        height: 60,
+        borderRadius: 30,
+        opacity: 0.3,
+        shadowColor: colors.coral,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 1,
+        shadowRadius: 20,
+        elevation: 10,
+    },
+    ring: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        borderWidth: 2,
+    },
+    icon: {
+        position: 'absolute',
+        zIndex: 10,
     },
     loadingText: {
         ...typography.bodyMedium,
-        opacity: 0.6,
-        marginTop: spacing.xl,
-        letterSpacing: 1,
+        fontFamily: 'Poppins_700Bold',
+        opacity: 0.8,
+        marginTop: spacing.xl * 2,
+        letterSpacing: 2,
+        textTransform: 'uppercase',
     }
 });
