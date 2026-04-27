@@ -270,10 +270,9 @@ export default function ChatScreen({ route, navigation }: any) {
                 {/* Invisible Overlay to close menu */}
                 {showMenu && (
                     <TouchableOpacity 
-                        style={StyleSheet.absoluteFillObject} 
+                        style={[StyleSheet.absoluteFillObject, { zIndex: 999 }]} 
                         activeOpacity={1} 
                         onPress={() => setShowMenu(false)}
-                        zIndex={999}
                     />
                 )}
 

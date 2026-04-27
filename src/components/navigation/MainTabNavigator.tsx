@@ -18,7 +18,7 @@ export default function MainTabNavigator() {
                 headerShown: false,
             }}
         >
-            <Tab.Screen name="Home" component={HomeScreen} />
+            <Tab.Screen name="HomeTab" component={HomeScreen} />
             <Tab.Screen name="Shop" component={ShopScreen} />
             <Tab.Screen name="Missions" component={MissionsScreen} />
             <Tab.Screen name="Friends" component={FriendsScreen} />

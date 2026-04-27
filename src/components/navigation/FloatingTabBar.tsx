@@ -12,7 +12,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
     const { unreadChatCount } = useData();
     
     const tabs = [
-        { id: 'Home', label: 'Accueil', icon: 'home' },
+        { id: 'HomeTab', label: 'Accueil', icon: 'home' },
         { id: 'Shop', label: 'Boutique', icon: 'basket' },
         { id: 'Missions', label: 'Missions', icon: 'rocket' },
         { id: 'Friends', label: 'Amis', icon: 'people' },

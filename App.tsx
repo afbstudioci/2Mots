@@ -34,7 +34,7 @@ export type RootStackParamList = {
   Splash: undefined;
   Login: undefined;
   Register: undefined;
-  Home: undefined;
+  Home: undefined; // Maintenant le nom du MainTabNavigator
   Game: undefined;
   GameOver: { 
     score: number; 
@@ -47,11 +47,10 @@ export type RootStackParamList = {
   Shop: undefined;
   Missions: undefined;
   Friends: undefined;
-  Chat: { friendId: string, friendName: string };
+  Chat: { friendId: string, friendName: string, friendAvatar?: string };
   Contact: undefined;
   Rules: undefined;
   Privacy: undefined;
-  Main: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -90,7 +89,7 @@ const AppNavigator = () => {
         </Stack.Screen>
       ) : user ? (
         <Stack.Group>
-          <Stack.Screen name="Main" component={MainTabNavigator} />
+          <Stack.Screen name="Home" component={MainTabNavigator} />
           <Stack.Screen name="Game" component={GameScreen} />
           <Stack.Screen name="GameOver" component={GameOverScreen} />
           <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
