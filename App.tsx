@@ -63,8 +63,6 @@ const AppNavigator = () => {
         // Animation douce
         animation: 'fade',
         animationDuration: 150,
-        // CRITIQUE : Garder l'écran précédent visible pendant la transition pour éviter de voir le fond blanc du moteur natif
-        detachPreviousScreen: false,
         freezeOnBlur: true,
       }}
     >

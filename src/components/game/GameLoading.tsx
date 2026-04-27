@@ -1,123 +1,64 @@
+//src/components/game/GameLoading.tsx
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { View, StyleSheet, Animated, Easing } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
-import { typography, colors, spacing } from '../../theme/theme';
-import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../../theme/theme';
+import Svg, { Path } from 'react-native-svg';
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 export default function GameLoading() {
-    const { themeColors } = useTheme();
-    
-    // Animation de rotation de l'icône
-    const rotateAnim = useRef(new Animated.Value(0)).current;
-    
-    // Animations de "ripple" (vagues radar)
-    const ripple1 = useRef(new Animated.Value(0)).current;
-    const ripple2 = useRef(new Animated.Value(0)).current;
-    const ripple3 = useRef(new Animated.Value(0)).current;
+  const { themeColors } = useTheme();
+  
+  const drawAnim = useRef(new Animated.Value(300)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
 
-    useEffect(() => {
-        // Rotation infinie de l'icône
-        Animated.loop(
-            Animated.timing(rotateAnim, {
-                toValue: 1,
-                duration: 4000,
-                easing: Easing.linear,
-                useNativeDriver: true
-            })
-        ).start();
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 400,
+      useNativeDriver: true,
+    }).start();
 
-        // Fonction pour lancer une vague
-        const startRipple = (anim: Animated.Value, delay: number) => {
-            Animated.loop(
-                Animated.sequence([
-                    Animated.delay(delay),
-                    Animated.timing(anim, {
-                        toValue: 1,
-                        duration: 2500,
-                        easing: Easing.out(Easing.ease),
-                        useNativeDriver: true
-                    }),
-                    Animated.timing(anim, {
-                        toValue: 0,
-                        duration: 0,
-                        useNativeDriver: true
-                    })
-                ])
-            ).start();
-        };
+    Animated.timing(drawAnim, {
+      toValue: 0,
+      duration: 1500,
+      easing: Easing.inOut(Easing.ease),
+      useNativeDriver: false,
+    }).start(() => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(scaleAnim, { toValue: 1.1, duration: 1000, useNativeDriver: true }),
+          Animated.timing(scaleAnim, { toValue: 1, duration: 1000, useNativeDriver: true })
+        ])
+      ).start();
+    });
+  }, []);
 
-        // Lancement décalé des vagues
-        startRipple(ripple1, 0);
-        startRipple(ripple2, 800);
-        startRipple(ripple3, 1600);
-
-    }, []);
-
-    const createRippleStyle = (anim: Animated.Value) => {
-        return {
-            transform: [{
-                scale: anim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.5, 3] // Grandit jusqu'à 3 fois la taille
-                })
-            }],
-            opacity: anim.interpolate({
-                inputRange: [0, 0.5, 1],
-                outputRange: [0.8, 0.3, 0] // S'estompe au fur et à mesure
-            })
-        };
-    };
-
-    return (
-        <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-            
-            <View style={styles.animationWrapper}>
-                
-                {/* Les 3 vagues radar */}
-                <Animated.View style={[styles.rippleRing, createRippleStyle(ripple1), { borderColor: colors.coral }]} />
-                <Animated.View style={[styles.rippleRing, createRippleStyle(ripple2), { borderColor: colors.mint }]} />
-                <Animated.View style={[styles.rippleRing, createRippleStyle(ripple3), { borderColor: colors.coral }]} />
-
-                {/* Icône Centrale qui tourne */}
-                <Animated.View style={{ 
-                    transform: [{ 
-                        rotate: rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) 
-                    }] 
-                }}>
-                    <Ionicons name="aperture-outline" size={64} color={themeColors.text} />
-                </Animated.View>
-                
-            </View>
-
-            <Text style={[styles.loadingText, { color: themeColors.text }]}>CONNEXION LOGIQUE...</Text>
-        </View>
-    );
+  return (
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <Animated.View style={{ opacity: fadeAnim, transform: [{ scale: scaleAnim }], alignItems: 'center' }}>
+        <Svg width="120" height="60" viewBox="0 0 100 50">
+          <AnimatedPath
+            d="M 50 25 C 65 0, 95 0, 95 25 C 95 50, 65 50, 50 25 C 35 0, 5 0, 5 25 C 5 50, 35 50, 50 25 Z"
+            fill="none"
+            stroke={colors.coral}
+            strokeWidth="6"
+            strokeLinecap="round"
+            strokeDasharray="300"
+            strokeDashoffset={drawAnim}
+          />
+        </Svg>
+      </Animated.View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    animationWrapper: {
-        width: 150,
-        height: 150,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    rippleRing: {
-        position: 'absolute',
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        borderWidth: 2,
-    },
-    loadingText: {
-        ...typography.bodyMedium,
-        fontFamily: 'Poppins_700Bold',
-        opacity: 0.6,
-        marginTop: spacing.xl * 3,
-        letterSpacing: 3,
-    }
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  }
 });

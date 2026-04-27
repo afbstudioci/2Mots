@@ -19,35 +19,55 @@ export default function LeaderboardScreen() {
 
     // Animation de fondu uniquement (pas de slide)
     const screenFadeAnim = useRef(new Animated.Value(0)).current;
+    const [timedOut, setTimedOut] = useState(false);
 
     useEffect(() => {
+        const timeout = setTimeout(() => {
+            if (loading) setTimedOut(true);
+        }, 10000); // 10s timeout
+
         fetchLeaderboard();
+
+        return () => {
+            clearTimeout(timeout);
+        };
     }, []);
 
     const fetchLeaderboard = async () => {
         try {
             setError(false);
+            setTimedOut(false);
             const response = await api.get('/leaderboard');
             setPlayers(response.data.data);
-            
-            // Apparition en fondu doux
+            setLoading(false);
+        } catch (err) {
+            setError(true);
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (!loading && !error && !timedOut) {
             Animated.timing(screenFadeAnim, {
                 toValue: 1,
                 duration: 400,
                 useNativeDriver: true,
             }).start();
-
-        } catch (err) {
-            setError(true);
-        } finally {
-            setLoading(false);
         }
-    };
+    }, [loading, error, timedOut]);
 
-    if (loading) {
+    if (loading || error || timedOut) {
         return (
             <ScreenWrapper>
-                <AppLoader />
+                <AppLoader 
+                    error={error || timedOut} 
+                    onRetry={() => {
+                        setLoading(true);
+                        setError(false);
+                        setTimedOut(false);
+                        fetchLeaderboard();
+                    }} 
+                />
             </ScreenWrapper>
         );
     }

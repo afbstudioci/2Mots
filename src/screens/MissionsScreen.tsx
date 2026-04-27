@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import EmptyState from '../components/common/EmptyState';
+import AppLoader from '../components/common/AppLoader';
 import { useMissions } from '../hooks/useMissions';
 import { spacing, borderRadius, typography, colors } from '../theme/theme';
 
@@ -12,10 +13,43 @@ export default function MissionsScreen() {
     const { themeColors } = useTheme();
     const navigation = useNavigation();
     const { missions, isLoading, fetchMissions } = useMissions();
+    const [timedOut, setTimedOut] = useState(false);
+    const [error, setError] = useState(false);
 
     useEffect(() => {
-        fetchMissions();
-    }, [fetchMissions]);
+        const timeout = setTimeout(() => {
+            if (isLoading) setTimedOut(true);
+        }, 10000);
+
+        loadMissions();
+
+        return () => {
+            clearTimeout(timeout);
+        };
+    }, []);
+
+    const loadMissions = async () => {
+        try {
+            setError(false);
+            setTimedOut(false);
+            await fetchMissions();
+        } catch (err) {
+            setError(true);
+        }
+    };
+
+    if ((isLoading || error || timedOut) && missions.length === 0) {
+        return (
+            <ScreenWrapper>
+                <AppLoader 
+                    error={error || timedOut} 
+                    onRetry={() => {
+                        loadMissions();
+                    }} 
+                />
+            </ScreenWrapper>
+        );
+    }
 
     return (
         <ScreenWrapper>

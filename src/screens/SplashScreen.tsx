@@ -16,12 +16,9 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
   const { themeColors } = useTheme();
   const [progress, setProgress] = useState(0);
   
-  // Valeurs d'animation
-  const drawAnim = useRef(new Animated.Value(300)).current; // Longueur totale estimee du trace SVG
+  const drawAnim = useRef(new Animated.Value(300)).current; 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const kevyFadeAnim = useRef(new Animated.Value(0)).current;
-  const kevyMoveAnim = useRef(new Animated.Value(15)).current;
 
   useEffect(() => {
     // 1. Fondu global du conteneur (très rapide)
@@ -56,25 +53,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
       ).start();
     });
 
-    // 4. Apparition majestueuse de "@By Kevy" synchronisee avec la fin du tracage
-    Animated.sequence([
-      Animated.delay(1000), 
-      Animated.parallel([
-        Animated.timing(kevyFadeAnim, {
-          toValue: 0.8,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(kevyMoveAnim, {
-          toValue: 0,
-          duration: 800,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        })
-      ])
-    ]).start();
-
-    // 5. Gestion du progres de la barre (2.5s strictes)
+    // 4. Gestion du progres de la barre (2.5s strictes)
     const duration = 2500;
     const intervalTime = 25;
     const steps = duration / intervalTime;
@@ -121,14 +100,6 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
           </Animated.View>
 
           <Text style={styles.logoText}>2Mots</Text>
-
-          {/* Signature Animee */}
-          <Animated.View style={{ 
-            opacity: kevyFadeAnim,
-            transform: [{ translateY: kevyMoveAnim }]
-          }}>
-            <Text style={styles.signatureText}>@By Kevy</Text>
-          </Animated.View>
         </View>
         
         <View style={styles.bottomBlock}>

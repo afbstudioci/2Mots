@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import EmptyState from '../components/common/EmptyState';
+import AppLoader from '../components/common/AppLoader';
 import { useFriends } from '../hooks/useFriends';
 import { spacing, borderRadius, typography, colors } from '../theme/theme';
 
@@ -12,10 +13,43 @@ export default function FriendsScreen() {
     const { themeColors } = useTheme();
     const navigation = useNavigation();
     const { friends, isLoading, fetchFriends } = useFriends();
+    const [timedOut, setTimedOut] = useState(false);
+    const [error, setError] = useState(false);
 
     useEffect(() => {
-        fetchFriends();
-    }, [fetchFriends]);
+        const timeout = setTimeout(() => {
+            if (isLoading) setTimedOut(true);
+        }, 10000);
+
+        loadFriends();
+
+        return () => {
+            clearTimeout(timeout);
+        };
+    }, []);
+
+    const loadFriends = async () => {
+        try {
+            setError(false);
+            setTimedOut(false);
+            await fetchFriends();
+        } catch (err) {
+            setError(true);
+        }
+    };
+
+    if ((isLoading || error || timedOut) && friends.length === 0) {
+        return (
+            <ScreenWrapper>
+                <AppLoader 
+                    error={error || timedOut} 
+                    onRetry={() => {
+                        loadFriends();
+                    }} 
+                />
+            </ScreenWrapper>
+        );
+    }
 
     return (
         <ScreenWrapper>

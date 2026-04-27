@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import EmptyState from '../components/common/EmptyState';
+import AppLoader from '../components/common/AppLoader';
 import { useShop } from '../hooks/useShop';
 import { useAuth } from '../context/AuthContext';
 import { spacing, borderRadius, typography, colors } from '../theme/theme';
@@ -14,10 +15,43 @@ export default function ShopScreen() {
     const navigation = useNavigation();
     const { user } = useAuth();
     const { items, isLoading, fetchShopItems } = useShop();
+    const [timedOut, setTimedOut] = useState(false);
+    const [error, setError] = useState(false);
 
     useEffect(() => {
-        fetchShopItems();
-    }, [fetchShopItems]);
+        const timeout = setTimeout(() => {
+            if (isLoading) setTimedOut(true);
+        }, 10000);
+
+        loadItems();
+
+        return () => {
+            clearTimeout(timeout);
+        };
+    }, []);
+
+    const loadItems = async () => {
+        try {
+            setError(false);
+            setTimedOut(false);
+            await fetchShopItems();
+        } catch (err) {
+            setError(true);
+        }
+    };
+
+    if ((isLoading || error || timedOut) && items.length === 0) {
+        return (
+            <ScreenWrapper>
+                <AppLoader 
+                    error={error || timedOut} 
+                    onRetry={() => {
+                        loadItems();
+                    }} 
+                />
+            </ScreenWrapper>
+        );
+    }
 
     return (
         <ScreenWrapper>
