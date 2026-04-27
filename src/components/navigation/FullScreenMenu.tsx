@@ -110,12 +110,20 @@ export default function FullScreenMenu() {
             )}
 
             <Modal 
+                transparent 
                 visible={isOpen} 
                 animationType="none" 
                 statusBarTranslucent={true} 
                 navigationBarTranslucent={true}
+                onRequestClose={toggleMenu}
             >
-                <Animated.View style={[styles.menuContainer, { opacity: fadeAnim, backgroundColor: themeColors.background }]}>
+                <Animated.View style={[styles.menuContainer, { opacity: fadeAnim }]}>
+                    
+                    {/* Fond absolu qui couvre TOUT, même derrière la barre de navigation Android */}
+                    <View style={[
+                        StyleSheet.absoluteFillObject, 
+                        { backgroundColor: themeColors.background, bottom: -150 }
+                    ]} />
                     
                     <Pressable onPress={toggleMenu} style={[styles.actionButton, { top: insets.top + spacing.sm, backgroundColor: themeColors.overlay }]}>
                         <Animated.View style={[styles.crossLine, { backgroundColor: themeColors.text, transform: [{ rotate: rotate1 }] }]} />

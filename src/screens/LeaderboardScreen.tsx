@@ -8,6 +8,7 @@ import { colors, spacing } from '../theme/theme';
 import api from '../services/api';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import LeaderboardItem from '../components/leaderboard/LeaderboardItem';
+import AppLoader from '../components/common/AppLoader';
 
 export default function LeaderboardScreen() {
     const [players, setPlayers] = useState<any[]>([]);
@@ -46,9 +47,7 @@ export default function LeaderboardScreen() {
     if (loading) {
         return (
             <ScreenWrapper>
-                <View style={styles.center}>
-                    <ActivityIndicator color={colors.coral} size="large" />
-                </View>
+                <AppLoader />
             </ScreenWrapper>
         );
     }

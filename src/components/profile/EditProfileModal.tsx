@@ -107,6 +107,7 @@ export default function EditProfileModal({ visible, onClose }: EditProfileModalP
     <Modal 
       visible={visible} 
       animationType="slide" 
+      transparent={true}
       statusBarTranslucent={true}
       navigationBarTranslucent={true}
       onRequestClose={onClose}
@@ -157,6 +158,9 @@ export default function EditProfileModal({ visible, onClose }: EditProfileModalP
               </View>
             </View>
           </ScrollView>
+
+          {/* Fond de secours pour la barre de navigation Android */}
+          <View style={{ position: 'absolute', bottom: -150, left: 0, right: 0, height: 150, backgroundColor: themeColors.background, zIndex: -1 }} />
 
           {loading && (
             <View style={styles.loadingOverlay}>

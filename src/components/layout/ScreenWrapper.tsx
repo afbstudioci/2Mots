@@ -17,7 +17,7 @@ export default function ScreenWrapper({ children, style, useSafeArea = true }: S
     if (useSafeArea) {
         return (
             <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }, style]} edges={['top']}>
-                <StatusBar style={statusBarStyle} backgroundColor={themeColors.background} translucent={false} />
+                <StatusBar style={statusBarStyle} backgroundColor="transparent" translucent={true} />
                 <View style={styles.content}>
                     {children}
                 </View>
@@ -27,7 +27,7 @@ export default function ScreenWrapper({ children, style, useSafeArea = true }: S
 
     return (
         <View style={[styles.container, { backgroundColor: themeColors.background }, style]}>
-            <StatusBar style={statusBarStyle} backgroundColor={themeColors.background} translucent={false} />
+            <StatusBar style={statusBarStyle} backgroundColor="transparent" translucent={true} />
             <View style={styles.content}>
                 {children}
             </View>

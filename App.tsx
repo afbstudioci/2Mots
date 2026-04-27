@@ -58,11 +58,13 @@ const AppNavigator = () => {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
+        // Fond opaque sur TOUTES les screens
         contentStyle: { backgroundColor: themeColors.background },
-        // Suppression du flash blanc : animation personnalisée sans blanc
+        // Animation douce
         animation: 'fade',
-        animationDuration: 180,
-        // Fond opaque pendant la transition
+        animationDuration: 150,
+        // CRITIQUE : Garder l'écran précédent visible pendant la transition pour éviter de voir le fond blanc du moteur natif
+        detachPreviousScreen: false,
         freezeOnBlur: true,
       }}
     >
@@ -126,8 +128,8 @@ const AppContent = () => {
       <GestureHandlerRootView style={{ flex: 1, backgroundColor: themeColors.background }}>
         <StatusBar 
           style={isDark ? "light" : "dark"} 
-          backgroundColor={themeColors.background}
-          translucent={false}
+          backgroundColor="transparent"
+          translucent={true}
         />
         <NavigationContainer theme={navigationTheme}>
           <AppNavigator />
