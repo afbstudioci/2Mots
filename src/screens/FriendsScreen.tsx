@@ -1,21 +1,21 @@
-//src/screens/FriendsScreen.tsx
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
+import EmptyState from '../components/common/EmptyState';
+import { useFriends } from '../hooks/useFriends';
 import { spacing, borderRadius, typography, colors } from '../theme/theme';
-
-const FRIENDS = [
-    { id: '1', name: 'Moussa', level: 12, status: 'online' },
-    { id: '2', name: 'Sarah_92', level: 8, status: 'offline' },
-    { id: '3', name: 'LienMaster', level: 25, status: 'online' },
-];
 
 export default function FriendsScreen() {
     const { themeColors } = useTheme();
     const navigation = useNavigation();
+    const { friends, isLoading, fetchFriends } = useFriends();
+
+    useEffect(() => {
+        fetchFriends();
+    }, [fetchFriends]);
 
     return (
         <ScreenWrapper>
@@ -40,27 +40,44 @@ export default function FriendsScreen() {
                 </View>
             </View>
 
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                {FRIENDS.map((friend) => (
-                    <View key={friend.id} style={[styles.friendItem, { borderBottomColor: themeColors.border }]}>
-                        <View style={[styles.avatar, { backgroundColor: themeColors.surface }]}>
-                            <Text style={[styles.avatarText, { color: themeColors.primary }]}>
-                                {friend.name.charAt(0).toUpperCase()}
-                            </Text>
-                            <View style={[
-                                styles.statusDot, 
-                                { backgroundColor: friend.status === 'online' ? colors.mint : themeColors.textSecondary }
-                            ]} />
+            <ScrollView 
+                contentContainerStyle={friends.length === 0 ? styles.emptyScrollContent : styles.scrollContent} 
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl refreshing={isLoading} onRefresh={fetchFriends} tintColor={themeColors.primary} />
+                }
+            >
+                {friends.length === 0 && !isLoading ? (
+                    <EmptyState 
+                        icon="people"
+                        iconColor={colors.mint}
+                        title="Aucun Ami"
+                        message="Vous êtes un loup solitaire dans l'univers des mots. Invitez vos proches à vous rejoindre !"
+                        actionLabel="Ajouter un ami"
+                        onAction={() => console.log('Ouvrir modal ajout ami')}
+                    />
+                ) : (
+                    friends.map((friend) => (
+                        <View key={friend.id} style={[styles.friendItem, { borderBottomColor: themeColors.border }]}>
+                            <View style={[styles.avatar, { backgroundColor: themeColors.surface }]}>
+                                <Text style={[styles.avatarText, { color: themeColors.primary }]}>
+                                    {friend.name.charAt(0).toUpperCase()}
+                                </Text>
+                                <View style={[
+                                    styles.statusDot, 
+                                    { backgroundColor: friend.status === 'online' ? colors.mint : themeColors.textSecondary }
+                                ]} />
+                            </View>
+                            <View style={styles.friendInfo}>
+                                <Text style={[styles.friendName, { color: themeColors.text }]}>{friend.name}</Text>
+                                <Text style={[styles.friendLevel, { color: themeColors.textSecondary }]}>Niveau {friend.level}</Text>
+                            </View>
+                            <TouchableOpacity style={[styles.challengeButton, { borderColor: themeColors.primary }]}>
+                                <Text style={[styles.challengeText, { color: themeColors.primary }]}>DÉFIER</Text>
+                            </TouchableOpacity>
                         </View>
-                        <View style={styles.friendInfo}>
-                            <Text style={[styles.friendName, { color: themeColors.text }]}>{friend.name}</Text>
-                            <Text style={[styles.friendLevel, { color: themeColors.textSecondary }]}>Niveau {friend.level}</Text>
-                        </View>
-                        <TouchableOpacity style={[styles.challengeButton, { borderColor: themeColors.primary }]}>
-                            <Text style={[styles.challengeText, { color: themeColors.primary }]}>DÉFIER</Text>
-                        </TouchableOpacity>
-                    </View>
-                ))}
+                    ))
+                )}
             </ScrollView>
         </ScreenWrapper>
     );
@@ -80,7 +97,8 @@ const styles = StyleSheet.create({
     searchSection: { paddingHorizontal: spacing.lg, marginBottom: spacing.lg },
     searchBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, height: 45, borderRadius: borderRadius.md },
     searchInput: { flex: 1, marginLeft: spacing.sm, ...typography.bodySmall },
-    scrollContent: { paddingHorizontal: spacing.lg },
+    scrollContent: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
+    emptyScrollContent: { flexGrow: 1, justifyContent: 'center' },
     friendItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.md, borderBottomWidth: 1 },
     avatar: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center' },
     avatarText: { ...typography.titleLarge, fontSize: 20 },

@@ -1,76 +1,63 @@
 //src/hooks/useAudio.ts
-import { useEffect, useRef } from 'react';
-import { Audio } from 'expo-av';
+import { useEffect } from 'react';
+import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { useSettings } from '../context/SettingsContext';
 
 export const useAudio = () => {
-    // Supposons que les réglages aient une option soundEnabled, sinon on l'active par défaut.
     const { soundEnabled = true } = useSettings() as any; 
 
-    const successSound = useRef<Audio.Sound | null>(null);
-    const dangerSound = useRef<Audio.Sound | null>(null);
-    const levelupSound = useRef<Audio.Sound | null>(null);
-    const gameoverSound = useRef<Audio.Sound | null>(null);
-
+    // Configuration de l'audio global
     useEffect(() => {
-        async function loadSounds() {
+        async function setupAudio() {
             try {
-                // Initialisation de l'audio pour iOS
-                await Audio.setAudioModeAsync({
-                    playsInSilentModeIOS: true,
-                    staysActiveInBackground: false,
+                await setAudioModeAsync({
+                    playsInSilentMode: true,
+                    interruptionMode: 'mixWithOthers',
+                    shouldPlayInBackground: false,
+                    allowsRecording: false,
+                    shouldRouteThroughEarpiece: false,
                 });
-
-                const { sound: s1 } = await Audio.Sound.createAsync(require('../../assets/sounds/success.mp3'));
-                successSound.current = s1;
-
-                const { sound: s2 } = await Audio.Sound.createAsync(require('../../assets/sounds/danger.mp3'));
-                dangerSound.current = s2;
-
-                const { sound: s3 } = await Audio.Sound.createAsync(require('../../assets/sounds/levelup.mp3'));
-                levelupSound.current = s3;
-
-                const { sound: s4 } = await Audio.Sound.createAsync(require('../../assets/sounds/gameover.mp3'));
-                gameoverSound.current = s4;
             } catch (error) {
-                console.log("Erreur de chargement audio :", error);
+                console.log("Erreur de configuration audio :", error);
             }
         }
-        loadSounds();
-
-        return () => {
-            successSound.current?.unloadAsync();
-            dangerSound.current?.unloadAsync();
-            levelupSound.current?.unloadAsync();
-            gameoverSound.current?.unloadAsync();
-        };
+        setupAudio();
     }, []);
 
-    const playSuccess = async () => {
+    const successPlayer = useAudioPlayer(require('../../assets/sounds/success.mp3'));
+    const dangerPlayer = useAudioPlayer(require('../../assets/sounds/danger.mp3'));
+    const levelupPlayer = useAudioPlayer(require('../../assets/sounds/levelup.mp3'));
+    const gameoverPlayer = useAudioPlayer(require('../../assets/sounds/gameover.mp3'));
+
+    const playSuccess = () => {
         if (!soundEnabled) return;
         try {
-            await successSound.current?.replayAsync();
+            successPlayer.seekTo(0);
+            successPlayer.play();
         } catch (e) {}
     };
 
-    const playDanger = async () => {
+    const playDanger = () => {
         if (!soundEnabled) return;
         try {
-            await dangerSound.current?.replayAsync();
+            dangerPlayer.seekTo(0);
+            dangerPlayer.play();
         } catch (e) {}
     };
 
-    const playLevelUp = async () => {
+    const playLevelUp = () => {
         if (!soundEnabled) return;
         try {
-            await levelupSound.current?.replayAsync();
+            levelupPlayer.seekTo(0);
+            levelupPlayer.play();
         } catch (e) {}
     };
 
-    const playGameOver = async () => {
+    const playGameOver = () => {
         if (!soundEnabled) return;
         try {
-            await gameoverSound.current?.replayAsync();
+            gameoverPlayer.seekTo(0);
+            gameoverPlayer.play();
         } catch (e) {}
     };
 
