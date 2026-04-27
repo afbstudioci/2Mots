@@ -58,7 +58,12 @@ const AppNavigator = () => {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: themeColors.background }, 
+        contentStyle: { backgroundColor: themeColors.background },
+        // Suppression du flash blanc : animation personnalisée sans blanc
+        animation: 'fade',
+        animationDuration: 180,
+        // Fond opaque pendant la transition
+        freezeOnBlur: true,
       }}
     >
       {loading || !isSplashDone ? (
@@ -86,22 +91,14 @@ const AppNavigator = () => {
             name="Login" 
             component={LoginScreen} 
             options={{
-              headerShown: true,
-              headerTitle: '',
-              headerStyle: { backgroundColor: themeColors.background },
-              headerShadowVisible: false,
+              headerShown: false,
             }}
           />
           <Stack.Screen 
             name="Register" 
             component={RegisterScreen} 
             options={{
-              headerShown: true,
-              headerTitle: '',
-              headerStyle: { backgroundColor: themeColors.background },
-              headerShadowVisible: false,
-              headerTintColor: themeColors.text,
-              headerBackTitle: '',
+              headerShown: false,
             }}
           />
         </Stack.Group>
@@ -129,8 +126,8 @@ const AppContent = () => {
       <GestureHandlerRootView style={{ flex: 1, backgroundColor: themeColors.background }}>
         <StatusBar 
           style={isDark ? "light" : "dark"} 
-          backgroundColor="transparent" 
-          translucent={true} 
+          backgroundColor={themeColors.background}
+          translucent={false}
         />
         <NavigationContainer theme={navigationTheme}>
           <AppNavigator />

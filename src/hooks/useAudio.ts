@@ -12,7 +12,6 @@ export const useAudio = () => {
             try {
                 await setAudioModeAsync({
                     playsInSilentMode: true,
-                    interruptionMode: 'mixWithOthers',
                     shouldPlayInBackground: false,
                     allowsRecording: false,
                     shouldRouteThroughEarpiece: false,

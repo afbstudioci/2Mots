@@ -110,22 +110,13 @@ export default function FullScreenMenu() {
             )}
 
             <Modal 
-                transparent 
                 visible={isOpen} 
                 animationType="none" 
                 statusBarTranslucent={true} 
                 navigationBarTranslucent={true}
             >
-                <Animated.View style={[styles.menuContainer, { opacity: fadeAnim }]}>
+                <Animated.View style={[styles.menuContainer, { opacity: fadeAnim, backgroundColor: themeColors.background }]}>
                     
-                    <View style={[
-                        StyleSheet.absoluteFillObject, 
-                        { backgroundColor: themeColors.background }
-                    ]} />
-
-                    {/* Fond de secours étendu pour éviter la barre blanche sur certains Android */}
-                    <View style={{ position: 'absolute', bottom: -100, left: 0, right: 0, height: 100, backgroundColor: themeColors.background }} />
-
                     <Pressable onPress={toggleMenu} style={[styles.actionButton, { top: insets.top + spacing.sm, backgroundColor: themeColors.overlay }]}>
                         <Animated.View style={[styles.crossLine, { backgroundColor: themeColors.text, transform: [{ rotate: rotate1 }] }]} />
                         <Animated.View style={[styles.crossLine, { backgroundColor: themeColors.text, transform: [{ rotate: rotate2 }] }]} />

@@ -9,13 +9,15 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import CustomAlert from '../components/common/CustomAlert';
 import AuthInput from '../components/auth/AuthInput';
 import ServerWakeUpLoader from '../components/auth/ServerWakeUpLoader';
-import { borderRadius } from '../theme/theme';
+import { borderRadius, colors, spacing, typography } from '../theme/theme';
 import { useKeyboard } from '../hooks/useKeyboard';
 
 const LoginScreen = ({ navigation }: any) => {
@@ -67,16 +69,17 @@ const LoginScreen = ({ navigation }: any) => {
   return (
     <ScreenWrapper>
       {loading && <ServerWakeUpLoader />}
-      
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flex}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 10}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          bounces={false}
         >
           <View style={styles.mainContainer}>
             {!isKeyboardVisible && (
@@ -111,16 +114,30 @@ const LoginScreen = ({ navigation }: any) => {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.loginButton, { backgroundColor: themeColors.primary }]}
                 onPress={handleLogin}
                 disabled={loading}
+                activeOpacity={0.85}
               >
-                <Text style={styles.loginButtonText}>Se connecter</Text>
+                <LinearGradient
+                  colors={[colors.coral, '#FF8C66']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.loginButton}
+                >
+                  <Text style={styles.loginButtonText}>Se connecter</Text>
+                  <Ionicons name="arrow-forward" size={20} color="#FFF" style={{ marginLeft: spacing.sm }} />
+                </LinearGradient>
               </TouchableOpacity>
 
-              <TouchableOpacity onPress={() => navigation.navigate('Register')} style={styles.registerLink}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Register')}
+                style={styles.registerLink}
+              >
                 <Text style={[styles.registerText, { color: themeColors.textSecondary }]}>
-                  Pas encore de compte ? <Text style={{ color: themeColors.primary, fontWeight: 'bold' }}>S'inscrire</Text>
+                  Pas encore de compte ?{' '}
+                  <Text style={{ color: themeColors.primary, fontFamily: 'Poppins_700Bold' }}>
+                    S'inscrire
+                  </Text>
                 </Text>
               </TouchableOpacity>
             </View>
@@ -142,17 +159,52 @@ const LoginScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   scrollContent: { flexGrow: 1 },
-  mainContainer: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 15 },
-  header: { alignItems: 'center', marginBottom: 20 },
-  logoText: { fontSize: 32, fontWeight: '900' },
-  subtitle: { fontSize: 14, textAlign: 'center', marginTop: 4 },
+  mainContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+    paddingVertical: 15,
+  },
+  header: {
+    alignItems: 'flex-start',
+    marginBottom: 36,
+  },
+  logoText: {
+    fontFamily: 'Poppins_900Black',
+    fontSize: 34,
+    letterSpacing: 1,
+  },
+  subtitle: {
+    fontFamily: 'Poppins_500Medium',
+    fontSize: 15,
+    marginTop: 4,
+  },
   form: { width: '100%' },
-  forgotPassword: { alignSelf: 'flex-end', marginBottom: 20 },
-  forgotPasswordText: { fontSize: 13, fontWeight: '600' },
-  loginButton: { height: 55, borderRadius: borderRadius.xl, justifyContent: 'center', alignItems: 'center' },
-  loginButtonText: { color: '#FFF', fontSize: 17, fontWeight: 'bold' },
-  registerLink: { marginTop: 20, alignItems: 'center', paddingBottom: 10 },
-  registerText: { fontSize: 14 }
+  forgotPassword: { alignSelf: 'flex-end', marginBottom: 24, marginTop: -8 },
+  forgotPasswordText: {
+    fontFamily: 'Poppins_600SemiBold',
+    fontSize: 13,
+  },
+  loginButton: {
+    height: 58,
+    borderRadius: borderRadius.xl,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: colors.coral,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 14,
+    elevation: 10,
+  },
+  loginButtonText: {
+    fontFamily: 'Poppins_700Bold',
+    color: '#FFF',
+    fontSize: 17,
+    letterSpacing: 0.5,
+  },
+  registerLink: { marginTop: 24, alignItems: 'center', paddingBottom: 10 },
+  registerText: { fontFamily: 'Poppins_500Medium', fontSize: 14 },
 });
 
 export default LoginScreen;

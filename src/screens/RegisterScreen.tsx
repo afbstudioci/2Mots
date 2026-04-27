@@ -1,5 +1,5 @@
 //src/screens/RegisterScreen.tsx
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -9,6 +9,8 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
@@ -16,12 +18,12 @@ import CustomAlert from '../components/common/CustomAlert';
 import AuthInput from '../components/auth/AuthInput';
 import ServerWakeUpLoader from '../components/auth/ServerWakeUpLoader';
 import PasswordValidator from '../components/auth/PasswordValidator';
-import { borderRadius, spacing } from '../theme/theme';
+import { borderRadius, colors, spacing } from '../theme/theme';
 import { useKeyboard } from '../hooks/useKeyboard';
 
 const RegisterScreen = ({ navigation }: any) => {
   const [formData, setFormData] = useState({
-    login: '', 
+    login: '',
     email: '',
     password: '',
   });
@@ -38,7 +40,6 @@ const RegisterScreen = ({ navigation }: any) => {
     type: 'error',
   });
 
-  const scrollRef = useRef<ScrollView>(null);
   const { register } = useAuth();
   const { themeColors } = useTheme();
   const { isKeyboardVisible } = useKeyboard();
@@ -56,7 +57,8 @@ const RegisterScreen = ({ navigation }: any) => {
       return;
     }
 
-    const isPasswordValid = password.length >= 8 && /[A-Z]/.test(password) && /[0-9]/.test(password);
+    const isPasswordValid =
+      password.length >= 8 && /[A-Z]/.test(password) && /[0-9]/.test(password);
     if (!isPasswordValid) {
       setAlert({
         visible: true,
@@ -70,7 +72,6 @@ const RegisterScreen = ({ navigation }: any) => {
     setLoading(true);
     try {
       await register({ login, email, password });
-      // On n'appelle plus navigation.navigate('Login') ici car l'utilisateur est auto-connecté
       setAlert({
         visible: true,
         title: 'Succès',
@@ -81,7 +82,7 @@ const RegisterScreen = ({ navigation }: any) => {
       setAlert({
         visible: true,
         title: 'Erreur',
-        message: err.message || 'Erreur lors de l\'inscription.',
+        message: err.message || "Erreur lors de l'inscription.",
         type: 'error',
       });
     } finally {
@@ -96,13 +97,13 @@ const RegisterScreen = ({ navigation }: any) => {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flex}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 10}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <ScrollView
-          ref={scrollRef}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          bounces={false}
         >
           <View style={styles.mainContainer}>
             {!isKeyboardVisible && (
@@ -139,16 +140,31 @@ const RegisterScreen = ({ navigation }: any) => {
               <PasswordValidator password={formData.password} />
 
               <TouchableOpacity
-                style={[styles.registerButton, { backgroundColor: themeColors.primary }]}
                 onPress={handleRegister}
                 disabled={loading}
+                activeOpacity={0.85}
+                style={{ marginTop: spacing.md }}
               >
-                <Text style={styles.registerButtonText}>Créer mon compte</Text>
+                <LinearGradient
+                  colors={[colors.coral, '#FF8C66']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.registerButton}
+                >
+                  <Text style={styles.registerButtonText}>Créer mon compte</Text>
+                  <Ionicons name="checkmark" size={22} color="#FFF" style={{ marginLeft: spacing.sm }} />
+                </LinearGradient>
               </TouchableOpacity>
 
-              <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.loginLink}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Login')}
+                style={styles.loginLink}
+              >
                 <Text style={[styles.loginLinkText, { color: themeColors.textSecondary }]}>
-                  Déjà un compte ? <Text style={{ color: themeColors.primary, fontWeight: 'bold' }}>Se connecter</Text>
+                  Déjà un compte ?{' '}
+                  <Text style={{ color: themeColors.primary, fontFamily: 'Poppins_700Bold' }}>
+                    Se connecter
+                  </Text>
                 </Text>
               </TouchableOpacity>
             </View>
@@ -170,15 +186,47 @@ const RegisterScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   scrollContent: { flexGrow: 1 },
-  mainContainer: { flex: 1, paddingHorizontal: 24, paddingVertical: 15, justifyContent: 'center' },
-  header: { alignItems: 'center', marginBottom: 20 },
-  logoText: { fontSize: 32, fontWeight: '900' },
-  subtitle: { fontSize: 14, textAlign: 'center', marginTop: 4 },
+  mainContainer: {
+    flex: 1,
+    paddingHorizontal: 28,
+    paddingVertical: 15,
+    justifyContent: 'center',
+  },
+  header: {
+    alignItems: 'flex-start',
+    marginBottom: 36,
+  },
+  logoText: {
+    fontFamily: 'Poppins_900Black',
+    fontSize: 34,
+    letterSpacing: 1,
+  },
+  subtitle: {
+    fontFamily: 'Poppins_500Medium',
+    fontSize: 15,
+    marginTop: 4,
+  },
   form: { width: '100%' },
-  registerButton: { height: 55, borderRadius: borderRadius.xl, justifyContent: 'center', alignItems: 'center', marginTop: 10 },
-  registerButtonText: { color: '#FFF', fontSize: 17, fontWeight: 'bold' },
-  loginLink: { marginTop: 15, alignItems: 'center', paddingBottom: 10 },
-  loginLinkText: { fontSize: 14 }
+  registerButton: {
+    height: 58,
+    borderRadius: borderRadius.xl,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: colors.coral,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 14,
+    elevation: 10,
+  },
+  registerButtonText: {
+    fontFamily: 'Poppins_700Bold',
+    color: '#FFF',
+    fontSize: 17,
+    letterSpacing: 0.5,
+  },
+  loginLink: { marginTop: 20, alignItems: 'center', paddingBottom: 10 },
+  loginLinkText: { fontFamily: 'Poppins_500Medium', fontSize: 14 },
 });
 
 export default RegisterScreen;

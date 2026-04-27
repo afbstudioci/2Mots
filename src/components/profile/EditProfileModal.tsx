@@ -48,7 +48,7 @@ export default function EditProfileModal({ visible, onClose }: EditProfileModalP
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: 'images',
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.5,
@@ -107,16 +107,16 @@ export default function EditProfileModal({ visible, onClose }: EditProfileModalP
     <Modal 
       visible={visible} 
       animationType="slide" 
-      transparent={true} 
-      onRequestClose={onClose}
       statusBarTranslucent={true}
       navigationBarTranslucent={true}
+      onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
-        <TouchableOpacity style={StyleSheet.absoluteFillObject} onPress={onClose} activeOpacity={1} />
+      <View style={styles.root}>
+        {/* Fond foncé semi-transparent sur la zone au-dessus du modal */}
+        <TouchableOpacity style={styles.dimArea} onPress={onClose} activeOpacity={1} />
         
         <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
           style={[styles.modalContent, { backgroundColor: themeColors.background }]}
         >
           <View style={[styles.header, { borderBottomColor: themeColors.overlayLight }]}>
@@ -158,9 +158,6 @@ export default function EditProfileModal({ visible, onClose }: EditProfileModalP
             </View>
           </ScrollView>
 
-          {/* Fond de secours pour la barre de navigation Android */}
-          <View style={{ position: 'absolute', bottom: -100, left: 0, right: 0, height: 100, backgroundColor: themeColors.background }} />
-
           {loading && (
             <View style={styles.loadingOverlay}>
               <ActivityIndicator size="large" color={themeColors.primary} />
@@ -181,14 +178,18 @@ export default function EditProfileModal({ visible, onClose }: EditProfileModalP
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)' },
-  
-  // CORRECTION : L'ancrage absolu
+  root: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0)',
+    justifyContent: 'flex-end',
+  },
+  dimArea: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+  },
   modalContent: { 
-      position: 'absolute',
-      bottom: 0,
       width: '100%',
-      height: '92%', // Un peu plus haut pour le confort
+      height: '92%',
       borderTopLeftRadius: borderRadius.xl, 
       borderTopRightRadius: borderRadius.xl, 
       paddingHorizontal: spacing.lg, 
