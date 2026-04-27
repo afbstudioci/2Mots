@@ -40,10 +40,12 @@ export const useSocket = () => {
         }
     };
 
-    const onMessageReceived = (callback: (message: any) => void) => {
+    const onMessageReceived = (callback: (message: any) => void): (() => void) => {
         if (socketRef.current) {
             socketRef.current.on('receive_message', callback);
+            return () => socketRef.current?.off('receive_message', callback);
         }
+        return () => {};
     };
 
     return { sendMessage, onMessageReceived };

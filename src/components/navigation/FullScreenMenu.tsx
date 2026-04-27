@@ -49,15 +49,12 @@ export default function FullScreenMenu() {
             });
             Animated.stagger(60, animations).start();
         } else {
-            Animated.parallel([
-                Animated.timing(fadeAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
-                Animated.timing(rotateCrossAnim, { toValue: 0, duration: 200, useNativeDriver: true })
-            ]).start(() => {
-                setIsOpen(false);
-                MENU_ITEMS.forEach((_, index) => {
-                    itemFadeAnims[index].setValue(0);
-                    itemSlideAnims[index].setValue(40);
-                });
+            setIsOpen(false);
+            fadeAnim.setValue(0);
+            rotateCrossAnim.setValue(0);
+            MENU_ITEMS.forEach((_, index) => {
+                itemFadeAnims[index].setValue(0);
+                itemSlideAnims[index].setValue(40);
             });
         }
     };

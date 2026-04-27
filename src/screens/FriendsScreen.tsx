@@ -1,6 +1,6 @@
 //src/screens/FriendsScreen.tsx
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, RefreshControl, DeviceEventEmitter } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, RefreshControl, DeviceEventEmitter, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
@@ -16,7 +16,7 @@ import * as Haptics from 'expo-haptics';
 export default function FriendsScreen() {
     const { themeColors } = useTheme();
     const navigation = useNavigation<any>();
-    const { friends, friendRequests, isLoading, updateFriends, updateFriendRequests } = useData();
+    const { friends, friendRequests, unreadChatCount, isLoading, updateFriends, updateFriendRequests, updateUnreadCount } = useData();
     const [error, setError] = useState(false);
     const [activeTab, setActiveTab] = useState<'list' | 'requests' | 'sent'>('list');
     const [searchQuery, setSearchQuery] = useState('');
@@ -40,6 +40,7 @@ export default function FriendsScreen() {
 
     useEffect(() => {
         fetchSentRequests();
+        updateUnreadCount();
     }, []);
 
     useEffect(() => {
@@ -125,7 +126,7 @@ export default function FriendsScreen() {
     const onRefresh = async () => {
         try {
             setError(false);
-            await Promise.all([updateFriends(), updateFriendRequests(), fetchSentRequests()]);
+            await Promise.all([updateFriends(), updateFriendRequests(), fetchSentRequests(), updateUnreadCount()]);
         } catch (err) {
             setError(true);
         }
@@ -147,27 +148,24 @@ export default function FriendsScreen() {
                 <Text style={[styles.headerTitle, { color: themeColors.text }]}>COMMUNAUTÉ</Text>
             </View>
 
-            {/* 3 Onglets */}
+            {/* Stats / Tabs */}
             <View style={styles.tabsContainer}>
                 {(['list', 'requests', 'sent'] as const).map((tab) => {
                     const labels = { list: 'AMIS', requests: 'REÇUES', sent: 'ENVOYÉES' };
                     const counts = { list: friends.length, requests: friendRequests.length, sent: sentRequests.length };
+                    const isActive = activeTab === tab;
                     return (
                         <TouchableOpacity 
                             key={tab}
                             onPress={() => { setActiveTab(tab); Haptics.selectionAsync(); }}
-                            style={[styles.tab, activeTab === tab && { borderBottomColor: colors.coral }]}
+                            style={[styles.tab, isActive && { borderBottomColor: colors.coral }]}
                         >
-                            <View style={styles.requestTabRow}>
-                                <Text style={[styles.tabText, { color: activeTab === tab ? colors.coral : themeColors.textSecondary }]}>
-                                    {labels[tab]}
-                                </Text>
-                                {counts[tab] > 0 && (
-                                    <View style={[styles.badge, tab === 'requests' && { backgroundColor: colors.coral }]}>
-                                        <Text style={styles.badgeText}>{counts[tab]}</Text>
-                                    </View>
-                                )}
-                            </View>
+                            <Text style={[styles.tabCount, { color: isActive ? colors.coral : themeColors.text }]}>
+                                {counts[tab]}
+                            </Text>
+                            <Text style={[styles.tabLabel, { color: isActive ? colors.coral : themeColors.textSecondary }]}>
+                                {labels[tab]}
+                            </Text>
                         </TouchableOpacity>
                     );
                 })}
@@ -210,7 +208,11 @@ export default function FriendsScreen() {
                             searchResults.map(user => (
                                 <View key={user._id} style={[styles.friendItem, { borderBottomColor: themeColors.border }]}>
                                     <View style={[styles.avatar, { backgroundColor: themeColors.surface }]}>
-                                        <Text style={[styles.avatarText, { color: themeColors.primary }]}>{user.login.charAt(0).toUpperCase()}</Text>
+                                        {user.avatar ? (
+                                            <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
+                                        ) : (
+                                            <Text style={[styles.avatarText, { color: themeColors.primary }]}>{user.login.charAt(0).toUpperCase()}</Text>
+                                        )}
                                     </View>
                                     <View style={styles.friendInfo}>
                                         <Text style={[styles.friendName, { color: themeColors.text }]}>{user.login}</Text>
@@ -248,12 +250,16 @@ export default function FriendsScreen() {
                             <TouchableOpacity 
                                 key={friend.id} 
                                 style={[styles.friendItem, { borderBottomColor: themeColors.border }]}
-                                onPress={() => navigation.navigate('Chat', { friendId: friend.id, friendName: friend.name })}
+                                onPress={() => navigation.navigate('Chat', { friendId: friend.id, friendName: friend.name, friendAvatar: friend.avatar })}
                             >
                                 <View style={[styles.avatar, { backgroundColor: themeColors.surface }]}>
-                                    <Text style={[styles.avatarText, { color: themeColors.primary }]}>
-                                        {friend.name.charAt(0).toUpperCase()}
-                                    </Text>
+                                    {friend.avatar ? (
+                                        <Image source={{ uri: friend.avatar }} style={styles.avatarImage} />
+                                    ) : (
+                                        <Text style={[styles.avatarText, { color: themeColors.primary }]}>
+                                            {friend.name.charAt(0).toUpperCase()}
+                                        </Text>
+                                    )}
                                     <View style={[
                                         styles.statusDot, 
                                         { backgroundColor: friend.status === 'online' ? colors.mint : themeColors.textSecondary }
@@ -286,9 +292,13 @@ export default function FriendsScreen() {
                         friendRequests.map((req) => (
                             <View key={req._id} style={[styles.friendItem, { borderBottomColor: themeColors.border }]}>
                                 <View style={[styles.avatar, { backgroundColor: themeColors.surface }]}>
-                                    <Text style={[styles.avatarText, { color: themeColors.primary }]}>
-                                        {req.requester.login.charAt(0).toUpperCase()}
-                                    </Text>
+                                    {req.requester.avatar ? (
+                                        <Image source={{ uri: req.requester.avatar }} style={styles.avatarImage} />
+                                    ) : (
+                                        <Text style={[styles.avatarText, { color: themeColors.primary }]}>
+                                            {req.requester.login.charAt(0).toUpperCase()}
+                                        </Text>
+                                    )}
                                 </View>
                                 <View style={styles.friendInfo}>
                                     <Text style={[styles.friendName, { color: themeColors.text }]}>{req.requester.login}</Text>
@@ -320,9 +330,13 @@ export default function FriendsScreen() {
                             return (
                                 <View key={req._id} style={[styles.friendItem, { borderBottomColor: themeColors.border }]}>
                                     <View style={[styles.avatar, { backgroundColor: themeColors.surface }]}>
-                                        <Text style={[styles.avatarText, { color: themeColors.primary }]}>
-                                            {recipient.login.charAt(0).toUpperCase()}
-                                        </Text>
+                                        {recipient.avatar ? (
+                                            <Image source={{ uri: recipient.avatar }} style={styles.avatarImage} />
+                                        ) : (
+                                            <Text style={[styles.avatarText, { color: themeColors.primary }]}>
+                                                {recipient.login.charAt(0).toUpperCase()}
+                                            </Text>
+                                        )}
                                     </View>
                                     <View style={styles.friendInfo}>
                                         <Text style={[styles.friendName, { color: themeColors.text }]}>{recipient.login}</Text>
@@ -355,16 +369,15 @@ const styles = StyleSheet.create({
     headerTitle: { ...typography.buttonPrimary, fontSize: 18, letterSpacing: 3 },
     tabsContainer: { flexDirection: 'row', paddingHorizontal: spacing.lg, marginBottom: spacing.md },
     tab: { flex: 1, alignItems: 'center', paddingVertical: spacing.sm, borderBottomWidth: 2, borderBottomColor: 'transparent' },
-    tabText: { ...typography.buttonPrimary, fontSize: 11 },
-    requestTabRow: { flexDirection: 'row', alignItems: 'center' },
-    badge: { backgroundColor: colors.mint, borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center', marginLeft: 6, paddingHorizontal: 4 },
-    badgeText: { color: colors.white, fontSize: 10, fontWeight: 'bold' },
+    tabCount: { fontSize: 18, fontFamily: 'Poppins_700Bold', marginBottom: -2 },
+    tabLabel: { fontSize: 10, fontFamily: 'Poppins_600SemiBold', letterSpacing: 0.5 },
     searchSection: { paddingHorizontal: spacing.lg, marginBottom: spacing.md },
     searchBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, height: 45, borderRadius: borderRadius.xl },
     searchInput: { flex: 1, marginLeft: spacing.sm, ...typography.bodySmall },
     scrollContent: { paddingHorizontal: spacing.lg, paddingBottom: 120 },
     friendItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.md, borderBottomWidth: 0.5 },
-    avatar: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center' },
+    avatar: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+    avatarImage: { width: '100%', height: '100%' },
     avatarText: { ...typography.titleLarge, fontSize: 20 },
     statusDot: { position: 'absolute', bottom: 2, right: 2, width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: colors.nightBlue },
     friendInfo: { flex: 1, marginLeft: spacing.md },

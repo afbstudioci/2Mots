@@ -8,6 +8,7 @@ interface DataContextType {
   friends: any[];
   friendRequests: any[];
   leaderboard: any[];
+  unreadChatCount: number;
   isLoading: boolean;
   lastRefresh: number | null;
   refreshAll: () => Promise<void>;
@@ -16,6 +17,7 @@ interface DataContextType {
   updateFriends: () => Promise<void>;
   updateFriendRequests: () => Promise<void>;
   updateLeaderboard: () => Promise<void>;
+  updateUnreadCount: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -28,6 +30,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<number | null>(null);
+
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+
+  const updateUnreadCount = useCallback(async () => {
+    try {
+      const response = await api.get('/chat/unread-count');
+      setUnreadChatCount(response.data.data.unreadCount || 0);
+    } catch (error) {
+      console.log('Error fetching unread count:', error);
+    }
+  }, []);
 
   const updateShop = useCallback(async () => {
     try {
@@ -83,13 +96,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateMissions(),
         updateFriends(),
         updateFriendRequests(),
-        updateLeaderboard()
+        updateLeaderboard(),
+        updateUnreadCount()
       ]);
       setLastRefresh(Date.now());
     } finally {
       setIsLoading(false);
     }
-  }, [updateShop, updateMissions, updateFriends, updateLeaderboard]);
+  }, [updateShop, updateMissions, updateFriends, updateLeaderboard, updateUnreadCount]);
 
   return (
     <DataContext.Provider
@@ -99,6 +113,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         friends,
         friendRequests,
         leaderboard,
+        unreadChatCount,
         isLoading,
         lastRefresh,
         refreshAll,
@@ -106,7 +121,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateShop,
         updateFriends,
         updateFriendRequests,
-        updateLeaderboard
+        updateLeaderboard,
+        updateUnreadCount
       }}
     >
       {children}

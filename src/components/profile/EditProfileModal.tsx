@@ -10,7 +10,8 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  ScrollView
+  ScrollView,
+  Keyboard
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -60,6 +61,7 @@ export default function EditProfileModal({ visible, onClose }: EditProfileModalP
   };
 
   const handleSave = async () => {
+    Keyboard.dismiss();
     setLoading(true);
     try {
       const formData = new FormData();
@@ -113,13 +115,9 @@ export default function EditProfileModal({ visible, onClose }: EditProfileModalP
       onRequestClose={onClose}
     >
       <View style={styles.root}>
-        {/* Fond foncé semi-transparent sur la zone au-dessus du modal */}
         <TouchableOpacity style={styles.dimArea} onPress={onClose} activeOpacity={1} />
         
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-          style={[styles.modalContent, { backgroundColor: themeColors.background }]}
-        >
+        <View style={[styles.modalContent, { backgroundColor: themeColors.background }]}>
           <View style={[styles.header, { borderBottomColor: themeColors.overlayLight }]}>
             <TouchableOpacity onPress={onClose} disabled={loading}>
               <Text style={[styles.cancelText, { color: themeColors.textSecondary }]}>Annuler</Text>
@@ -130,36 +128,40 @@ export default function EditProfileModal({ visible, onClose }: EditProfileModalP
             </TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-            <TouchableOpacity style={styles.avatarSection} onPress={handlePickImage} disabled={loading}>
-              <View style={[styles.avatarContainer, { borderColor: themeColors.primary }]}>
-                {displayAvatar ? (
-                  <Image source={{ uri: displayAvatar }} style={styles.avatarImage} />
-                ) : (
-                  <Text style={[styles.avatarTextPlaceholder, { color: themeColors.primary }]}>
-                    {login.charAt(0).toUpperCase()}
-                  </Text>
-                )}
-                <View style={[styles.editIconBadge, { backgroundColor: themeColors.primary, borderColor: themeColors.background }]}>
-                  <Ionicons name="camera" size={14} color="#FFF" />
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={{ flex: 1 }}
+          >
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+              <TouchableOpacity style={styles.avatarSection} onPress={handlePickImage} disabled={loading}>
+                <View style={[styles.avatarContainer, { borderColor: themeColors.primary }]}>
+                  {displayAvatar ? (
+                    <Image source={{ uri: displayAvatar }} style={styles.avatarImage} />
+                  ) : (
+                    <Text style={[styles.avatarTextPlaceholder, { color: themeColors.primary }]}>
+                      {login.charAt(0).toUpperCase()}
+                    </Text>
+                  )}
+                  <View style={[styles.editIconBadge, { backgroundColor: themeColors.primary, borderColor: themeColors.background }]}>
+                    <Ionicons name="camera" size={14} color="#FFF" />
+                  </View>
+                </View>
+                <Text style={[styles.changePhotoText, { color: themeColors.primary }]}>Changer la photo</Text>
+              </TouchableOpacity>
+
+              <View style={styles.formSection}>
+                <AuthInput label="Pseudo" value={login} onChangeText={setLogin} placeholder="Votre pseudo" />
+                <AuthInput label="Email" value={email} onChangeText={setEmail} placeholder="votre@email.com" keyboardType="email-address" />
+                
+                <View style={styles.passwordSection}>
+                  <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>Sécurité (Optionnel)</Text>
+                  <AuthInput label="Mot de passe actuel" value={currentPassword} onChangeText={setCurrentPassword} placeholder="Requis si modification" isPassword />
+                  <AuthInput label="Nouveau mot de passe" value={newPassword} onChangeText={setNewPassword} placeholder="Nouveau mot de passe" isPassword />
                 </View>
               </View>
-              <Text style={[styles.changePhotoText, { color: themeColors.primary }]}>Changer la photo</Text>
-            </TouchableOpacity>
+            </ScrollView>
+          </KeyboardAvoidingView>
 
-            <View style={styles.formSection}>
-              <AuthInput label="Pseudo" value={login} onChangeText={setLogin} placeholder="Votre pseudo" />
-              <AuthInput label="Email" value={email} onChangeText={setEmail} placeholder="votre@email.com" keyboardType="email-address" />
-              
-              <View style={styles.passwordSection}>
-                <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>Sécurité (Optionnel)</Text>
-                <AuthInput label="Mot de passe actuel" value={currentPassword} onChangeText={setCurrentPassword} placeholder="Requis si modification" isPassword />
-                <AuthInput label="Nouveau mot de passe" value={newPassword} onChangeText={setNewPassword} placeholder="Nouveau mot de passe" isPassword />
-              </View>
-            </View>
-          </ScrollView>
-
-          {/* Fond de secours pour la barre de navigation Android */}
           <View style={{ position: 'absolute', bottom: -150, left: 0, right: 0, height: 150, backgroundColor: themeColors.background, zIndex: -1 }} />
 
           {loading && (
@@ -175,7 +177,7 @@ export default function EditProfileModal({ visible, onClose }: EditProfileModalP
             type={alert.type} 
             onClose={() => setAlert(prev => ({ ...prev, visible: false }))} 
           />
-        </KeyboardAvoidingView>
+        </View>
       </View>
     </Modal>
   );

@@ -5,9 +5,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { colors, spacing, borderRadius, shadows } from '../../theme/theme';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { useData } from '../../context/DataContext';
 
 export default function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
     const { themeColors } = useTheme();
+    const { unreadChatCount } = useData();
     
     const tabs = [
         { id: 'Home', label: 'Accueil', icon: 'home' },
@@ -46,6 +48,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
                             isActive={isActive}
                             onPress={handlePress}
                             themeColors={themeColors}
+                            unreadChatCount={unreadChatCount}
                         />
                     );
                 })}
@@ -54,7 +57,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
     );
 }
 
-const TabItem = ({ item, isActive, onPress, themeColors }: any) => {
+const TabItem = ({ item, isActive, onPress, themeColors, unreadChatCount }: any) => {
     const scaleIconAnim = useRef(new Animated.Value(1)).current;
     const activeBubbleAnim = useRef(new Animated.Value(0)).current;
 
@@ -97,6 +100,11 @@ const TabItem = ({ item, isActive, onPress, themeColors }: any) => {
                         size={22} 
                         color={isActive ? colors.coral : themeColors.textSecondary} 
                     />
+                    {item.id === 'Friends' && unreadChatCount > 0 && (
+                        <View style={styles.badge}>
+                            <Text style={styles.badgeText}>{unreadChatCount > 9 ? '9+' : unreadChatCount}</Text>
+                        </View>
+                    )}
                 </Animated.View>
             </View>
             <Text style={[styles.tabText, { color: isActive ? colors.coral : themeColors.textSecondary }]}>
@@ -151,5 +159,25 @@ const styles = StyleSheet.create({
         fontSize: 9, 
         marginTop: 2,
         letterSpacing: 0.5
+    },
+    badge: {
+        position: 'absolute',
+        top: -4,
+        right: -6,
+        backgroundColor: colors.error,
+        borderRadius: 8,
+        minWidth: 16,
+        height: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 2,
+        borderWidth: 1.5,
+        borderColor: colors.nightBlue,
+    },
+    badgeText: {
+        color: colors.white,
+        fontSize: 8,
+        fontFamily: 'Poppins_700Bold',
+        includeFontPadding: false,
     }
 });
