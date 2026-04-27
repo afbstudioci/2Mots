@@ -32,8 +32,8 @@ export const registerForPushNotificationsAsync = async () => {
       return;
     }
     
-    token = (await Notifications.getExpoPushTokenAsync()).data;
-    console.log('FCM/Expo Token:', token);
+    token = (await Notifications.getDevicePushTokenAsync()).data;
+    console.log('Native FCM Token:', token);
 
     // Envoyer le token au backend
     try {

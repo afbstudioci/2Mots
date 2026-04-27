@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "501992801615",
+    "project_id": "mots-3aaa6",
+    "storage_bucket": "mots-3aaa6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:501992801615:android:75ba2f60a667463503313a",
+        "android_client_info": {
+          "package_name": "com.afbstudio.twomots"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCeanTOwJBWiGV9mopBr71x2wEsu-RHnsQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
