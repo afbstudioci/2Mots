@@ -28,7 +28,6 @@ export default function GameInputArea({
     const { themeColors } = useTheme();
     const navigation = useNavigation<any>();
     
-    const [hintUsed, setHintUsed] = useState(false);
     const [isError, setIsError] = useState(false);
     const shakeAnim = useRef(new Animated.Value(0)).current;
 
@@ -46,13 +45,8 @@ export default function GameInputArea({
         }
     }));
 
-    const handleHint = () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-        if (!hintUsed) setHintUsed(true);
-        onHintPress();
-    };
-
     const handleSubmission = () => {
+        if (!answer.trim()) return;
         Keyboard.dismiss();
         submitAnswer();
     };
@@ -83,6 +77,18 @@ export default function GameInputArea({
                     isError && styles.inputWrapperError
                 ]}
             >
+                {/* Nouveau : Bouton Lettre intégré directement à gauche */}
+                <TouchableOpacity 
+                    onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                        navigation.navigate('Shop');
+                    }}
+                    style={styles.hintIconBtn}
+                    activeOpacity={0.7}
+                >
+                    <MaterialCommunityIcons name="magic-staff" size={24} color={colors.mint} />
+                </TouchableOpacity>
+
                 <TextInput
                     style={styles.input}
                     value={answer}
@@ -92,18 +98,19 @@ export default function GameInputArea({
                     placeholderTextColor="rgba(26, 32, 44, 0.4)"
                     editable={!isAnimating}
                     autoCorrect={false}
+                    autoCapitalize="none"
                     returnKeyType="send"
                 />
                 
                 <TouchableOpacity 
                     style={[
                         styles.sendButton, 
-                        isAnimating && styles.sendButtonDisabled,
+                        (!answer.trim() || isAnimating) && styles.sendButtonDisabled,
                         isError && { backgroundColor: colors.coral }
                     ]} 
                     onPress={handleSubmission} 
                     activeOpacity={0.8} 
-                    disabled={isAnimating}
+                    disabled={isAnimating || !answer.trim()}
                 >
                     <Ionicons 
                         name={isError ? "close" : "arrow-forward"} 
@@ -113,27 +120,13 @@ export default function GameInputArea({
                 </TouchableOpacity>
             </Animated.View>
 
-            {/* L'indice logique mis en évidence de façon permanente */}
+            {/* L'indice logique mis en évidence */}
             {clue ? (
                 <View style={[styles.logicalHintContainer, { backgroundColor: themeColors.overlayLight, borderColor: themeColors.overlayMedium }]}>
                     <Ionicons name="bulb" size={20} color={colors.coral} style={{ marginRight: spacing.sm }} />
                     <Text style={[styles.hintText, { color: themeColors.text }]}>{clue}</Text>
                 </View>
             ) : null}
-
-            {/* Nouveau : L'indice Premium (Lettres) */}
-            <TouchableOpacity 
-                style={[styles.premiumHintBtn, { backgroundColor: themeColors.card, borderColor: colors.mint, borderWidth: 1 }]} 
-                onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    navigation.navigate('Shop');
-                }} 
-                activeOpacity={0.7}
-            >
-                <MaterialCommunityIcons name="magic-staff" size={20} color={colors.mint} style={{ marginRight: spacing.sm }} />
-                <Text style={[styles.premiumHintText, { color: colors.mint }]}>Dévoiler une lettre (Payant)</Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.mint} style={{ marginLeft: 'auto' }} />
-            </TouchableOpacity>
         </View>
     );
 }
@@ -163,7 +156,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: colors.white,
         borderRadius: borderRadius.xl,
-        paddingLeft: spacing.lg,
+        paddingLeft: spacing.sm,
         paddingRight: spacing.xs,
         height: 60,
         ...shadows.float(false),
@@ -173,11 +166,18 @@ const styles = StyleSheet.create({
     inputWrapperError: {
         borderColor: colors.coral,
     },
+    hintIconBtn: {
+        width: 44,
+        height: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     input: {
         flex: 1,
         ...typography.bodyMedium,
         color: colors.nightBlue,
         height: '100%',
+        paddingHorizontal: spacing.sm,
     },
     sendButton: {
         width: 48,
@@ -200,18 +200,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.lg,
         borderRadius: borderRadius.md,
         borderWidth: 1,
-    },
-    premiumHintBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: spacing.md,
-        paddingVertical: spacing.sm,
-        paddingHorizontal: spacing.lg,
-        borderRadius: borderRadius.md,
-    },
-    premiumHintText: {
-        ...typography.bodySmall,
-        fontWeight: '700',
     },
     hintText: {
         ...typography.bodySmall,

@@ -4,10 +4,12 @@ import { AppState, Dimensions } from 'react-native';
 import api from '../services/api';
 import { useFeedback } from './useFeedback';
 import { useAudio } from './useAudio';
+import { useAuth } from '../context/AuthContext';
 
 const { width } = Dimensions.get('window');
 
 export const useGameLogic = (navigation: any) => {
+    const { user } = useAuth();
     const { triggerSuccessVibration, triggerErrorVibration, triggerWarningVibration, triggerVibration } = useFeedback();
     const { playSuccess, playLevelUp, playGameOver } = useAudio();
 
@@ -20,10 +22,10 @@ export const useGameLogic = (navigation: any) => {
     const [isChecking, setIsChecking] = useState(false);
     const [isGameOver, setIsGameOver] = useState(false);
 
-    // Stats de session
-    const [userLevel, setUserLevel] = useState(1);
-    const [currentXp, setCurrentXp] = useState(0);
-    const [xpNeeded, setXpNeeded] = useState(5);
+    // Stats de session (Initialisées avec les données locales de l'utilisateur)
+    const [userLevel, setUserLevel] = useState(user?.level || 1);
+    const [currentXp, setCurrentXp] = useState(user?.xp || 0);
+    const [xpNeeded, setXpNeeded] = useState(3 + ((user?.level || 1) * 2));
     const [timeWon, setTimeWon] = useState(0);
     const [successTrigger, setSuccessTrigger] = useState(0);
     const [lastAccuracy, setLastAccuracy] = useState(0);
@@ -39,9 +41,19 @@ export const useGameLogic = (navigation: any) => {
         try {
             const response = await api.get('/game/batch');
             const fetchedWords = response.data.data;
+            const stats = response.data.userStats;
+
             if (fetchedWords && fetchedWords.length > 0) {
                 setWordPairs(prev => isInitial ? fetchedWords : [...prev, ...fetchedWords]);
-                if (isInitial) setIsLoading(false);
+                
+                if (isInitial && stats) {
+                    setUserLevel(stats.level);
+                    setCurrentXp(stats.xp);
+                    setXpNeeded(stats.xpNeeded);
+                    setIsLoading(false);
+                } else if (isInitial) {
+                    setIsLoading(false);
+                }
             }
         } catch (error) {
             if (isInitial) { setErrorMessage('Erreur de connexion.'); setIsLoading(false); }

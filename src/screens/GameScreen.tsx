@@ -145,24 +145,22 @@ export default function GameScreen({ navigation }: any) {
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
             >
-                {/* En-tête avec progression XP */}
+                {/* En-tête avec progression XP et Retour */}
                 <GameHeader level={userLevel} currentXp={currentXp} xpNeeded={xpNeeded} />
-                
-                {/* Timer avec gestion des gains de temps */}
-                <View style={styles.timerWrapper}>
-                    <GameTimer 
-                        timeLeft={timeLeft} 
-                        maxTime={30} 
-                        timeWon={timeWon} 
-                        onTimeGainAnimationEnd={() => setTimeWon(0)} 
-                    />
-                </View>
                 
                 <ScrollView 
                     contentContainerStyle={styles.scrollContent} 
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
                 >
+                    {/* Timer Circulaire centralisé */}
+                    <GameTimer 
+                        timeLeft={timeLeft} 
+                        maxTime={30} 
+                        timeWon={timeWon} 
+                        onTimeGainAnimationEnd={() => setTimeWon(0)} 
+                    />
+
                     <View style={styles.playAreaWrapper}>
                         {/* Effet d'onde en cas de succès avec la précision */}
                         <SuccessRipple trigger={successTrigger} accuracy={lastAccuracy} />
