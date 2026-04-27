@@ -10,7 +10,8 @@ interface AudioContextData {
     playError: () => void;
     playDanger: () => void;
     playLevelUp: () => void;
-    playGameOver: () => void;
+    playGameOver: (hasScore: boolean) => void;
+    stopGameOver: () => void;
     playHint: () => void;
 }
 
@@ -135,7 +136,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }}>
             {children}
         </AudioContext.Provider>
-    );
     );
 };
 
