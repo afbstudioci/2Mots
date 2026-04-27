@@ -96,6 +96,7 @@ const AppNavigator = () => {
           <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="Chat" component={ChatScreen} />
+          <Stack.Screen name="Settings" component={SettingsScreen} />
           <Stack.Screen name="Contact" component={ContactScreen} />
           <Stack.Screen name="Rules" component={RulesScreen} />
           <Stack.Screen name="Privacy" component={PrivacyScreen} />
