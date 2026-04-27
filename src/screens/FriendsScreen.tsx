@@ -47,7 +47,7 @@ export default function FriendsScreen() {
                     <RefreshControl refreshing={isLoading} onRefresh={fetchFriends} tintColor={themeColors.primary} />
                 }
             >
-                {friends.length === 0 && !isLoading ? (
+                {friends.length === 0 ? (
                     <EmptyState 
                         icon="people"
                         iconColor={colors.mint}

@@ -34,7 +34,7 @@ export default function MissionsScreen() {
                     <RefreshControl refreshing={isLoading} onRefresh={fetchMissions} tintColor={colors.coral} />
                 }
             >
-                {missions.length === 0 && !isLoading ? (
+                {missions.length === 0 ? (
                     <EmptyState 
                         icon="rocket"
                         iconColor={colors.coral}

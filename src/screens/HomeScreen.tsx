@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Animated, Pressable, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
@@ -8,6 +8,8 @@ import { useTheme } from '../context/ThemeContext';
 import { colors, typography, borderRadius, shadows, spacing } from '../theme/theme';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import FloatingTabBar from '../components/navigation/FloatingTabBar';
 import FullScreenMenu from '../components/navigation/FullScreenMenu';
@@ -22,6 +24,9 @@ const HomeScreen = ({ navigation }: { navigation: HomeScreenNavigationProp }) =>
     
     const scalePressAnim = useRef(new Animated.Value(1)).current;
     const breathAnim = useRef(new Animated.Value(1)).current;
+    const halo1Anim = useRef(new Animated.Value(0)).current;
+    const halo2Anim = useRef(new Animated.Value(0)).current;
+    const halo3Anim = useRef(new Animated.Value(0)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(30)).current;
 
@@ -39,14 +44,42 @@ const HomeScreen = ({ navigation }: { navigation: HomeScreenNavigationProp }) =>
             Animated.spring(slideAnim, { toValue: 0, tension: 40, friction: 7, useNativeDriver: true })
         ]).start();
 
-        // Pulsation du bouton JOUER (Battement de coeur continu)
+        // Pulsation du bouton JOUER (Plus marquée)
         Animated.loop(
             Animated.sequence([
-                Animated.timing(breathAnim, { toValue: 1.05, duration: 1200, useNativeDriver: true }),
-                Animated.timing(breathAnim, { toValue: 1, duration: 1200, useNativeDriver: true })
+                Animated.timing(breathAnim, { toValue: 1.08, duration: 1000, useNativeDriver: true }),
+                Animated.timing(breathAnim, { toValue: 1, duration: 1000, useNativeDriver: true })
             ])
         ).start();
-    }, [breathAnim, fadeAnim, slideAnim]);
+
+        // Animation des Halos (Effet de propagation/Ripple)
+        const createHaloAnim = (anim: Animated.Value, delay: number) => {
+            return Animated.loop(
+                Animated.sequence([
+                    Animated.delay(delay),
+                    Animated.parallel([
+                        Animated.timing(anim, { toValue: 1, duration: 2500, useNativeDriver: true }),
+                        Animated.timing(anim, { toValue: 1.5, duration: 2500, useNativeDriver: true }) // Not useful but parallel needs same type often or sequence
+                    ])
+                ])
+            );
+        };
+        
+        // On va plutôt faire un timing simple pour l'opacité et l'échelle
+        const startHalo = (anim: Animated.Value, delay: number) => {
+            anim.setValue(0);
+            Animated.loop(
+                Animated.sequence([
+                    Animated.delay(delay),
+                    Animated.timing(anim, { toValue: 1, duration: 3000, useNativeDriver: true })
+                ])
+            ).start();
+        };
+
+        startHalo(halo1Anim, 0);
+        startHalo(halo2Anim, 1000);
+        startHalo(halo3Anim, 2000);
+    }, [breathAnim, fadeAnim, slideAnim, halo1Anim, halo2Anim, halo3Anim]);
 
     const handlePressIn = () => {
         Animated.spring(scalePressAnim, { toValue: 0.94, useNativeDriver: true }).start();
@@ -70,25 +103,67 @@ const HomeScreen = ({ navigation }: { navigation: HomeScreenNavigationProp }) =>
                 
                 <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
                     <Text style={[styles.greetingText, { color: themeColors.textSecondary }]}>Bienvenue,</Text>
-                    <Text style={[styles.userNameText, { color: themeColors.text }]}>{user?.login}</Text>
                     
-                    <View style={styles.badgesContainer}>
-                        <View style={[styles.badge, { backgroundColor: themeColors.card, borderColor: themeColors.cardBorder, borderWidth: themeColors.cardBorderWidth }]}>
-                            <Text style={[styles.badgeLabel, { color: themeColors.textSecondary }]}>Record </Text>
-                            <Text style={[styles.badgeValue, { color: themeColors.text }]}>{user?.bestScore || 0}</Text>
-                        </View>
+                    <View style={styles.userRow}>
+                        <Pressable 
+                            onPress={() => navigation.navigate('Profile')}
+                            style={({ pressed }) => [
+                                styles.avatarPressable,
+                                { transform: [{ scale: pressed ? 0.92 : 1 }] }
+                            ]}
+                        >
+                            <View style={[styles.avatarContainer, { borderColor: themeColors.primary, backgroundColor: themeColors.card }]}>
+                                {user?.avatar ? (
+                                    <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
+                                ) : (
+                                    <Text style={[styles.avatarPlaceholder, { color: themeColors.primary }]}>
+                                        {user?.login?.charAt(0).toUpperCase()}
+                                    </Text>
+                                )}
+                            </View>
+                        </Pressable>
                         
-                        <View style={[styles.badge, styles.kevsBadge, { backgroundColor: 'rgba(255, 215, 0, 0.1)', borderColor: themeColors.cardBorderWidth === 2 ? themeColors.cardBorder : 'rgba(255, 215, 0, 0.3)', borderWidth: themeColors.cardBorderWidth }]}>
-                            <Text style={[styles.badgeLabel, { color: '#FFD700' }]}>Kevs </Text>
-                            <Text style={[styles.badgeValue, { color: '#FFD700' }]}>{user?.kevs || 0}</Text>
-                        </View>
+                        <Text style={[styles.userNameText, { color: themeColors.text }]}>{user?.login}</Text>
                     </View>
                 </Animated.View>
 
                 <View style={styles.centerContainer}>
-                    {/* Ombres pulsantes decoratives */}
-                    <Animated.View style={[styles.playButtonGlow, { transform: [{ scale: breathAnim }], opacity: 0.6 }]} />
-                    <Animated.View style={[styles.playButtonGlow, { transform: [{ scale: breathAnim }], opacity: 0.3, width: 220, height: 220 }]} />
+                    {/* STATS CARDS - Juste au-dessus du bouton PLAY */}
+                    <Animated.View style={[styles.statsContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+                        <View style={[styles.statCard, { backgroundColor: themeColors.card, borderColor: themeColors.cardBorder, borderWidth: themeColors.cardBorderWidth }]}>
+                            <View style={[styles.statIconContainer, { backgroundColor: 'rgba(255, 184, 77, 0.15)' }]}>
+                                <Ionicons name="trophy" size={20} color="#FFB84D" />
+                            </View>
+                            <View>
+                                <Text style={[styles.statLabelText, { color: themeColors.textSecondary }]}>RECORD</Text>
+                                <Text style={[styles.statValueText, { color: themeColors.text }]}>{user?.bestScore || 0}</Text>
+                            </View>
+                        </View>
+
+                        <View style={[styles.statCard, { backgroundColor: themeColors.card, borderColor: themeColors.cardBorder, borderWidth: themeColors.cardBorderWidth }]}>
+                            <View style={[styles.statIconContainer, { backgroundColor: 'rgba(129, 230, 217, 0.15)' }]}>
+                                <Ionicons name="diamond" size={20} color="#81E6D9" />
+                            </View>
+                            <View>
+                                <Text style={[styles.statLabelText, { color: themeColors.textSecondary }]}>KEVS</Text>
+                                <Text style={[styles.statValueText, { color: themeColors.text }]}>{user?.kevs || 0}</Text>
+                            </View>
+                        </View>
+                    </Animated.View>
+
+                    {/* HALOS MULTIPLES (Design superbe) */}
+                    <Animated.View style={[styles.halo, { 
+                        transform: [{ scale: halo1Anim.interpolate({ inputRange: [0, 1], outputRange: [1, 2.2] }) }],
+                        opacity: halo1Anim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0.4, 0] })
+                    }]} />
+                    <Animated.View style={[styles.halo, { 
+                        transform: [{ scale: halo2Anim.interpolate({ inputRange: [0, 1], outputRange: [1, 2.2] }) }],
+                        opacity: halo2Anim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0.4, 0] })
+                    }]} />
+                    <Animated.View style={[styles.halo, { 
+                        transform: [{ scale: halo3Anim.interpolate({ inputRange: [0, 1], outputRange: [1, 2.2] }) }],
+                        opacity: halo3Anim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0.4, 0] })
+                    }]} />
                     
                     <Animated.View style={{ transform: [{ scale: breathAnim }] }}>
                         <Animated.View style={{ transform: [{ scale: scalePressAnim }] }}>
@@ -96,9 +171,18 @@ const HomeScreen = ({ navigation }: { navigation: HomeScreenNavigationProp }) =>
                                 onPressIn={handlePressIn}
                                 onPressOut={handlePressOut}
                                 onPress={handlePlayPress}
-                                style={styles.playButton}
                             >
-                                <Text style={[styles.playButtonText, { color: themeColors.background }]}>JOUER</Text>
+                                <LinearGradient
+                                    colors={[colors.coral, '#FF8C66']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                    style={styles.playButton}
+                                >
+                                    <View style={styles.playButtonContent}>
+                                        <Ionicons name="play" size={32} color={themeColors.background} style={styles.playIcon} />
+                                        <Text style={[styles.playButtonText, { color: themeColors.background }]}>JOUER</Text>
+                                    </View>
+                                </LinearGradient>
                             </Pressable>
                         </Animated.View>
                     </Animated.View>
@@ -124,78 +208,126 @@ const styles = StyleSheet.create({
     },
     header: {
         marginTop: spacing.xl,
-        alignItems: 'flex-start',
+        width: '100%',
+    },
+    userRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: spacing.xs,
+    },
+    avatarPressable: {
+        marginRight: spacing.sm,
+    },
+    avatarContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        borderWidth: 2,
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden',
+        ...shadows.soft(false),
+    },
+    avatarImage: {
+        width: '100%',
+        height: '100%',
+    },
+    avatarPlaceholder: {
+        fontFamily: 'Poppins_700Bold',
+        fontSize: 20,
     },
     greetingText: {
         fontFamily: 'Poppins_500Medium',
         fontSize: 16,
-        paddingLeft: spacing.xs,
         letterSpacing: 1,
     },
     userNameText: {
         fontFamily: 'Poppins_800ExtraBold',
-        fontSize: 32,
-        marginBottom: spacing.md,
-        paddingLeft: spacing.xs,
+        fontSize: 30,
         letterSpacing: 0.5,
-    },
-    badgesContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: spacing.sm,
-    },
-    badge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
-        borderRadius: borderRadius.xl,
-        ...shadows.soft(false),
-    },
-    kevsBadge: {
-        borderWidth: 1,
-        borderColor: 'rgba(255, 215, 0, 0.3)',
-    },
-    badgeLabel: {
-        fontFamily: 'Poppins_500Medium',
-        fontSize: 14,
-    },
-    badgeValue: {
-        fontFamily: 'Poppins_800ExtraBold',
-        fontSize: 16,
+        flexShrink: 1,
     },
     centerContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: -50, 
     },
-    playButtonGlow: {
+    statsContainer: {
+        flexDirection: 'row',
+        gap: spacing.md,
+        marginBottom: spacing.xxl,
+        width: '100%',
+        justifyContent: 'center',
+    },
+    statCard: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: spacing.md,
+        paddingHorizontal: spacing.md,
+        borderRadius: borderRadius.xl,
+        ...shadows.soft(false),
+        maxWidth: 160,
+    },
+    statIconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: spacing.sm,
+    },
+    statLabelText: {
+        fontFamily: 'Poppins_700Bold',
+        fontSize: 10,
+        letterSpacing: 1,
+        marginBottom: -2,
+    },
+    statValueText: {
+        fontFamily: 'Poppins_800ExtraBold',
+        fontSize: 18,
+    },
+    halo: {
         position: 'absolute',
-        width: 180,
-        height: 180,
-        borderRadius: 90,
+        width: 140,
+        height: 140,
+        borderRadius: 70,
         backgroundColor: colors.coral,
         zIndex: 0,
+        marginTop: 60,
     },
     playButton: {
-        backgroundColor: colors.coral,
-        paddingVertical: spacing.lg,
-        paddingHorizontal: 80,
-        borderRadius: borderRadius.xl,
+        paddingVertical: spacing.md,
+        paddingHorizontal: 50,
+        borderRadius: 30,
         zIndex: 10,
         shadowColor: colors.coral,
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.5,
-        shadowRadius: 20,
-        elevation: 10,
-        borderWidth: 2,
-        borderColor: 'rgba(255, 255, 255, 0.3)', // Reflet premium interne
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.6,
+        shadowRadius: 15,
+        elevation: 12,
+        borderWidth: 1.5,
+        borderColor: 'rgba(255, 255, 255, 0.4)',
+        marginTop: 60,
+    },
+    playButtonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    playIcon: {
+        marginRight: spacing.sm,
+        textShadowColor: 'rgba(0, 0, 0, 0.2)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 4,
     },
     playButtonText: {
         fontFamily: 'Poppins_900Black',
-        fontSize: 40,
+        fontSize: 34,
         letterSpacing: 2,
+        textShadowColor: 'rgba(0, 0, 0, 0.2)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 4,
     },
 });
 

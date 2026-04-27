@@ -158,6 +158,9 @@ export default function EditProfileModal({ visible, onClose }: EditProfileModalP
             </View>
           </ScrollView>
 
+          {/* Fond de secours pour la barre de navigation Android */}
+          <View style={{ position: 'absolute', bottom: -100, left: 0, right: 0, height: 100, backgroundColor: themeColors.background }} />
+
           {loading && (
             <View style={styles.loadingOverlay}>
               <ActivityIndicator size="large" color={themeColors.primary} />
@@ -185,11 +188,11 @@ const styles = StyleSheet.create({
       position: 'absolute',
       bottom: 0,
       width: '100%',
-      height: '90%', 
+      height: '92%', // Un peu plus haut pour le confort
       borderTopLeftRadius: borderRadius.xl, 
       borderTopRightRadius: borderRadius.xl, 
       paddingHorizontal: spacing.lg, 
-      paddingBottom: spacing.xxl + 20,
+      paddingBottom: spacing.xxl,
   },
   
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.md, borderBottomWidth: 1, marginBottom: spacing.md },

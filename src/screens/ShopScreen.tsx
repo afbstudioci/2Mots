@@ -6,11 +6,13 @@ import { useTheme } from '../context/ThemeContext';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import EmptyState from '../components/common/EmptyState';
 import { useShop } from '../hooks/useShop';
+import { useAuth } from '../context/AuthContext';
 import { spacing, borderRadius, typography, colors } from '../theme/theme';
 
 export default function ShopScreen() {
     const { themeColors } = useTheme();
     const navigation = useNavigation();
+    const { user } = useAuth();
     const { items, isLoading, fetchShopItems } = useShop();
 
     useEffect(() => {
@@ -25,9 +27,9 @@ export default function ShopScreen() {
                 </TouchableOpacity>
                 <Text style={[styles.headerTitle, { color: themeColors.text }]}>BOUTIQUE</Text>
                 
-                {/* Solde fictif de Kevs */}
+                {/* Solde de Kevs du joueur */}
                 <View style={[styles.balanceBadge, { backgroundColor: themeColors.surface }]}>
-                    <Text style={[styles.balanceText, { color: colors.mint }]}>120</Text>
+                    <Text style={[styles.balanceText, { color: colors.mint }]}>{user?.kevs || 0}</Text>
                     <Ionicons name="diamond" size={14} color={colors.mint} style={{ marginLeft: 4 }} />
                 </View>
             </View>
@@ -39,7 +41,7 @@ export default function ShopScreen() {
                     <RefreshControl refreshing={isLoading} onRefresh={fetchShopItems} tintColor={themeColors.primary} />
                 }
             >
-                {items.length === 0 && !isLoading ? (
+                {items.length === 0 ? (
                     <EmptyState 
                         icon="basket"
                         iconColor={themeColors.primary}

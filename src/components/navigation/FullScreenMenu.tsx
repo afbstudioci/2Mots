@@ -123,6 +123,9 @@ export default function FullScreenMenu() {
                         { backgroundColor: themeColors.background }
                     ]} />
 
+                    {/* Fond de secours étendu pour éviter la barre blanche sur certains Android */}
+                    <View style={{ position: 'absolute', bottom: -100, left: 0, right: 0, height: 100, backgroundColor: themeColors.background }} />
+
                     <Pressable onPress={toggleMenu} style={[styles.actionButton, { top: insets.top + spacing.sm, backgroundColor: themeColors.overlay }]}>
                         <Animated.View style={[styles.crossLine, { backgroundColor: themeColors.text, transform: [{ rotate: rotate1 }] }]} />
                         <Animated.View style={[styles.crossLine, { backgroundColor: themeColors.text, transform: [{ rotate: rotate2 }] }]} />
@@ -200,11 +203,8 @@ const styles = StyleSheet.create({
     
     // CORRECTION : L'ancrage absolu aux 4 coins
     menuContainer: { 
-        position: 'absolute',
-        top: 0,
-        bottom: 0,
-        left: 0,
-        right: 0,
+        flex: 1,
+        backgroundColor: 'transparent',
     },
     
     menuContent: { flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%', paddingHorizontal: spacing.xl },
