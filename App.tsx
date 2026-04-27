@@ -1,5 +1,5 @@
 //App.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer, DefaultTheme, DarkTheme as NavDarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -60,10 +60,15 @@ const AppNavigator = () => {
   const { user, loading } = useAuth();
   const { themeColors } = useTheme();
   const [isSplashDone, setIsSplashDone] = useState(false);
+  const pushRegistered = React.useRef(false);
 
   useEffect(() => {
-    if (user) {
+    if (user && !pushRegistered.current) {
+      pushRegistered.current = true;
       registerForPushNotificationsAsync();
+    }
+    if (!user) {
+      pushRegistered.current = false;
     }
   }, [user]);
 
