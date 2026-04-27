@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, DeviceEventEmitter } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
@@ -16,6 +16,14 @@ export default function ShopScreen() {
     const { user } = useAuth();
     const { shopItems, isLoading, updateShop } = useData();
     const [error, setError] = useState(false);
+    const scrollRef = useRef<ScrollView>(null);
+
+    useEffect(() => {
+        const sub = DeviceEventEmitter.addListener('SCROLL_TO_TOP_Shop', () => {
+            scrollRef.current?.scrollTo({ y: 0, animated: true });
+        });
+        return () => sub.remove();
+    }, []);
 
     const onRefresh = async () => {
         try {
@@ -50,6 +58,7 @@ export default function ShopScreen() {
             </View>
 
             <ScrollView 
+                ref={scrollRef}
                 contentContainerStyle={shopItems.length === 0 ? styles.emptyScrollContent : styles.scrollContent} 
                 showsVerticalScrollIndicator={false}
                 refreshControl={

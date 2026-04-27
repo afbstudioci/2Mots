@@ -1,5 +1,5 @@
 //App.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer, DefaultTheme, DarkTheme as NavDarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -24,8 +24,11 @@ import ShopScreen from './src/screens/ShopScreen';
 import MissionsScreen from './src/screens/MissionsScreen';
 import FriendsScreen from './src/screens/FriendsScreen';
 import ContactScreen from './src/screens/ContactScreen';
+import ChatScreen from './src/screens/ChatScreen';
 import RulesScreen from './src/screens/RulesScreen';
 import PrivacyScreen from './src/screens/PrivacyScreen';
+import MainTabNavigator from './src/components/navigation/MainTabNavigator';
+import { registerForPushNotificationsAsync } from './src/services/notificationService';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -44,9 +47,11 @@ export type RootStackParamList = {
   Shop: undefined;
   Missions: undefined;
   Friends: undefined;
+  Chat: { friendId: string, friendName: string };
   Contact: undefined;
   Rules: undefined;
   Privacy: undefined;
+  Main: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -55,6 +60,12 @@ const AppNavigator = () => {
   const { user, loading } = useAuth();
   const { themeColors } = useTheme();
   const [isSplashDone, setIsSplashDone] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      registerForPushNotificationsAsync();
+    }
+  }, [user]);
 
   return (
     <Stack.Navigator
@@ -74,15 +85,12 @@ const AppNavigator = () => {
         </Stack.Screen>
       ) : user ? (
         <Stack.Group>
-          <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen name="Main" component={MainTabNavigator} />
           <Stack.Screen name="Game" component={GameScreen} />
           <Stack.Screen name="GameOver" component={GameOverScreen} />
           <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
-          <Stack.Screen name="Settings" component={SettingsScreen} />
-          <Stack.Screen name="Shop" component={ShopScreen} />
-          <Stack.Screen name="Missions" component={MissionsScreen} />
-          <Stack.Screen name="Friends" component={FriendsScreen} />
+          <Stack.Screen name="Chat" component={ChatScreen} />
           <Stack.Screen name="Contact" component={ContactScreen} />
           <Stack.Screen name="Rules" component={RulesScreen} />
           <Stack.Screen name="Privacy" component={PrivacyScreen} />

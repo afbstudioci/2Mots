@@ -1,39 +1,50 @@
 //src/components/navigation/FloatingTabBar.tsx
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Pressable, Animated, DeviceEventEmitter } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../../context/ThemeContext';
 import { colors, spacing, borderRadius, shadows } from '../../theme/theme';
-import { RootStackParamList } from '../../../App';
+import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
-export default function FloatingTabBar() {
+export default function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
     const { themeColors } = useTheme();
-    const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-    const route = useRoute();
     
     const tabs = [
+        { id: 'Home', label: 'Accueil', icon: 'home' },
         { id: 'Shop', label: 'Boutique', icon: 'basket' },
         { id: 'Missions', label: 'Missions', icon: 'rocket' },
         { id: 'Friends', label: 'Amis', icon: 'people' },
     ];
 
-    const handlePress = (id: any) => {
-        navigation.navigate(id);
-    };
-
     return (
         <View style={styles.container}>
             <View style={[styles.tabBar, { backgroundColor: themeColors.card }]}>
-                {tabs.map((tab) => {
-                    const isActive = route.name === tab.id;
+                {tabs.map((tab, index) => {
+                    const isActive = state.index === index;
+                    
+                    const handlePress = () => {
+                        const event = navigation.emit({
+                            type: 'tabPress',
+                            target: state.routes[index].key,
+                            canPreventDefault: true,
+                        });
+
+                        if (isActive) {
+                            // Scroll to top si on clique sur l'onglet déjà actif
+                            DeviceEventEmitter.emit('SCROLL_TO_TOP_' + tab.id);
+                        }
+
+                        if (!isActive && !event.defaultPrevented) {
+                            navigation.navigate(tab.id);
+                        }
+                    };
+
                     return (
                         <TabItem 
                             key={tab.id}
                             item={tab}
                             isActive={isActive}
-                            onPress={() => handlePress(tab.id)}
+                            onPress={handlePress}
                             themeColors={themeColors}
                         />
                     );
@@ -73,7 +84,7 @@ const TabItem = ({ item, isActive, onPress, themeColors }: any) => {
                 <Animated.View style={[
                     styles.activeBubble, 
                     { 
-                        backgroundColor: themeColors.overlayLight,
+                        backgroundColor: colors.coral + '15',
                         opacity: activeBubbleAnim,
                         transform: [{ 
                             scale: activeBubbleAnim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }) 
@@ -83,7 +94,7 @@ const TabItem = ({ item, isActive, onPress, themeColors }: any) => {
                 <Animated.View style={{ transform: [{ scale: scaleIconAnim }] }}>
                     <Ionicons 
                         name={isActive ? (item.icon as any) : (`${item.icon}-outline` as any)} 
-                        size={24} 
+                        size={22} 
                         color={isActive ? colors.coral : themeColors.textSecondary} 
                     />
                 </Animated.View>
@@ -96,10 +107,49 @@ const TabItem = ({ item, isActive, onPress, themeColors }: any) => {
 };
 
 const styles = StyleSheet.create({
-    container: { position: 'absolute', bottom: spacing.xl, left: 0, right: 0, alignItems: 'center', zIndex: 10 },
-    tabBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.sm, paddingHorizontal: spacing.lg, borderRadius: borderRadius.xl, width: '85%', ...shadows.soft(true) },
-    tabItem: { alignItems: 'center', justifyContent: 'center', width: 80 },
-    iconContainer: { alignItems: 'center', justifyContent: 'center', height: 40, width: 40 },
-    activeBubble: { position: 'absolute', width: 46, height: 46, borderRadius: 23 },
-    tabText: { fontFamily: 'Poppins_700Bold', fontSize: 10, marginTop: 2 }
+    container: { 
+        position: 'absolute', 
+        bottom: spacing.lg, 
+        left: 0, 
+        right: 0, 
+        alignItems: 'center', 
+        zIndex: 100,
+        backgroundColor: 'transparent'
+    },
+    tabBar: { 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        justifyContent: 'space-around', 
+        paddingVertical: spacing.sm, 
+        paddingHorizontal: spacing.sm, 
+        borderRadius: 30, 
+        width: '92%', 
+        height: 70,
+        ...shadows.soft(true),
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)'
+    },
+    tabItem: { 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        flex: 1,
+    },
+    iconContainer: { 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        height: 40, 
+        width: 40 
+    },
+    activeBubble: { 
+        position: 'absolute', 
+        width: 44, 
+        height: 44, 
+        borderRadius: 22 
+    },
+    tabText: { 
+        fontFamily: 'Poppins_700Bold', 
+        fontSize: 9, 
+        marginTop: 2,
+        letterSpacing: 0.5
+    }
 });

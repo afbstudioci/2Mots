@@ -6,6 +6,7 @@ interface DataContextType {
   shopItems: any[];
   missions: any[];
   friends: any[];
+  friendRequests: any[];
   leaderboard: any[];
   isLoading: boolean;
   lastRefresh: number | null;
@@ -13,6 +14,7 @@ interface DataContextType {
   updateMissions: () => Promise<void>;
   updateShop: () => Promise<void>;
   updateFriends: () => Promise<void>;
+  updateFriendRequests: () => Promise<void>;
   updateLeaderboard: () => Promise<void>;
 }
 
@@ -22,14 +24,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [shopItems, setShopItems] = useState<any[]>([]);
   const [missions, setMissions] = useState<any[]>([]);
   const [friends, setFriends] = useState<any[]>([]);
+  const [friendRequests, setFriendRequests] = useState<any[]>([]);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<number | null>(null);
 
   const updateShop = useCallback(async () => {
     try {
-      // Simulation pour l'instant si l'endpoint n'existe pas ou est vide
-      const response = await api.get('/shop').catch(() => ({ data: { data: [] } }));
+      const response = await api.get('/shop');
       setShopItems(response.data.data || []);
     } catch (error) {
       console.log('Error fetching shop:', error);
@@ -38,7 +40,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateMissions = useCallback(async () => {
     try {
-      const response = await api.get('/missions').catch(() => ({ data: { data: [] } }));
+      const response = await api.get('/missions');
       setMissions(response.data.data || []);
     } catch (error) {
       console.log('Error fetching missions:', error);
@@ -47,10 +49,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateFriends = useCallback(async () => {
     try {
-      const response = await api.get('/friends').catch(() => ({ data: { data: [] } }));
+      const response = await api.get('/friends');
       setFriends(response.data.data || []);
     } catch (error) {
       console.log('Error fetching friends:', error);
+    }
+  }, []);
+
+  const updateFriendRequests = useCallback(async () => {
+    try {
+      const response = await api.get('/friends/requests');
+      setFriendRequests(response.data.data || []);
+    } catch (error) {
+      console.log('Error fetching friend requests:', error);
     }
   }, []);
 
@@ -71,6 +82,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateShop(),
         updateMissions(),
         updateFriends(),
+        updateFriendRequests(),
         updateLeaderboard()
       ]);
       setLastRefresh(Date.now());
@@ -85,6 +97,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         shopItems,
         missions,
         friends,
+        friendRequests,
         leaderboard,
         isLoading,
         lastRefresh,
@@ -92,6 +105,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateMissions,
         updateShop,
         updateFriends,
+        updateFriendRequests,
         updateLeaderboard
       }}
     >

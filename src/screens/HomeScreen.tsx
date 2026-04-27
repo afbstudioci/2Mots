@@ -11,7 +11,6 @@ import { RootStackParamList } from '../../App';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import FloatingTabBar from '../components/navigation/FloatingTabBar';
 import FullScreenMenu from '../components/navigation/FullScreenMenu';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -189,8 +188,6 @@ const HomeScreen = ({ navigation }: { navigation: HomeScreenNavigationProp }) =>
                 </View>
 
             </View>
-
-            <FloatingTabBar />
 
         </SafeAreaView>
     );
