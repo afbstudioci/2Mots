@@ -174,6 +174,15 @@ export const useGameLogic = (navigation: any) => {
         }
     };
 
+    // Nettoyage à la destruction du hook (quand on quitte le GameScreen)
+    useEffect(() => {
+        return () => {
+            stopBgm();
+            stopGameOver();
+            if (timerRef.current) clearInterval(timerRef.current);
+        };
+    }, []);
+
     return {
         wordPairs, currentIndex, setCurrentIndex, timeLeft, setTimeLeft,
         answer, setAnswer, isLoading, errorMessage, isChecking, setIsChecking,

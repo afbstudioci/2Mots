@@ -19,7 +19,7 @@ interface FriendCardProps {
 }
 
 export default function FriendCard({ friend, onPress, onChallenge, rightElement }: FriendCardProps) {
-    const { themeColors, isDarkMode } = useTheme();
+    const { themeColors, isDark } = useTheme();
 
     return (
         <TouchableOpacity 
@@ -29,8 +29,8 @@ export default function FriendCard({ friend, onPress, onChallenge, rightElement 
                 styles.card, 
                 { 
                     backgroundColor: themeColors.card,
-                    borderColor: !isDarkMode ? colors.coral : themeColors.border,
-                    borderWidth: !isDarkMode ? 1.5 : 1,
+                    borderColor: !isDark ? colors.coral : themeColors.border,
+                    borderWidth: !isDark ? 1.5 : 1,
                 }
             ]}
         >

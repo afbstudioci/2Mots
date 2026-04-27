@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     playAreaWrapper: { 
         justifyContent: 'center', 
         alignItems: 'center', 
-        paddingVertical: spacing.xl 
+        paddingVertical: spacing.md 
     },
     orb: {
         position: 'absolute',
