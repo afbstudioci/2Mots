@@ -1,28 +1,12 @@
-import { useState, useCallback } from 'react';
+//src/hooks/useMissions.ts
+import { useData } from '../context/DataContext';
 
 export function useMissions() {
-    const [missions, setMissions] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    const fetchMissions = useCallback(async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            // Simulation de l'appel API
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            setMissions([]);
-        } catch (err: any) {
-            setError(err.message || 'Erreur réseau');
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
+    const { missions, isLoading, updateMissions } = useData();
 
     return {
         missions,
         isLoading,
-        error,
-        fetchMissions,
+        fetchMissions: updateMissions,
     };
 }

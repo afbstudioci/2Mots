@@ -8,6 +8,7 @@ import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { SettingsProvider } from './src/context/SettingsContext';
+import { DataProvider } from './src/context/DataContext';
 
 import SplashScreen from './src/screens/SplashScreen';
 import LoginScreen from './src/screens/LoginScreen';
@@ -142,7 +143,9 @@ export default function App() {
     <AuthProvider>
       <SettingsProvider>
         <ThemeProvider>
-          <AppContent />
+          <DataProvider>
+            <AppContent />
+          </DataProvider>
         </ThemeProvider>
       </SettingsProvider>
     </AuthProvider>

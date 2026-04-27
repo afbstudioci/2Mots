@@ -6,47 +6,28 @@ import { useTheme } from '../context/ThemeContext';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import EmptyState from '../components/common/EmptyState';
 import AppLoader from '../components/common/AppLoader';
-import { useMissions } from '../hooks/useMissions';
+import { useData } from '../context/DataContext';
 import { spacing, borderRadius, typography, colors } from '../theme/theme';
 
 export default function MissionsScreen() {
     const { themeColors } = useTheme();
     const navigation = useNavigation();
-    const { missions, isLoading, fetchMissions } = useMissions();
-    const [timedOut, setTimedOut] = useState(false);
+    const { missions, isLoading, updateMissions } = useData();
     const [error, setError] = useState(false);
 
-    useEffect(() => {
-        const timeout = setTimeout(() => {
-            if (isLoading) setTimedOut(true);
-        }, 10000);
-
-        loadMissions();
-
-        return () => {
-            clearTimeout(timeout);
-        };
-    }, []);
-
-    const loadMissions = async () => {
+    const onRefresh = async () => {
         try {
             setError(false);
-            setTimedOut(false);
-            await fetchMissions();
+            await updateMissions();
         } catch (err) {
             setError(true);
         }
     };
 
-    if ((isLoading || error || timedOut) && missions.length === 0) {
+    if (isLoading && missions.length === 0) {
         return (
             <ScreenWrapper>
-                <AppLoader 
-                    error={error || timedOut} 
-                    onRetry={() => {
-                        loadMissions();
-                    }} 
-                />
+                <AppLoader error={error} onRetry={onRefresh} />
             </ScreenWrapper>
         );
     }
@@ -65,7 +46,7 @@ export default function MissionsScreen() {
                 contentContainerStyle={missions.length === 0 ? styles.emptyScrollContent : styles.scrollContent} 
                 showsVerticalScrollIndicator={false}
                 refreshControl={
-                    <RefreshControl refreshing={isLoading} onRefresh={fetchMissions} tintColor={colors.coral} />
+                    <RefreshControl refreshing={isLoading} onRefresh={onRefresh} tintColor={colors.coral} />
                 }
             >
                 {missions.length === 0 ? (
@@ -75,7 +56,7 @@ export default function MissionsScreen() {
                         title="Pas de Mission"
                         message="L'ordre des mots est en paix. Reposez-vous, aucune nouvelle mission n'a été détectée."
                         actionLabel="Scanner à nouveau"
-                        onAction={fetchMissions}
+                        onAction={onRefresh}
                     />
                 ) : (
                     missions.map((mission) => (

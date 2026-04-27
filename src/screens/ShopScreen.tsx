@@ -6,7 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import EmptyState from '../components/common/EmptyState';
 import AppLoader from '../components/common/AppLoader';
-import { useShop } from '../hooks/useShop';
+import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { spacing, borderRadius, typography, colors } from '../theme/theme';
 
@@ -14,41 +14,22 @@ export default function ShopScreen() {
     const { themeColors } = useTheme();
     const navigation = useNavigation();
     const { user } = useAuth();
-    const { items, isLoading, fetchShopItems } = useShop();
-    const [timedOut, setTimedOut] = useState(false);
+    const { shopItems, isLoading, updateShop } = useData();
     const [error, setError] = useState(false);
 
-    useEffect(() => {
-        const timeout = setTimeout(() => {
-            if (isLoading) setTimedOut(true);
-        }, 10000);
-
-        loadItems();
-
-        return () => {
-            clearTimeout(timeout);
-        };
-    }, []);
-
-    const loadItems = async () => {
+    const onRefresh = async () => {
         try {
             setError(false);
-            setTimedOut(false);
-            await fetchShopItems();
+            await updateShop();
         } catch (err) {
             setError(true);
         }
     };
 
-    if ((isLoading || error || timedOut) && items.length === 0) {
+    if (isLoading && shopItems.length === 0) {
         return (
             <ScreenWrapper>
-                <AppLoader 
-                    error={error || timedOut} 
-                    onRetry={() => {
-                        loadItems();
-                    }} 
-                />
+                <AppLoader error={error} onRetry={onRefresh} />
             </ScreenWrapper>
         );
     }
@@ -69,27 +50,27 @@ export default function ShopScreen() {
             </View>
 
             <ScrollView 
-                contentContainerStyle={items.length === 0 ? styles.emptyScrollContent : styles.scrollContent} 
+                contentContainerStyle={shopItems.length === 0 ? styles.emptyScrollContent : styles.scrollContent} 
                 showsVerticalScrollIndicator={false}
                 refreshControl={
-                    <RefreshControl refreshing={isLoading} onRefresh={fetchShopItems} tintColor={themeColors.primary} />
+                    <RefreshControl refreshing={isLoading} onRefresh={onRefresh} tintColor={themeColors.primary} />
                 }
             >
-                {items.length === 0 ? (
+                {shopItems.length === 0 ? (
                     <EmptyState 
                         icon="basket"
                         iconColor={themeColors.primary}
                         title="Rayons Vides"
                         message="Les marchands sont encore en route avec de nouveaux bonus et indices. Revenez plus tard !"
                         actionLabel="Rafraîchir"
-                        onAction={fetchShopItems}
+                        onAction={onRefresh}
                     />
                 ) : (
                     <>
                         <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>BOOSTERS</Text>
                         
                         <View style={styles.itemsGrid}>
-                            {items.map((item, index) => (
+                            {shopItems.map((item, index) => (
                                 <View key={index} style={[styles.itemCard, { backgroundColor: themeColors.card }]}>
                                     <View style={[styles.iconWrapper, { backgroundColor: 'rgba(255, 127, 80, 0.1)' }]}>
                                         <Ionicons name="time" size={32} color={themeColors.primary} />

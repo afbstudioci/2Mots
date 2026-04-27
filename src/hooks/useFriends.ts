@@ -1,28 +1,12 @@
-import { useState, useCallback } from 'react';
+//src/hooks/useFriends.ts
+import { useData } from '../context/DataContext';
 
 export function useFriends() {
-    const [friends, setFriends] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    const fetchFriends = useCallback(async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            // Simulation de l'appel API
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            setFriends([]);
-        } catch (err: any) {
-            setError(err.message || 'Erreur réseau');
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
+    const { friends, isLoading, updateFriends } = useData();
 
     return {
         friends,
         isLoading,
-        error,
-        fetchFriends,
+        fetchFriends: updateFriends,
     };
 }

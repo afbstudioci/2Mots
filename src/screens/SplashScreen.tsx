@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { typography, colors, spacing } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
+import { useData } from '../context/DataContext';
 import Svg, { Path } from 'react-native-svg';
 
 interface SplashScreenProps {
@@ -14,6 +15,7 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 export default function SplashScreen({ onFinish }: SplashScreenProps) {
   const { themeColors } = useTheme();
+  const { refreshAll } = useData();
   const [progress, setProgress] = useState(0);
   
   const drawAnim = useRef(new Animated.Value(300)).current; 
@@ -27,6 +29,9 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
       duration: 400,
       useNativeDriver: true,
     }).start();
+
+    // 1b. Lancement du pré-chargement global
+    refreshAll();
 
     // 2. L'Effet Serpentin : Tracage de l'icone SVG
     Animated.timing(drawAnim, {

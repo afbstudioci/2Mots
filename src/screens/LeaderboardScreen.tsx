@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, 
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { useData } from '../context/DataContext';
 import { colors, spacing } from '../theme/theme';
 import api from '../services/api';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
@@ -11,63 +12,33 @@ import LeaderboardItem from '../components/leaderboard/LeaderboardItem';
 import AppLoader from '../components/common/AppLoader';
 
 export default function LeaderboardScreen() {
-    const [players, setPlayers] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(false);
+    const { leaderboard, isLoading, updateLeaderboard } = useData();
     const navigation = useNavigation();
     const { themeColors } = useTheme();
 
-    // Animation de fondu uniquement (pas de slide)
-    const screenFadeAnim = useRef(new Animated.Value(0)).current;
+    const [error, setError] = useState(false);
     const [timedOut, setTimedOut] = useState(false);
+    const screenFadeAnim = useRef(new Animated.Value(1)).current; // Directement à 1 car data déjà là
 
-    useEffect(() => {
-        const timeout = setTimeout(() => {
-            if (loading) setTimedOut(true);
-        }, 10000); // 10s timeout
-
-        fetchLeaderboard();
-
-        return () => {
-            clearTimeout(timeout);
-        };
-    }, []);
-
-    const fetchLeaderboard = async () => {
+    const onRefresh = async () => {
         try {
-            setError(false);
-            setTimedOut(false);
-            const response = await api.get('/leaderboard');
-            setPlayers(response.data.data);
-            setLoading(false);
+            await updateLeaderboard();
         } catch (err) {
-            setError(true);
-            setLoading(false);
+            console.log('Error refreshing leaderboard');
         }
     };
 
+    // Si on arrive et qu'il n'y a rien (cas rare), on lance un chargement
     useEffect(() => {
-        if (!loading && !error && !timedOut) {
-            Animated.timing(screenFadeAnim, {
-                toValue: 1,
-                duration: 400,
-                useNativeDriver: true,
-            }).start();
+        if (leaderboard.length === 0 && !isLoading) {
+            onRefresh();
         }
-    }, [loading, error, timedOut]);
+    }, []);
 
-    if (loading || error || timedOut) {
+    if (isLoading && leaderboard.length === 0) {
         return (
             <ScreenWrapper>
-                <AppLoader 
-                    error={error || timedOut} 
-                    onRetry={() => {
-                        setLoading(true);
-                        setError(false);
-                        setTimedOut(false);
-                        fetchLeaderboard();
-                    }} 
-                />
+                <AppLoader error={error || timedOut} onRetry={onRefresh} />
             </ScreenWrapper>
         );
     }
@@ -102,8 +73,10 @@ export default function LeaderboardScreen() {
                 </View>
 
                 <FlatList
-                    data={players}
+                    data={leaderboard}
                     keyExtractor={(item) => item._id}
+                    refreshing={isLoading}
+                    onRefresh={onRefresh}
                     renderItem={({ item, index }) => {
                         const rank = index + 1;
                         return (

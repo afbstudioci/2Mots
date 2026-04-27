@@ -6,47 +6,28 @@ import { useTheme } from '../context/ThemeContext';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import EmptyState from '../components/common/EmptyState';
 import AppLoader from '../components/common/AppLoader';
-import { useFriends } from '../hooks/useFriends';
+import { useData } from '../context/DataContext';
 import { spacing, borderRadius, typography, colors } from '../theme/theme';
 
 export default function FriendsScreen() {
     const { themeColors } = useTheme();
     const navigation = useNavigation();
-    const { friends, isLoading, fetchFriends } = useFriends();
-    const [timedOut, setTimedOut] = useState(false);
+    const { friends, isLoading, updateFriends } = useData();
     const [error, setError] = useState(false);
 
-    useEffect(() => {
-        const timeout = setTimeout(() => {
-            if (isLoading) setTimedOut(true);
-        }, 10000);
-
-        loadFriends();
-
-        return () => {
-            clearTimeout(timeout);
-        };
-    }, []);
-
-    const loadFriends = async () => {
+    const onRefresh = async () => {
         try {
             setError(false);
-            setTimedOut(false);
-            await fetchFriends();
+            await updateFriends();
         } catch (err) {
             setError(true);
         }
     };
 
-    if ((isLoading || error || timedOut) && friends.length === 0) {
+    if (isLoading && friends.length === 0) {
         return (
             <ScreenWrapper>
-                <AppLoader 
-                    error={error || timedOut} 
-                    onRetry={() => {
-                        loadFriends();
-                    }} 
-                />
+                <AppLoader error={error} onRetry={onRefresh} />
             </ScreenWrapper>
         );
     }
@@ -78,7 +59,7 @@ export default function FriendsScreen() {
                 contentContainerStyle={friends.length === 0 ? styles.emptyScrollContent : styles.scrollContent} 
                 showsVerticalScrollIndicator={false}
                 refreshControl={
-                    <RefreshControl refreshing={isLoading} onRefresh={fetchFriends} tintColor={themeColors.primary} />
+                    <RefreshControl refreshing={isLoading} onRefresh={onRefresh} tintColor={themeColors.primary} />
                 }
             >
                 {friends.length === 0 ? (
