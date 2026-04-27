@@ -25,11 +25,25 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
+    "notification": {
+      "icon": "./assets/icon.png",
+      "color": "#FF7F50",
+      "androidMode": "default",
+      "androidCollapsedTitle": "2Mots"
+    },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-audio"
+      "expo-audio",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#FF7F50",
+          "sounds": []
+        }
+      ]
     ]
   }
 }
