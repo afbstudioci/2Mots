@@ -105,6 +105,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
           </Animated.View>
 
           <Text style={styles.logoText}>2Mots</Text>
+          <Text style={styles.signatureText}>@By_Kevy</Text>
         </View>
         
         <View style={styles.bottomBlock}>
