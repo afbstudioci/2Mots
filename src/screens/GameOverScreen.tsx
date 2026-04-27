@@ -7,12 +7,14 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import { useTheme } from '../context/ThemeContext';
+import { useAudio } from '../hooks/useAudio';
 
 type GameOverScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'GameOver'>;
 
 export default function GameOverScreen({ route, navigation }: { route: any, navigation: GameOverScreenNavigationProp }) {
     const { score, details, corrections } = route.params;
     const { themeColors } = useTheme();
+    const { stopGameOver } = useAudio();
 
     // Animation du score
     const [displayScore, setDisplayScore] = useState(0);
@@ -39,10 +41,16 @@ export default function GameOverScreen({ route, navigation }: { route: any, navi
             toValue: score,
             duration: 1500, // Durée du comptage
             useNativeDriver: false,
-        }).start();
+        }).start(() => {
+            // Une fois que le score est affiché, on peut arrêter le son gameover
+            setTimeout(() => {
+                stopGameOver();
+            }, 500); // Petit délai supplémentaire pour la fluidité
+        });
 
         return () => {
             scoreAnim.removeAllListeners();
+            stopGameOver(); // Sécurité au démontage
         };
     }, [score]);
 

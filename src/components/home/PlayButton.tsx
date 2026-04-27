@@ -53,7 +53,7 @@ const PlayButton: React.FC<PlayButtonProps> = ({ onPress }) => {
             const angle = (index * 360) / NUM_PARTICLES;
             const distance = 100 + Math.random() * 40;
             const rad = (angle * Math.PI) / 180;
-            
+
             const toX = Math.cos(rad) * distance;
             const toY = Math.sin(rad) * distance;
 
@@ -91,9 +91,9 @@ const PlayButton: React.FC<PlayButtonProps> = ({ onPress }) => {
     const handlePressOut = () => {
         // CORRECTION : Utilisation de notre moteur pour respecter les paramètres
         triggerVibration(Haptics.ImpactFeedbackStyle.Heavy);
-        
+
         fireParticles();
-        
+
         Animated.spring(scalePressAnim, {
             toValue: 1,
             friction: 4,
@@ -142,9 +142,9 @@ const PlayButton: React.FC<PlayButtonProps> = ({ onPress }) => {
                         onPressOut={handlePressOut}
                         style={[styles.playButtonWrapper, { shadowColor: themeColors.primary }]}
                     >
-                        <View style={[styles.playButtonInner, { 
+                        <View style={[styles.playButtonInner, {
                             backgroundColor: themeColors.primary,
-                            borderColor: themeColors.overlayMedium 
+                            borderColor: themeColors.overlayMedium
                         }]}>
                             {/* Le texte prend la couleur du fond pour un look découpé moderne */}
                             <Text style={[styles.playButtonText, { color: themeColors.background }]}>JOUER</Text>

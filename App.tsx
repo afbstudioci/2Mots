@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { SettingsProvider } from './src/context/SettingsContext';
 import { DataProvider } from './src/context/DataContext';
+import { AudioProvider } from './src/context/AudioContext';
 
 import SplashScreen from './src/screens/SplashScreen';
 import LoginScreen from './src/screens/LoginScreen';
@@ -142,11 +143,13 @@ export default function App() {
   return (
     <AuthProvider>
       <SettingsProvider>
-        <ThemeProvider>
-          <DataProvider>
-            <AppContent />
-          </DataProvider>
-        </ThemeProvider>
+        <AudioProvider>
+          <ThemeProvider>
+            <DataProvider>
+              <AppContent />
+            </DataProvider>
+          </ThemeProvider>
+        </AudioProvider>
       </SettingsProvider>
     </AuthProvider>
   );

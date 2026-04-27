@@ -18,12 +18,13 @@ interface GameInputAreaProps {
     expectedType: string;
     clue: string;
     onHintPress: () => void;
+    playHint: () => void;
     isAnimating: boolean;
     actionRef?: React.Ref<GameInputAreaRef>;
 }
 
 export default function GameInputArea({ 
-    answer, setAnswer, submitAnswer, expectedType, clue, onHintPress, isAnimating, actionRef
+    answer, setAnswer, submitAnswer, expectedType, clue, onHintPress, playHint, isAnimating, actionRef
 }: GameInputAreaProps) {
     const { themeColors } = useTheme();
     const navigation = useNavigation<any>();
@@ -81,12 +82,14 @@ export default function GameInputArea({
                 <TouchableOpacity 
                     onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                        playHint(); // Jouer le son d'indice
                         navigation.navigate('Shop');
                     }}
-                    style={styles.hintIconBtn}
+                    style={[styles.hintIconBtn, { backgroundColor: colors.mint + '15' }]}
                     activeOpacity={0.7}
                 >
-                    <MaterialCommunityIcons name="magic-staff" size={24} color={colors.mint} />
+                    <View style={[styles.hintGlow, { backgroundColor: colors.mint + '20' }]} />
+                    <MaterialCommunityIcons name="magic-staff" size={26} color={colors.mint} />
                 </TouchableOpacity>
 
                 <TextInput
@@ -167,10 +170,21 @@ const styles = StyleSheet.create({
         borderColor: colors.coral,
     },
     hintIconBtn: {
-        width: 44,
-        height: 44,
+        width: 50,
+        height: 50,
         alignItems: 'center',
         justifyContent: 'center',
+        borderRadius: 25,
+        borderWidth: 1,
+        borderColor: colors.mint + '30',
+        marginRight: 4,
+    },
+    hintGlow: {
+        position: 'absolute',
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        opacity: 0.5,
     },
     input: {
         flex: 1,

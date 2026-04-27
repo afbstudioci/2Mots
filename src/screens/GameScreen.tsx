@@ -23,7 +23,8 @@ export default function GameScreen({ navigation }: any) {
     const {
         wordPairs, currentIndex, setCurrentIndex, timeLeft, answer, setAnswer,
         isLoading, errorMessage, isChecking, setIsChecking, userLevel, 
-        currentXp, xpNeeded, timeWon, setTimeWon, successTrigger, lastAccuracy, submitAnswer
+        currentXp, xpNeeded, timeWon, setTimeWon, successTrigger, lastAccuracy, 
+        submitAnswer, playHint
     } = useGameLogic(navigation);
 
     const slideWordsAnim = useRef(new Animated.Value(0)).current;
@@ -126,19 +127,22 @@ export default function GameScreen({ navigation }: any) {
                 ]} />
             </View>
 
-            {/* Bordure rouge pulsante (Panic Mode) */}
+            {/* Contour de danger (Panic Mode) amélioré avec dégradé */}
             <Animated.View 
                 pointerEvents="none" 
                 style={[
                     StyleSheet.absoluteFillObject, 
                     { 
-                        borderWidth: 8, 
-                        borderColor: colors.error,
-                        opacity: panicAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.8] }),
+                        opacity: panicAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.6] }),
                         zIndex: 100
                     }
                 ]} 
-            />
+            >
+                <View style={[styles.dangerBorder, { borderTopWidth: 15, borderTopColor: colors.error }]} />
+                <View style={[styles.dangerBorder, { borderBottomWidth: 15, borderBottomColor: colors.error, bottom: 0, position: 'absolute', width: '100%' }]} />
+                <View style={[styles.dangerBorder, { borderLeftWidth: 15, borderLeftColor: colors.error, left: 0, height: '100%', position: 'absolute' }]} />
+                <View style={[styles.dangerBorder, { borderRightWidth: 15, borderRightColor: colors.error, right: 0, height: '100%', position: 'absolute' }]} />
+            </Animated.View>
 
             <KeyboardAvoidingView 
                 style={{ flex: 1 }} 
@@ -180,6 +184,7 @@ export default function GameScreen({ navigation }: any) {
                     isAnimating={isChecking}
                     expectedType={wordPairs[currentIndex]?.expectedType}
                     clue={wordPairs[currentIndex]?.clue}
+                    playHint={playHint}
                     onHintPress={() => {
                         // Logique des indices (Kevs) à implémenter ici
                         console.log("Demande d'indice pour :", wordPairs[currentIndex]?._id);
@@ -209,5 +214,12 @@ const styles = StyleSheet.create({
         height: width * 1.5,
         borderRadius: width * 0.75,
         opacity: 0.05, // Effet subtil
+    },
+    dangerBorder: {
+        shadowColor: colors.error,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 1,
+        shadowRadius: 20,
+        elevation: 20,
     }
 });

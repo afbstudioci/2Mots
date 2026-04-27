@@ -11,7 +11,7 @@ const { width } = Dimensions.get('window');
 export const useGameLogic = (navigation: any) => {
     const { user } = useAuth();
     const { triggerSuccessVibration, triggerErrorVibration, triggerWarningVibration, triggerVibration } = useFeedback();
-    const { playSuccess, playLevelUp, playGameOver } = useAudio();
+    const { playSuccess, playLevelUp, playGameOver, stopGameOver, playBgm, stopBgm, playHint, playError } = useAudio();
 
     const [wordPairs, setWordPairs] = useState<any[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -51,8 +51,10 @@ export const useGameLogic = (navigation: any) => {
                     setCurrentXp(stats.xp);
                     setXpNeeded(stats.xpNeeded);
                     setIsLoading(false);
+                    playBgm(); // Lancer la musique dès que c'est prêt
                 } else if (isInitial) {
                     setIsLoading(false);
+                    playBgm();
                 }
             }
         } catch (error) {
@@ -68,8 +70,12 @@ export const useGameLogic = (navigation: any) => {
         hasTriggeredGameOver.current = true;
         
         setIsGameOver(true);
+        stopBgm(); // Arrêter la musique de fond
         triggerWarningVibration(); 
-        playGameOver();
+        
+        // On vérifie s'il y a eu au moins une bonne réponse dans la session
+        const hasScore = sessionAnswersRef.current.some(a => a.isCorrect);
+        playGameOver(hasScore);
         
         const currentPair = wordPairs[currentIndex];
         if (currentPair) {
@@ -157,6 +163,7 @@ export const useGameLogic = (navigation: any) => {
                 return true; // Indique au screen de lancer l'animation de slide
             } else {
                 triggerErrorVibration();
+                playError(); // Son d'erreur
                 inputAreaRef.current?.triggerShake();
                 setIsChecking(false);
                 return false;
@@ -171,6 +178,6 @@ export const useGameLogic = (navigation: any) => {
         wordPairs, currentIndex, setCurrentIndex, timeLeft, setTimeLeft,
         answer, setAnswer, isLoading, errorMessage, isChecking, setIsChecking,
         userLevel, currentXp, xpNeeded, timeWon, setTimeWon, successTrigger, lastAccuracy,
-        submitAnswer, hasTriggeredGameOver
+        submitAnswer, hasTriggeredGameOver, playHint, stopGameOver
     };
 };
