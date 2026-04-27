@@ -58,6 +58,13 @@ export const shadows = {
         shadowOpacity: isDark ? 0.4 : 0.15,
         shadowRadius: 12,
         elevation: 8,
+    }),
+    medium: (isDark: boolean) => ({
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: isDark ? 0.3 : 0.12,
+        shadowRadius: 6,
+        elevation: 6,
     })
 };
 
