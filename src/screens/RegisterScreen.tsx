@@ -18,6 +18,7 @@ import CustomAlert from '../components/common/CustomAlert';
 import AuthInput from '../components/auth/AuthInput';
 import ServerWakeUpLoader from '../components/auth/ServerWakeUpLoader';
 import PasswordValidator from '../components/auth/PasswordValidator';
+import ReferralModal from '../components/auth/ReferralModal';
 import { borderRadius, colors, spacing } from '../theme/theme';
 import { useKeyboard } from '../hooks/useKeyboard';
 
@@ -28,6 +29,8 @@ const RegisterScreen = ({ navigation }: any) => {
     password: '',
   });
   const [loading, setLoading] = useState(false);
+  const [showReferralModal, setShowReferralModal] = useState(false);
+  const [referralCode, setReferralCode] = useState<string | undefined>(undefined);
   const [alert, setAlert] = useState<{
     visible: boolean;
     title: string;
@@ -69,15 +72,16 @@ const RegisterScreen = ({ navigation }: any) => {
       return;
     }
 
+    // Si on n'a pas encore demandé le code promo, on ouvre la modal
+    if (referralCode === undefined) {
+      setShowReferralModal(true);
+      return;
+    }
+
     setLoading(true);
     try {
-      await register({ login, email, password });
-      setAlert({
-        visible: true,
-        title: 'Succès',
-        message: 'Compte créé avec succès !',
-        type: 'success',
-      });
+      await register({ login, email, password, referralCode });
+      // Le succès redirigera automatiquement vers Home via AuthContext
     } catch (err: any) {
       setAlert({
         visible: true,
@@ -85,6 +89,34 @@ const RegisterScreen = ({ navigation }: any) => {
         message: err.message || "Erreur lors de l'inscription.",
         type: 'error',
       });
+      setReferralCode(undefined); // Reset pour pouvoir re-tenter avec/sans code
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onReferralSubmit = (code?: string) => {
+    setShowReferralModal(false);
+    setReferralCode(code || '');
+    // Une fois le code (ou son absence) validé, on lance l'inscription
+    setTimeout(() => {
+        handleRegisterWithCode(code || '');
+    }, 100);
+  };
+
+  const handleRegisterWithCode = async (code: string) => {
+    const { login, email, password } = formData;
+    setLoading(true);
+    try {
+      await register({ login, email, password, referralCode: code });
+    } catch (err: any) {
+      setAlert({
+        visible: true,
+        title: 'Erreur',
+        message: err.message || "Erreur lors de l'inscription.",
+        type: 'error',
+      });
+      setReferralCode(undefined);
     } finally {
       setLoading(false);
     }
@@ -178,6 +210,11 @@ const RegisterScreen = ({ navigation }: any) => {
         message={alert.message}
         type={alert.type}
         onClose={() => setAlert({ ...alert, visible: false })}
+      />
+
+      <ReferralModal 
+        visible={showReferralModal}
+        onClose={onReferralSubmit}
       />
     </ScreenWrapper>
   );

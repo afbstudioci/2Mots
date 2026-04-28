@@ -12,6 +12,7 @@ import api from '../services/api';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
+import CustomAlert from '../components/common/CustomAlert';
 
 export default function MissionsScreen() {
     const { themeColors } = useTheme();
@@ -21,6 +22,7 @@ export default function MissionsScreen() {
     const [claimingId, setClaimingId] = useState<string | null>(null);
     const [referralCode, setReferralCode] = useState('');
     const [isSubmittingReferral, setIsSubmittingReferral] = useState(false);
+    const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '', type: 'info' as 'info' | 'success' | 'error' });
     const scrollRef = useRef<ScrollView>(null);
 
     useEffect(() => {
@@ -45,8 +47,9 @@ export default function MissionsScreen() {
         try {
             await api.post(`/missions/claim/${missionId}`);
             await Promise.all([updateMissions(), refreshProfile()]);
+            setAlertConfig({ visible: true, title: 'Succès !', message: 'Récompense récupérée avec succès.', type: 'success' });
         } catch (e) {
-            Alert.alert("Erreur", "Erreur lors de la réclamation");
+            setAlertConfig({ visible: true, title: 'Oups', message: 'Erreur lors de la récupération.', type: 'error' });
         } finally {
             setClaimingId(null);
         }
@@ -67,11 +70,11 @@ export default function MissionsScreen() {
         setIsSubmittingReferral(true);
         try {
             const response = await api.post('/friends/referral', { code: referralCode.trim() });
-            Alert.alert("Succès", response.data.message);
+            setAlertConfig({ visible: true, title: 'Félicitations', message: response.data.message, type: 'success' });
             setReferralCode('');
             await refreshProfile();
         } catch (e: any) {
-            Alert.alert("Erreur", e.response?.data?.message || "Code invalide");
+            setAlertConfig({ visible: true, title: 'Invalide', message: e.response?.data?.message || "Ce code n'existe pas.", type: 'error' });
         } finally {
             setIsSubmittingReferral(false);
         }
@@ -185,6 +188,14 @@ export default function MissionsScreen() {
                     </>
                 )}
             </ScrollView>
+
+            <CustomAlert 
+                visible={alertConfig.visible}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                type={alertConfig.type}
+                onClose={() => setAlertConfig({ ...alertConfig, visible: false })}
+            />
         </ScreenWrapper>
     );
 }

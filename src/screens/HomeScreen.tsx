@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import FullScreenMenu from '../components/navigation/FullScreenMenu';
+import ReferralCelebration from '../components/common/ReferralCelebration';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -20,6 +21,7 @@ const HomeScreen = ({ navigation }: { navigation: HomeScreenNavigationProp }) =>
     const { themeColors } = useTheme();
     
     const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const [showCelebration, setShowCelebration] = useState(false);
     
     const scalePressAnim = useRef(new Animated.Value(1)).current;
     const breathAnim = useRef(new Animated.Value(1)).current;
@@ -78,7 +80,15 @@ const HomeScreen = ({ navigation }: { navigation: HomeScreenNavigationProp }) =>
         startHalo(halo1Anim, 0);
         startHalo(halo2Anim, 1000);
         startHalo(halo3Anim, 2000);
-    }, [breathAnim, fadeAnim, slideAnim, halo1Anim, halo2Anim, halo3Anim]);
+
+        // Check for referral bonus notification
+        if (user?.referredBy && user?.level === 1 && !user?.referralRewardClaimed) {
+            const timer = setTimeout(() => {
+                setShowCelebration(true);
+            }, 1500);
+            return () => clearTimeout(timer);
+        }
+    }, [breathAnim, fadeAnim, slideAnim, halo1Anim, halo2Anim, halo3Anim, user]);
 
     const handlePressIn = () => {
         Animated.spring(scalePressAnim, { toValue: 0.94, useNativeDriver: true }).start();
@@ -189,6 +199,10 @@ const HomeScreen = ({ navigation }: { navigation: HomeScreenNavigationProp }) =>
 
             </View>
 
+            <ReferralCelebration 
+                visible={showCelebration}
+                onClose={() => setShowCelebration(false)}
+            />
         </SafeAreaView>
     );
 };
