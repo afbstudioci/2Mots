@@ -94,6 +94,7 @@ const AppNavigator = () => {
           <Stack.Screen name="GameOver" component={GameOverScreen} />
           <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen name="Friends" component={FriendsScreen} />
           <Stack.Screen name="Chat" component={ChatScreen} />
           <Stack.Screen name="Settings" component={SettingsScreen} />
           <Stack.Screen name="Contact" component={ContactScreen} />

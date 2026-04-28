@@ -35,6 +35,7 @@ export default function ChatInput({
     
     const micScale = useRef(new Animated.Value(1)).current;
     const slideAnim = useRef(new Animated.Value(0)).current;
+    const pulseAnim = useRef(new Animated.Value(1)).current;
 
     const formatTime = (s: number) => {
         const mins = Math.floor(s / 60);
@@ -42,20 +43,33 @@ export default function ChatInput({
         return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
     };
 
+    useEffect(() => {
+        if (isRecording) {
+            Animated.loop(
+                Animated.sequence([
+                    Animated.timing(pulseAnim, { toValue: 0.4, duration: 500, useNativeDriver: true }),
+                    Animated.timing(pulseAnim, { toValue: 1, duration: 500, useNativeDriver: true })
+                ])
+            ).start();
+        } else {
+            pulseAnim.setValue(1);
+        }
+    }, [isRecording]);
+
     const panResponder = useRef(
         PanResponder.create({
             onStartShouldSetPanResponder: () => true,
             onPanResponderGrant: () => {
                 onStartRecording();
-                Animated.spring(micScale, { toValue: 1.5, useNativeDriver: true }).start();
+                Animated.spring(micScale, { toValue: 1.6, friction: 4, useNativeDriver: true }).start();
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             },
             onPanResponderMove: (_, gesture) => {
                 if (gesture.dy < -60 && !isLocked) {
                     setIsLocked(true);
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
                 }
                 if (gesture.dx < -100) {
-                    // Visual feedback for cancellation
                     slideAnim.setValue(gesture.dx);
                 }
             },
@@ -75,6 +89,7 @@ export default function ChatInput({
         if (text.trim()) {
             onSend(text.trim());
             setText('');
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
     };
 
@@ -90,17 +105,19 @@ export default function ChatInput({
             {isRecording ? (
                 <View style={styles.recordingContainer}>
                     <View style={styles.recordInfo}>
-                        <Animated.View style={[styles.dot, { opacity: new Animated.Value(1) }]} />
+                        <Animated.View style={[styles.dot, { opacity: pulseAnim }]} />
                         <Text style={[styles.timer, { color: themeColors.text }]}>{formatTime(recordingTime)}</Text>
                     </View>
 
                     {isLocked ? (
                         <View style={styles.lockedControls}>
-                            <TouchableOpacity onPress={() => onStopRecording(true)}>
+                            <TouchableOpacity onPress={() => onStopRecording(true)} style={styles.cancelBtn}>
                                 <Text style={styles.cancelText}>ANNULER</Text>
                             </TouchableOpacity>
                             <TouchableOpacity onPress={() => onStopRecording(false)} style={styles.sendRecordBtn}>
-                                <Ionicons name="send" size={20} color={colors.white} />
+                                <LinearGradient colors={[colors.coral, '#FF8C66']} style={styles.sendGradientSmall}>
+                                    <Ionicons name="send" size={18} color={colors.white} />
+                                </LinearGradient>
                             </TouchableOpacity>
                         </View>
                     ) : (
@@ -111,7 +128,7 @@ export default function ChatInput({
                     )}
 
                     {!isLocked && (
-                        <Animated.View style={{ transform: [{ scale: micScale }] }}>
+                        <Animated.View style={[styles.micActive, { transform: [{ scale: micScale }] }]}>
                             <Ionicons name="mic" size={28} color={colors.coral} />
                         </Animated.View>
                     )}
@@ -129,6 +146,7 @@ export default function ChatInput({
                         value={text}
                         onChangeText={(t) => { setText(t); onTyping(); }}
                         multiline
+                        blurOnSubmit={false}
                     />
 
                     {text.trim().length > 0 ? (
@@ -150,29 +168,29 @@ export default function ChatInput({
 
 const styles = StyleSheet.create({
     container: {
-        paddingHorizontal: spacing.sm,
+        paddingHorizontal: spacing.md,
         paddingTop: spacing.sm,
-        paddingBottom: Platform.OS === 'ios' ? 30 : spacing.sm,
+        paddingBottom: Platform.OS === 'ios' ? 34 : spacing.md,
     },
     inputRow: {
         flexDirection: 'row',
         alignItems: 'center',
     },
     actionBtn: {
-        padding: 8,
+        padding: 6,
     },
     input: {
         flex: 1,
         borderRadius: 24,
         paddingHorizontal: 16,
         paddingVertical: 10,
-        maxHeight: 100,
+        maxHeight: 120,
         fontFamily: 'Poppins_500Medium',
         fontSize: 15,
-        marginHorizontal: 4,
+        marginHorizontal: 8,
     },
     sendBtn: {
-        marginLeft: 4,
+        marginLeft: 2,
     },
     sendGradient: {
         width: 44,
@@ -185,7 +203,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         height: 50,
-        paddingHorizontal: 8,
     },
     recordInfo: {
         flexDirection: 'row',
@@ -193,11 +210,11 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     dot: {
-        width: 10,
-        height: 10,
-        borderRadius: 5,
+        width: 12,
+        height: 12,
+        borderRadius: 6,
         backgroundColor: colors.error,
-        marginRight: 8,
+        marginRight: 10,
     },
     timer: {
         fontSize: 18,
@@ -211,24 +228,41 @@ const styles = StyleSheet.create({
     slideText: {
         fontSize: 14,
         fontFamily: 'Poppins_600SemiBold',
-        marginLeft: 4,
+        marginLeft: 6,
     },
     lockedControls: {
         flexDirection: 'row',
         alignItems: 'center',
     },
+    cancelBtn: {
+        padding: 10,
+        marginRight: 10,
+    },
     cancelText: {
         color: colors.error,
-        fontFamily: 'Poppins_700Bold',
-        fontSize: 14,
-        marginRight: 20,
+        fontFamily: 'Poppins_800ExtraBold',
+        fontSize: 13,
+        letterSpacing: 0.5,
     },
     sendRecordBtn: {
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: colors.coral,
+    },
+    sendGradientSmall: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
         justifyContent: 'center',
         alignItems: 'center',
     },
+    micActive: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: colors.coral + '15',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 10,
+    }
 });

@@ -125,18 +125,25 @@ const ConversationCard = ({ item, onPress }: any) => {
                         {item.friend.login}
                     </Text>
                     <Text style={[styles.time, { color: themeColors.textSecondary }]}>
-                        {new Date(lastMsg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {lastMsg 
+                            ? new Date(lastMsg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                            : ''
+                        }
                     </Text>
                 </View>
                 <View style={styles.row}>
                     <Text 
                         style={[
                             styles.preview, 
-                            { color: isUnread ? themeColors.text : themeColors.textSecondary, fontFamily: isUnread ? 'Poppins_700Bold' : 'Poppins_400Regular' }
+                            { 
+                                color: isUnread ? themeColors.text : themeColors.textSecondary, 
+                                fontFamily: isUnread ? 'Poppins_700Bold' : 'Poppins_400Regular',
+                                fontStyle: lastMsg ? 'normal' : 'italic'
+                            }
                         ]} 
                         numberOfLines={1}
                     >
-                        {lastMsg.isDeleted ? 'Message supprimé' : (lastMsg.text || 'Média')}
+                        {!lastMsg ? 'Démarrer la discussion...' : (lastMsg.isDeleted ? 'Message supprimé' : (lastMsg.text || 'Média'))}
                     </Text>
                     {isUnread && (
                         <View style={styles.badge}>

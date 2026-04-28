@@ -19,13 +19,12 @@ export default function FriendsScreen() {
     const navigation = useNavigation<any>();
     const { friends, friendRequests, isLoading, updateFriends, updateFriendRequests, updateUnreadCount } = useData();
     const [error, setError] = useState(false);
-    const [activeTab, setActiveTab] = useState<'list' | 'requests' | 'sent'>('list');
+    const [activeTab, setActiveTab] = useState<'requests' | 'sent'>('requests');
     
-    // États de recherche par onglet
-    const [searchGlobal, setSearchGlobal] = useState(''); // Recherche d'utilisateurs (Onglet Amis quand pas vide)
-    const [filterList, setFilterList] = useState(''); // Filtre local Amis
-    const [filterRequests, setFilterRequests] = useState(''); // Filtre local Reçues
-    const [filterSent, setFilterSent] = useState(''); // Filtre local Envoyées
+    // États de recherche
+    const [searchGlobal, setSearchGlobal] = useState('');
+    const [filterRequests, setFilterRequests] = useState('');
+    const [filterSent, setFilterSent] = useState('');
 
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [isSearching, setIsSearching] = useState(false);
@@ -91,6 +90,8 @@ export default function FriendsScreen() {
                 message: 'Ta demande d\'ami a été envoyée avec succès !', type: 'success'
             });
             fetchSentRequests();
+            // Refresh search results to show pending status
+            handleSearch();
         } catch (e: any) {
             setAlertState({
                 visible: true, title: 'Oups',
@@ -127,7 +128,6 @@ export default function FriendsScreen() {
     };
 
     // Filtrage local
-    const filteredFriends = friends.filter(f => f.name.toLowerCase().includes(filterList.toLowerCase()));
     const filteredRequests = friendRequests.filter(r => r.requester.login.toLowerCase().includes(filterRequests.toLowerCase()));
     const filteredSent = sentRequests.filter(r => {
         const recipient = r.users.find((u: any) => u._id.toString() !== r.requester?.toString());
@@ -137,14 +137,37 @@ export default function FriendsScreen() {
     return (
         <ScreenWrapper>
             <View style={styles.header}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                    <Ionicons name="arrow-back" size={24} color={themeColors.text} />
+                </TouchableOpacity>
                 <Text style={[styles.headerTitle, { color: themeColors.text }]}>COMMUNAUTÉ</Text>
+                <View style={{ width: 40 }} />
             </View>
 
-            {/* Stats / Tabs */}
+            {/* Barre de recherche globale (Toujours visible pour trouver de nouveaux amis) */}
+            <View style={styles.searchSection}>
+                <View style={[styles.searchBar, { backgroundColor: themeColors.card }]}>
+                    <Ionicons name="search" size={18} color={themeColors.textSecondary} />
+                    <TextInput 
+                        placeholder="Rechercher des génies..."
+                        placeholderTextColor={themeColors.textSecondary}
+                        style={[styles.searchInput, { color: themeColors.text }]}
+                        value={searchGlobal}
+                        onChangeText={setSearchGlobal}
+                    />
+                    {searchGlobal.length > 0 && (
+                        <TouchableOpacity onPress={() => setSearchGlobal('')}>
+                            <Ionicons name="close-circle" size={18} color={themeColors.textSecondary} />
+                        </TouchableOpacity>
+                    )}
+                </View>
+            </View>
+
+            {/* Tabs for Requests */}
             <View style={styles.tabsContainer}>
-                {(['list', 'requests', 'sent'] as const).map((tab) => {
-                    const labels = { list: 'AMIS', requests: 'REÇUES', sent: 'ENVOYÉES' };
-                    const counts = { list: friends.length, requests: friendRequests.length, sent: sentRequests.length };
+                {(['requests', 'sent'] as const).map((tab) => {
+                    const labels = { requests: 'REÇUES', sent: 'ENVOYÉES' };
+                    const counts = { requests: friendRequests.length, sent: sentRequests.length };
                     const isActive = activeTab === tab;
                     return (
                         <TouchableOpacity 
@@ -163,41 +186,6 @@ export default function FriendsScreen() {
                 })}
             </View>
 
-            {/* Barre de recherche contextuelle */}
-            <View style={styles.searchSection}>
-                <View style={[styles.searchBar, { backgroundColor: themeColors.card }]}>
-                    <Ionicons name="search" size={18} color={themeColors.textSecondary} />
-                    <TextInput 
-                        placeholder={
-                            activeTab === 'list' ? (friends.length > 0 ? "Filtrer mes amis..." : "Trouver des génies...") :
-                            activeTab === 'requests' ? "Chercher dans les demandes..." : "Chercher une demande envoyée..."
-                        }
-                        placeholderTextColor={themeColors.textSecondary}
-                        style={[styles.searchInput, { color: themeColors.text }]}
-                        value={
-                            activeTab === 'list' ? (friends.length > 0 ? filterList : searchGlobal) :
-                            activeTab === 'requests' ? filterRequests : filterSent
-                        }
-                        onChangeText={(t) => {
-                            if (activeTab === 'list') {
-                                if (friends.length > 0) setFilterList(t);
-                                else setSearchGlobal(t);
-                            } else if (activeTab === 'requests') setFilterRequests(t);
-                            else setFilterSent(t);
-                        }}
-                    />
-                    {(activeTab === 'list' ? (friends.length > 0 ? filterList : searchGlobal) : activeTab === 'requests' ? filterRequests : filterSent).length > 0 && (
-                        <TouchableOpacity onPress={() => {
-                            if (activeTab === 'list') { setFilterList(''); setSearchGlobal(''); }
-                            else if (activeTab === 'requests') setFilterRequests('');
-                            else setFilterSent('');
-                        }}>
-                            <Ionicons name="close-circle" size={18} color={themeColors.textSecondary} />
-                        </TouchableOpacity>
-                    )}
-                </View>
-            </View>
-
             <ScrollView 
                 ref={scrollRef}
                 contentContainerStyle={styles.scrollContent} 
@@ -206,78 +194,71 @@ export default function FriendsScreen() {
                     <RefreshControl refreshing={isLoading} onRefresh={onRefresh} tintColor={colors.coral} />
                 }
             >
-                {/* Recherche Globale (quand on n'a pas d'amis ou qu'on cherche activement) */}
-                {activeTab === 'list' && friends.length === 0 && searchGlobal.length > 0 ? (
+                {/* Discovery Section (Search Results) */}
+                {searchGlobal.length > 0 ? (
                     <View>
-                        <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>UTILISATEURS TROUVÉS</Text>
-                        {isSearching ? <ActivityIndicator color={colors.coral} /> :
-                         searchResults.length === 0 ? <Text style={[styles.noResult, { color: themeColors.textSecondary }]}>Aucun résultat</Text> :
+                        <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>RÉSULTATS DE RECHERCHE</Text>
+                        {isSearching ? <ActivityIndicator color={colors.coral} style={{ marginTop: 20 }} /> :
+                         searchResults.length === 0 ? <Text style={[styles.noResult, { color: themeColors.textSecondary }]}>Aucun utilisateur trouvé</Text> :
                          searchResults.map(user => (
                              <FriendCard 
-                                key={user._id}
-                                friend={{ id: user._id, name: user.login, avatar: user.avatar, level: user.level }}
-                                rightElement={
-                                    pendingUserIds.has(user._id) ? (
-                                        <View style={styles.sentBadge}><Text style={styles.sentText}>Envoyée</Text></View>
-                                    ) : (
-                                        <TouchableOpacity onPress={() => sendRequest(user._id)} style={styles.addButton}>
-                                            <Ionicons name="person-add" size={18} color={colors.coral} />
-                                        </TouchableOpacity>
-                                    )
-                                }
+                                 key={user._id}
+                                 friend={{ id: user._id, name: user.login, avatar: user.avatar, level: user.level }}
+                                 rightElement={
+                                     user.friendshipStatus === 'accepted' ? (
+                                         <View style={[styles.sentBadge, { backgroundColor: colors.mint + '15' }]}>
+                                             <Text style={[styles.sentText, { color: colors.mint }]}>AMIS</Text>
+                                         </View>
+                                     ) : user.friendshipStatus === 'pending' ? (
+                                         <View style={styles.sentBadge}>
+                                             <Text style={styles.sentText}>{user.isRequester ? 'Envoyée' : 'En attente'}</Text>
+                                         </View>
+                                     ) : (
+                                         <TouchableOpacity onPress={() => sendRequest(user._id)} style={styles.addButton}>
+                                             <Ionicons name="person-add" size={20} color={colors.coral} />
+                                         </TouchableOpacity>
+                                     )
+                                 }
                              />
                          ))
                         }
                     </View>
-                ) : activeTab === 'list' ? (
-                    filteredFriends.length === 0 ? (
-                        <EmptyState 
-                            icon="people" iconColor={colors.mint}
-                            title="Loup Solitaire"
-                            message={filterList ? "Aucun ami ne correspond à ce nom." : "Ajoutez des amis pour comparer vos scores !"}
-                        />
-                    ) : (
-                        filteredFriends.map(f => (
-                            <FriendCard 
-                                key={f.id}
-                                friend={f}
-                                onPress={() => navigation.navigate('Chat', { friendId: f.id, friendName: f.name, friendAvatar: f.avatar })}
-                                onChallenge={() => console.log("Challenge", f.id)}
-                            />
-                        ))
-                    )
-                ) : activeTab === 'requests' ? (
-                    filteredRequests.length === 0 ? (
-                        <EmptyState icon="mail-unread" iconColor={colors.coral} title="Boîte vide" message="Aucune demande d'ami en attente." />
-                    ) : (
-                        filteredRequests.map(r => (
-                            <FriendCard 
-                                key={r._id}
-                                friend={{ id: r.requester._id, name: r.requester.login, avatar: r.requester.avatar, level: r.requester.level }}
-                                rightElement={
-                                    <TouchableOpacity onPress={() => acceptRequest(r._id)} style={styles.acceptButton}>
-                                        <Ionicons name="checkmark-circle" size={32} color={colors.mint} />
-                                    </TouchableOpacity>
-                                }
-                            />
-                        ))
-                    )
                 ) : (
-                    filteredSent.length === 0 ? (
-                        <EmptyState icon="paper-plane" iconColor={colors.coral} title="Rien d'envoyé" message="Aucune demande en attente de réponse." />
-                    ) : (
-                        filteredSent.map(r => {
-                            const recipient = r.users.find((u: any) => u._id.toString() !== r.requester?.toString());
-                            return (
+                    /* Requests Section */
+                    activeTab === 'requests' ? (
+                        filteredRequests.length === 0 ? (
+                            <EmptyState icon="mail-unread" iconColor={colors.coral} title="Boîte vide" message="Aucune demande d'ami en attente." />
+                        ) : (
+                            filteredRequests.map(r => (
                                 <FriendCard 
                                     key={r._id}
-                                    friend={{ id: recipient._id, name: recipient.login, avatar: recipient.avatar, level: recipient.level }}
+                                    friend={{ id: r.requester._id, name: r.requester.login, avatar: r.requester.avatar, level: r.requester.level }}
                                     rightElement={
-                                        <View style={styles.pendingBadge}><Text style={styles.pendingText}>EN ATTENTE</Text></View>
+                                        <TouchableOpacity onPress={() => acceptRequest(r._id)} style={styles.acceptButton}>
+                                            <Ionicons name="checkmark-circle" size={32} color={colors.mint} />
+                                        </TouchableOpacity>
                                     }
                                 />
-                            );
-                        })
+                            ))
+                        )
+                    ) : (
+                        /* Sent Requests Section */
+                        filteredSent.length === 0 ? (
+                            <EmptyState icon="paper-plane" iconColor={colors.coral} title="Rien d'envoyé" message="Aucune demande en attente de réponse." />
+                        ) : (
+                            filteredSent.map(r => {
+                                const recipient = r.users.find((u: any) => u._id.toString() !== r.requester?.toString());
+                                return (
+                                    <FriendCard 
+                                        key={r._id}
+                                        friend={{ id: recipient._id, name: recipient.login, avatar: recipient.avatar, level: recipient.level }}
+                                        rightElement={
+                                            <View style={styles.pendingBadge}><Text style={styles.pendingText}>EN ATTENTE</Text></View>
+                                        }
+                                    />
+                                );
+                            })
+                        )
                     )
                 )}
             </ScrollView>
@@ -291,7 +272,16 @@ export default function FriendsScreen() {
 }
 
 const styles = StyleSheet.create({
-    header: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, alignItems: 'center' },
+    header: { 
+        paddingHorizontal: spacing.lg, 
+        paddingVertical: spacing.md, 
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+    },
+    backBtn: {
+        width: 40,
+    },
     headerTitle: { ...typography.buttonPrimary, fontSize: 18, letterSpacing: 3 },
     tabsContainer: { flexDirection: 'row', paddingHorizontal: spacing.lg, marginBottom: spacing.md },
     tab: { flex: 1, alignItems: 'center', paddingVertical: spacing.sm, borderBottomWidth: 2, borderBottomColor: 'transparent' },

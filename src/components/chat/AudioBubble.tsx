@@ -39,6 +39,13 @@ export default function AudioBubble({ uri, isMe, duration }: AudioBubbleProps) {
 
     const playPause = async () => {
         try {
+            await Audio.setAudioModeAsync({
+                allowsRecordingIOS: false,
+                playsInSilentModeIOS: true,
+                staysActiveInBackground: true,
+                shouldDuckAndroid: true,
+            });
+
             if (sound) {
                 if (isPlaying) {
                     await sound.pauseAsync();
@@ -57,7 +64,7 @@ export default function AudioBubble({ uri, isMe, duration }: AudioBubbleProps) {
                 setIsPlaying(true);
             }
         } catch (e) {
-            console.log("Audio play error", e);
+            console.error("[AUDIO] Play error", e);
         }
     };
 
