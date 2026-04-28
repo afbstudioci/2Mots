@@ -51,9 +51,9 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    const isAuthRequest = originalRequest.url?.includes('/auth/login') || 
-                         originalRequest.url?.includes('/auth/register') ||
-                         originalRequest.url?.includes('/auth/refresh-token');
+    const isAuthRequest = originalRequest.url?.includes('/auth/login') ||
+      originalRequest.url?.includes('/auth/register') ||
+      originalRequest.url?.includes('/auth/refresh-token');
 
     if (error.response?.status === 401 && !originalRequest._retry && !isAuthRequest) {
       if (isRefreshing) {
@@ -85,7 +85,7 @@ api.interceptors.response.use(
 
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return api(originalRequest);
-        
+
       } catch (refreshError) {
         processQueue(refreshError, null);
         await clearTokens();
