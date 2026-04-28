@@ -15,7 +15,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
         { id: 'HomeTab', label: 'Accueil', icon: 'home' },
         { id: 'Shop', label: 'Boutique', icon: 'basket' },
         { id: 'Missions', label: 'Missions', icon: 'rocket' },
-        { id: 'Friends', label: 'Amis', icon: 'people' },
+        { id: 'Messages', label: 'Messages', icon: 'chatbubbles' },
     ];
 
     return (
@@ -100,7 +100,7 @@ const TabItem = ({ item, isActive, onPress, themeColors, unreadChatCount }: any)
                         size={22} 
                         color={isActive ? colors.coral : themeColors.textSecondary} 
                     />
-                    {item.id === 'Friends' && unreadChatCount > 0 && (
+                    {item.id === 'Messages' && unreadChatCount > 0 && (
                         <View style={styles.badge}>
                             <Text style={styles.badgeText}>{unreadChatCount > 9 ? '9+' : unreadChatCount}</Text>
                         </View>

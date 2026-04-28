@@ -30,23 +30,42 @@ export const useSocket = () => {
         };
     }, [user]);
 
-    const sendMessage = (data: any) => {
+    const emitEvent = (event: string, data: any) => {
         if (socketRef.current && user) {
-            socketRef.current.emit('send_message', {
+            socketRef.current.emit(event, {
                 ...data,
+                userId: user.id,
                 senderId: user.id,
                 senderName: user.login
             });
         }
     };
 
-    const onMessageReceived = (callback: (message: any) => void): (() => void) => {
+    const sendMessage = (data: any) => emitEvent('send_message', data);
+    const startTyping = (recipientId: string) => emitEvent('typing_start', { recipientId });
+    const stopTyping = (recipientId: string) => emitEvent('typing_stop', { recipientId });
+    const editMessage = (data: any) => emitEvent('edit_message', data);
+    const deleteMessage = (data: any) => emitEvent('delete_message', data);
+    const toggleReaction = (data: any) => emitEvent('toggle_reaction', data);
+    const markAsRead = (friendId: string) => emitEvent('message_read', { friendId });
+
+    const subscribe = (event: string, callback: (data: any) => void): (() => void) => {
         if (socketRef.current) {
-            socketRef.current.on('receive_message', callback);
-            return () => socketRef.current?.off('receive_message', callback);
+            socketRef.current.on(event, callback);
+            return () => socketRef.current?.off(event, callback);
         }
         return () => {};
     };
 
-    return { sendMessage, onMessageReceived };
+    return { 
+        sendMessage, 
+        startTyping, 
+        stopTyping, 
+        editMessage, 
+        deleteMessage, 
+        toggleReaction, 
+        markAsRead,
+        subscribe,
+        socket: socketRef.current
+    };
 };
