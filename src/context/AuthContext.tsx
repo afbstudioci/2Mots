@@ -31,7 +31,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(storageUser);
         refreshProfileSilently();
       }
-      
+
       if (isMounted) setLoading(false);
     }
 
@@ -51,7 +51,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await api.get('/auth/me');
       const freshUser = response.data.data.user;
-      
+
       const currentToken = await getToken();
       if (currentToken) {
         await saveUser(freshUser);
@@ -101,7 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
       });
       const updatedUser = response.data.data.user;
-      
+
       await saveUser(updatedUser);
       setUser(updatedUser);
     } catch (error: any) {
@@ -113,7 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await clearTokens();
       setUser(null);
-      api.post('/auth/logout').catch(() => {});
+      api.post('/auth/logout').catch(() => { });
     } catch (e) {
       console.error('Erreur lors de la deconnexion', e);
     }

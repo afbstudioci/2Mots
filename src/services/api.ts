@@ -56,6 +56,13 @@ api.interceptors.response.use(
       originalRequest.url?.includes('/auth/refresh-token');
 
     if (error.response?.status === 401 && !originalRequest._retry && !isAuthRequest) {
+      const refreshToken = await getRefreshToken();
+      
+      // Si on n'a pas de refresh token, on ne tente rien et on laisse l'erreur 401 originale
+      if (!refreshToken) {
+        return Promise.reject(error);
+      }
+
       if (isRefreshing) {
         return new Promise(function (resolve, reject) {
           failedQueue.push({ resolve, reject });
@@ -71,9 +78,6 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = await getRefreshToken();
-        if (!refreshToken) throw new Error('Pas de refresh token');
-
         const response = await axios.post(`${API_URL}/auth/refresh-token`, {
           refreshToken,
         });
@@ -86,16 +90,19 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return api(originalRequest);
 
-      } catch (refreshError) {
+      } catch (refreshError: any) {
         processQueue(refreshError, null);
         await clearTokens();
         DeviceEventEmitter.emit('AUTH_FAILED');
+        
+        // On renvoie l'erreur de rafraîchissement si c'est elle qui a échoué
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
       }
     }
 
+    // Si on arrive ici, c'est une erreur classique (CORS, 400, 500, ou 401 sans refresh possible)
     return Promise.reject(error);
   }
 );
