@@ -71,12 +71,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await saveUser(userData);
       setUser(userData);
     } catch (error: any) {
+      console.error('[AuthContext] Login Error Details:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
       throw new Error(error.response?.data?.message || 'Erreur de connexion');
     }
   };
 
   const register = async (userData: any) => {
     try {
+      console.log('[AuthContext] Registering user:', userData.login);
       const response = await api.post('/auth/register', userData);
       const { user: newUserData, accessToken, refreshToken } = response.data.data;
 
@@ -84,6 +90,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await saveUser(newUserData);
       setUser(newUserData);
     } catch (error: any) {
+      console.error('[AuthContext] Register Error Details:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
       throw new Error(error.response?.data?.message || 'Erreur lors de l\'inscription');
     }
   };
