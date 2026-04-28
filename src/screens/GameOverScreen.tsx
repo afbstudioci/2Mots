@@ -65,7 +65,10 @@ export default function GameOverScreen({ route, navigation }: { route: any, navi
                     <Text style={styles.scoreValue}>{displayScore}</Text>
 
                     {corrections && corrections.length > 0 && (
-                        <View style={styles.correctionsWrapper}>
+                        <View style={[styles.correctionsWrapper, { 
+                            borderWidth: themeColors.cardBorderWidth,
+                            borderColor: themeColors.cardBorder
+                        }]}>
                             <Text style={styles.correctionsTitle}>{correctionTitle}</Text>
                             {corrections.map((item: any, index: number) => (
                                 <View key={index} style={styles.correctionItem}>
@@ -80,7 +83,11 @@ export default function GameOverScreen({ route, navigation }: { route: any, navi
                         </View>
                     )}
 
-                    <View style={[styles.cardContainer, { backgroundColor: themeColors.overlayLight }]}>
+                    <View style={[styles.cardContainer, { 
+                        backgroundColor: themeColors.overlayLight,
+                        borderWidth: themeColors.cardBorderWidth,
+                        borderColor: themeColors.cardBorder
+                    }]}>
                         {details.map((item: any, index: number) => {
                             const isHighAccuracy = item.accuracy >= 80;
                             const accuracyColor = isHighAccuracy ? colors.success : colors.coral;
@@ -174,8 +181,6 @@ const styles = StyleSheet.create({
         borderRadius: 24,
         padding: spacing.lg,
         marginBottom: spacing.xl,
-        borderWidth: themeColors.cardBorderWidth,
-        borderColor: themeColors.cardBorder,
     },
     correctionsTitle: {
         fontFamily: 'Poppins_700Bold',
@@ -204,8 +209,6 @@ const styles = StyleSheet.create({
         width: '100%',
         borderRadius: 32, 
         padding: spacing.xl,
-        borderWidth: themeColors.cardBorderWidth,
-        borderColor: themeColors.cardBorder,
     },
     detailRow: {
         flexDirection: 'row',
