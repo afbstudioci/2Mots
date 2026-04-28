@@ -1,9 +1,10 @@
 //src/components/chat/AudioBubble.tsx
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, shadows } from '../../theme/theme';
+import { useTheme } from '../../context/ThemeContext';
 import { Audio } from 'expo-av';
-import { colors } from '../../theme/theme';
 
 interface AudioBubbleProps {
     uri: string;
@@ -12,6 +13,7 @@ interface AudioBubbleProps {
 }
 
 export default function AudioBubble({ uri, isMe, duration }: AudioBubbleProps) {
+    const { themeColors } = useTheme();
     const [sound, setSound] = useState<Audio.Sound | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [position, setPosition] = useState(0);
@@ -78,15 +80,15 @@ export default function AudioBubble({ uri, isMe, duration }: AudioBubbleProps) {
     const progress = totalDuration > 0 ? (position / totalDuration) : 0;
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: isMe ? 'rgba(255,255,255,0.15)' : themeColors.overlayLight }]}>
             <TouchableOpacity 
                 onPress={playPause} 
-                style={[styles.playBtn, { backgroundColor: isMe ? 'rgba(255,255,255,0.2)' : colors.coral + '15' }]}
+                style={[styles.playBtn, { backgroundColor: isMe ? colors.white : colors.coral }]}
             >
-                <MaterialCommunityIcons 
+                <Ionicons 
                     name={isPlaying ? "pause" : "play"} 
-                    size={22} 
-                    color={isMe ? colors.white : colors.coral} 
+                    size={20} 
+                    color={isMe ? colors.coral : colors.white} 
                 />
             </TouchableOpacity>
             
@@ -101,11 +103,8 @@ export default function AudioBubble({ uri, isMe, duration }: AudioBubbleProps) {
                     ]} />
                 </View>
                 <View style={styles.metaRow}>
-                    <Text style={[styles.timer, { color: isMe ? 'rgba(255,255,255,0.7)' : colors.nightBlue + '60' }]}>
-                        {formatTime(position)}
-                    </Text>
-                    <Text style={[styles.timer, { color: isMe ? 'rgba(255,255,255,0.7)' : colors.nightBlue + '60' }]}>
-                        {formatTime(totalDuration)}
+                    <Text style={[styles.timer, { color: isMe ? colors.white : themeColors.textSecondary }]}>
+                        {formatTime(position)} / {formatTime(totalDuration)}
                     </Text>
                 </View>
             </View>
@@ -117,23 +116,25 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
         alignItems: 'center',
-        width: 200,
-        paddingVertical: 2,
+        width: 220,
+        padding: 8,
+        borderRadius: 20,
     },
     playBtn: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
         justifyContent: 'center',
         alignItems: 'center',
+        ...shadows.soft(false),
     },
     trackContainer: {
         flex: 1,
         marginLeft: 12,
     },
     track: {
-        height: 4,
-        borderRadius: 2,
+        height: 6,
+        borderRadius: 3,
         overflow: 'hidden',
     },
     progress: {
@@ -141,11 +142,12 @@ const styles = StyleSheet.create({
     },
     metaRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        justifyContent: 'flex-start',
         marginTop: 4,
     },
     timer: {
-        fontSize: 9,
+        fontSize: 10,
         fontFamily: 'Poppins_600SemiBold',
+        opacity: 0.8,
     },
 });

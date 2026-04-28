@@ -6,21 +6,37 @@ import { useSocket } from './useSocket';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 
+// Cache global pour les messages (persiste entre les écrans)
+const messageCache: Record<string, any[]> = {};
+
+export const prefetchChat = async (friendId: string) => {
+    try {
+        const response = await api.get(`/chat/history/${friendId}`);
+        messageCache[friendId] = response.data.data || [];
+        return messageCache[friendId];
+    } catch (error) {
+        console.error(`[CHAT] Prefetch error for ${friendId}:`, error);
+        return [];
+    }
+};
+
 export const useChat = (friendId: string) => {
     const { user } = useAuth();
     const { subscribe, sendMessage, startTyping, stopTyping, editMessage: socketEdit, deleteMessage: socketDelete, toggleReaction: socketReaction, markAsRead: socketRead } = useSocket();
     const { updateUnreadCount } = useData();
 
-    const [messages, setMessages] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [messages, setMessages] = useState<any[]>(messageCache[friendId] || []);
+    const [isLoading, setIsLoading] = useState(!messageCache[friendId]);
     const [isTyping, setIsTyping] = useState(false);
     const typingTimeoutRef = useRef<any>(null);
 
     const fetchHistory = useCallback(async () => {
         try {
-            setIsLoading(true);
+            if (!messageCache[friendId]) setIsLoading(true);
             const response = await api.get(`/chat/history/${friendId}`);
-            setMessages(response.data.data || []);
+            const data = response.data.data || [];
+            setMessages(data);
+            messageCache[friendId] = data; // Mise à jour du cache
         } catch (error) {
             console.error('[CHAT] History error:', error);
         } finally {

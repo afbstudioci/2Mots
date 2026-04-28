@@ -17,6 +17,27 @@ interface MessageBubbleProps {
 export default function MessageBubble({ item, isMe, onLongPress, onImagePress, replyContext }: MessageBubbleProps) {
     const { themeColors } = useTheme();
 
+    const formatMessageDate = (dateString: string) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (diffDays < 7) {
+            const dayNames = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+            const day = dayNames[date.getDay()];
+            const hour = date.getHours().toString().padStart(2, '0');
+            const minute = date.getMinutes().toString().padStart(2, '0');
+            return `${day} ${hour}h${minute}`;
+        } else {
+            const day = date.getDate().toString().padStart(2, '0');
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const year = date.getFullYear();
+            const hour = date.getHours().toString().padStart(2, '0');
+            const minute = date.getMinutes().toString().padStart(2, '0');
+            return `${day}-${month}-${year} à ${hour}h${minute}`;
+        }
+    };
+
     const renderContent = () => {
         if (item?.isDeleted) {
             return (
@@ -52,14 +73,15 @@ export default function MessageBubble({ item, isMe, onLongPress, onImagePress, r
                 style={[
                     styles.bubble,
                     { 
-                        backgroundColor: isMe ? colors.coral : themeColors.surface,
-                        borderBottomRightRadius: isMe ? 4 : 20,
-                        borderBottomLeftRadius: isMe ? 20 : 4,
+                        backgroundColor: isMe ? colors.coral : themeColors.card,
+                        borderBottomRightRadius: isMe ? 4 : 24,
+                        borderBottomLeftRadius: isMe ? 24 : 4,
+                        borderColor: isMe ? 'transparent' : themeColors.overlayLight,
+                        borderWidth: isMe ? 0 : 1,
                     },
-                    !isMe && shadows.soft(false)
+                    shadows.soft(false)
                 ]}
             >
-                {/* Reply Context */}
                 {item.replyTo && (
                     <View style={[styles.replyBox, { backgroundColor: isMe ? 'rgba(0,0,0,0.1)' : themeColors.overlayLight }]}>
                         <View style={[styles.replyBar, { backgroundColor: colors.coral }]} />
@@ -74,26 +96,27 @@ export default function MessageBubble({ item, isMe, onLongPress, onImagePress, r
                 <View style={styles.meta}>
                     {item?.isEdited && !item?.isDeleted && (
                         <Text style={[styles.edited, { color: isMe ? 'rgba(255,255,255,0.7)' : themeColors.textSecondary }]}>
-                            Modifié
+                            Modifié • 
                         </Text>
                     )}
                     <Text style={[styles.time, { color: isMe ? 'rgba(255,255,255,0.7)' : themeColors.textSecondary }]}>
-                        {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {formatMessageDate(item.createdAt)}
                     </Text>
                     {isMe && (
-                        <Ionicons 
-                            name={item.read ? "checkmark-done" : "checkmark"} 
-                            size={14} 
-                            color={item.read ? colors.mint : 'rgba(255,255,255,0.6)'} 
-                            style={styles.checkIcon} 
-                        />
+                        <View style={styles.statusContainer}>
+                            <Ionicons 
+                                name={item.status === 'read' || item.read ? "checkmark-done" : "checkmark"} 
+                                size={14} 
+                                color={(item.status === 'read' || item.read) ? colors.mint : 'rgba(255,255,255,0.6)'} 
+                                style={styles.checkIcon} 
+                            />
+                        </View>
                     )}
                 </View>
 
-                {/* Reactions */}
                 {item.reactions && item.reactions.length > 0 && (
-                    <View style={[styles.reactionsContainer, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
-                        {item.reactions.map((r: any, idx: number) => (
+                    <View style={[styles.reactionsContainer, { backgroundColor: themeColors.card, borderColor: colors.coral + '40' }]}>
+                        {item.reactions.slice(0, 3).map((r: any, idx: number) => (
                             <Text key={idx} style={styles.reactionEmoji}>{r.emoji}</Text>
                         ))}
                     </View>
@@ -114,7 +137,7 @@ const styles = StyleSheet.create({
     bubble: {
         maxWidth: '80%',
         padding: 10,
-        borderRadius: 20,
+        borderRadius: 24,
         position: 'relative',
     },
     bubbleText: {
@@ -129,7 +152,7 @@ const styles = StyleSheet.create({
     bubbleImage: {
         width: 220,
         height: 220,
-        borderRadius: 12,
+        borderRadius: 16,
     },
     meta: {
         flexDirection: 'row',
@@ -140,19 +163,21 @@ const styles = StyleSheet.create({
     edited: {
         fontSize: 10,
         fontFamily: 'Poppins_400Regular',
-        marginRight: 6,
     },
     time: {
         fontSize: 10,
-        fontFamily: 'Poppins_400Regular',
+        fontFamily: 'Poppins_500Medium',
+    },
+    statusContainer: {
+        marginLeft: 4,
     },
     checkIcon: {
-        marginLeft: 4,
+        marginLeft: 2,
     },
     replyBox: {
         flexDirection: 'row',
         padding: 8,
-        borderRadius: 8,
+        borderRadius: 12,
         marginBottom: 8,
         overflow: 'hidden',
     },
@@ -171,13 +196,14 @@ const styles = StyleSheet.create({
         bottom: -15,
         right: 10,
         flexDirection: 'row',
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 12,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 16,
         borderWidth: 1,
         ...shadows.soft(false),
     },
     reactionEmoji: {
         fontSize: 12,
+        marginHorizontal: 1,
     },
 });

@@ -137,6 +137,20 @@ const AppContent = () => {
     },
   };
 
+  const linking = {
+    prefixes: ['twomots://', 'https://twomots.app'],
+    config: {
+      screens: {
+        Chat: 'chat/:friendId',
+        Home: {
+          screens: {
+            Messages: 'messages',
+          },
+        },
+      },
+    },
+  };
+
   return (
     <SafeAreaProvider style={{ flex: 1, backgroundColor: themeColors.background }}>
       <GestureHandlerRootView style={{ flex: 1, backgroundColor: themeColors.background }}>
@@ -145,7 +159,7 @@ const AppContent = () => {
           backgroundColor="transparent"
           translucent={true}
         />
-        <NavigationContainer theme={navigationTheme}>
+        <NavigationContainer theme={navigationTheme} linking={linking as any}>
           <AppNavigator />
         </NavigationContainer>
       </GestureHandlerRootView>

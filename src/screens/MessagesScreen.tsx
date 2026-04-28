@@ -11,6 +11,7 @@ import ScreenWrapper from '../components/layout/ScreenWrapper';
 import { colors, spacing, borderRadius, typography, shadows } from '../theme/theme';
 import api from '../services/api';
 import { useData } from '../context/DataContext';
+import { prefetchChat } from '../hooks/useChat';
 
 export default function MessagesScreen() {
     const { themeColors } = useTheme();
@@ -23,7 +24,14 @@ export default function MessagesScreen() {
         try {
             setIsLoading(true);
             const response = await api.get('/chat/conversations');
-            setConversations(response.data.data || []);
+            const data = response.data.data || [];
+            setConversations(data);
+            
+            // PREFETCH : Charger les messages en arrière-plan pour chaque discussion
+            data.forEach((conv: any) => {
+                prefetchChat(conv.friend._id);
+            });
+            
         } catch (e) {
             console.error('[MESSAGES] Fetch error:', e);
         } finally {
@@ -49,7 +57,7 @@ export default function MessagesScreen() {
                     style={[styles.communityBtn, { backgroundColor: colors.coral + '15' }]}
                 >
                     <Ionicons name="people" size={20} color={colors.coral} />
-                    <Text style={styles.communityBtnText}>COMMUNAUTÉ</Text>
+                    <Text style={styles.communityBtnText}>AMIS</Text>
                 </TouchableOpacity>
             </View>
 
@@ -63,19 +71,29 @@ export default function MessagesScreen() {
                 renderItem={({ item }) => (
                     <ConversationCard 
                         item={item} 
-                        onPress={() => navigation.navigate('Chat', { 
-                            friendId: item.friend._id, 
-                            friendName: item.friend.login, 
-                            friendAvatar: item.friend.avatar 
-                        })} 
+                        onPress={() => {
+                            navigation.navigate('Chat', { 
+                                friendId: item.friend._id, 
+                                friendName: item.friend.login, 
+                                friendAvatar: item.friend.avatar 
+                            });
+                        }} 
                     />
                 )}
                 ListEmptyComponent={() => !isLoading ? (
                     <View style={styles.empty}>
-                        <Ionicons name="chatbubbles-outline" size={60} color={themeColors.textSecondary} />
+                        <View style={[styles.emptyIconContainer, { backgroundColor: themeColors.card }]}>
+                            <Ionicons name="chatbubbles-outline" size={60} color={colors.coral} />
+                        </View>
                         <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
                             Aucune discussion active.{"\n"}Lancez-en une avec vos amis !
                         </Text>
+                        <TouchableOpacity 
+                            onPress={() => navigation.navigate('Friends')}
+                            style={[styles.startBtn, { backgroundColor: colors.coral }]}
+                        >
+                            <Text style={styles.startBtnText}>Trouver des amis</Text>
+                        </TouchableOpacity>
                     </View>
                 ) : null}
             />
@@ -106,20 +124,29 @@ const ConversationCard = ({ item, onPress }: any) => {
             activeOpacity={0.7} 
             style={[
                 styles.card, 
-                { backgroundColor: themeColors.card, borderBottomColor: themeColors.overlayLight },
+                { 
+                    backgroundColor: themeColors.card, 
+                    // Contour corail en mode jour, bordure subtile en mode nuit
+                    borderColor: !isDark ? colors.coral : themeColors.overlayLight,
+                    borderWidth: !isDark ? 2 : 1,
+                },
                 shadows.soft(isDark)
             ]}
         >
             <View style={styles.avatarContainer}>
-                {item.friend.avatar ? (
-                    <Image source={{ uri: item.friend.avatar }} style={styles.avatar} />
-                ) : (
-                    <View style={[styles.avatarPlaceholder, { backgroundColor: colors.coral + '20' }]}>
-                        <Text style={styles.avatarInitial}>{item.friend.login.charAt(0).toUpperCase()}</Text>
-                    </View>
-                )}
+                <View style={[styles.avatarWrapper, { borderColor: isUnread ? colors.coral : 'transparent' }]}>
+                    {item.friend.avatar ? (
+                        <Image source={{ uri: item.friend.avatar }} style={styles.avatar} />
+                    ) : (
+                        <View style={[styles.avatarPlaceholder, { backgroundColor: colors.coral + '20' }]}>
+                            <Text style={styles.avatarInitial}>{item.friend.login.charAt(0).toUpperCase()}</Text>
+                        </View>
+                    )}
+                </View>
                 {isUnread && (
-                    <Animated.View style={[styles.unreadDot, { opacity: blinkAnim }]} />
+                    <Animated.View style={[styles.unreadBadge, { opacity: blinkAnim }]}>
+                        <Text style={styles.unreadCountText}>{item.unreadCount}</Text>
+                    </Animated.View>
                 )}
             </View>
 
@@ -136,26 +163,32 @@ const ConversationCard = ({ item, onPress }: any) => {
                     </Text>
                 </View>
                 <View style={styles.row}>
-                    <Text 
-                        style={[
-                            styles.preview, 
-                            { 
-                                color: isUnread ? themeColors.text : themeColors.textSecondary, 
-                                fontFamily: isUnread ? 'Poppins_700Bold' : 'Poppins_400Regular',
-                                fontStyle: lastMsg ? 'normal' : 'italic'
-                            }
-                        ]} 
-                        numberOfLines={1}
-                    >
-                        {!lastMsg ? 'Démarrer la discussion...' : (lastMsg?.isDeleted ? 'Message supprimé' : (lastMsg.text || 'Média'))}
-                    </Text>
-                    {isUnread && (
-                        <View style={styles.badge}>
-                            <Text style={styles.badgeText}>{item.unreadCount}</Text>
-                        </View>
-                    )}
+                    <View style={styles.previewContainer}>
+                        {lastMsg && lastMsg.sender !== item.friend._id && (
+                            <Ionicons 
+                                name={lastMsg.read ? "checkmark-done" : "checkmark"} 
+                                size={14} 
+                                color={lastMsg.read ? colors.mint : themeColors.textSecondary} 
+                                style={{ marginRight: 4 }}
+                            />
+                        )}
+                        <Text 
+                            style={[
+                                styles.preview, 
+                                { 
+                                    color: isUnread ? themeColors.text : themeColors.textSecondary, 
+                                    fontFamily: isUnread ? 'Poppins_700Bold' : 'Poppins_400Regular',
+                                }
+                            ]} 
+                            numberOfLines={1}
+                        >
+                            {!lastMsg ? 'Démarrer la discussion...' : (lastMsg?.isDeleted ? 'Message supprimé' : (lastMsg.text || 'Média'))}
+                        </Text>
+                    </View>
                 </View>
             </View>
+            
+            <Ionicons name="chevron-forward" size={18} color={themeColors.overlayMedium} />
         </TouchableOpacity>
     );
 };
@@ -182,37 +215,54 @@ const styles = StyleSheet.create({
         fontFamily: 'Poppins_700Bold', 
         color: colors.coral 
     },
-    listContent: { paddingHorizontal: spacing.md, paddingBottom: 100 },
+    listContent: { paddingHorizontal: spacing.md, paddingBottom: 120, paddingTop: spacing.sm },
     card: { 
         flexDirection: 'row', 
         padding: spacing.md, 
-        borderRadius: 20, 
-        marginBottom: spacing.sm,
-        borderBottomWidth: 1,
+        borderRadius: 24, 
+        marginBottom: spacing.md,
+        alignItems: 'center',
     },
     avatarContainer: { position: 'relative' },
+    avatarWrapper: {
+        padding: 2,
+        borderRadius: 30,
+        borderWidth: 2,
+    },
     avatar: { width: 54, height: 54, borderRadius: 27 },
     avatarPlaceholder: { 
         width: 54, height: 54, borderRadius: 27, 
         justifyContent: 'center', alignItems: 'center' 
     },
     avatarInitial: { fontSize: 20, fontFamily: 'Poppins_700Bold', color: colors.coral },
-    unreadDot: { 
-        position: 'absolute', top: 0, right: 0, 
-        width: 14, height: 14, borderRadius: 7, 
-        backgroundColor: colors.coral, borderWidth: 2, borderColor: '#FFF' 
+    unreadBadge: { 
+        position: 'absolute', top: -4, right: -4, 
+        minWidth: 22, height: 22, borderRadius: 11, 
+        backgroundColor: colors.coral, 
+        justifyContent: 'center', alignItems: 'center',
+        borderWidth: 2, borderColor: '#FFF',
+        paddingHorizontal: 4
     },
+    unreadCountText: { color: '#FFF', fontSize: 10, fontFamily: 'Poppins_900Black' },
     content: { flex: 1, marginLeft: spacing.md, justifyContent: 'center' },
     row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
-    name: { fontSize: 16, fontFamily: 'Poppins_700Bold' },
-    time: { fontSize: 11, fontFamily: 'Poppins_400Regular' },
-    preview: { fontSize: 13, flex: 1, marginRight: 10 },
-    badge: { 
-        backgroundColor: colors.coral, 
-        minWidth: 18, height: 18, borderRadius: 9, 
-        justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4 
+    name: { fontSize: 16, fontFamily: 'Poppins_700Bold', letterSpacing: 0.5 },
+    time: { fontSize: 11, fontFamily: 'Poppins_500Medium', opacity: 0.6 },
+    previewContainer: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+    preview: { fontSize: 13, flex: 1 },
+    empty: { alignItems: 'center', marginTop: 60, paddingHorizontal: spacing.xl },
+    emptyIconContainer: {
+        width: 120, height: 120, borderRadius: 60,
+        justifyContent: 'center', alignItems: 'center',
+        marginBottom: spacing.xl,
+        ...shadows.soft(false)
     },
-    badgeText: { color: '#FFF', fontSize: 10, fontFamily: 'Poppins_700Bold' },
-    empty: { alignItems: 'center', marginTop: 100 },
-    emptyText: { textAlign: 'center', marginTop: 20, fontFamily: 'Poppins_500Medium', lineHeight: 24 },
+    emptyText: { textAlign: 'center', marginBottom: spacing.xl, fontFamily: 'Poppins_500Medium', lineHeight: 24, fontSize: 16 },
+    startBtn: {
+        paddingHorizontal: spacing.xl,
+        paddingVertical: spacing.md,
+        borderRadius: 30,
+        ...shadows.soft(false)
+    },
+    startBtnText: { color: '#FFF', fontFamily: 'Poppins_700Bold', fontSize: 14 }
 });
