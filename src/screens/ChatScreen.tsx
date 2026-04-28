@@ -127,7 +127,7 @@ export default function ChatScreen({ route, navigation }: any) {
                         activeOpacity={1} 
                         onPress={() => setSelectedMessage(null)}
                     >
-                        <View style={[styles.menuContainer, { backgroundColor: themeColors.surface }]}>
+                        <View style={[styles.menuContainer, { backgroundColor: themeColors.surface }, shadows.float(isDark)]}>
                             <View style={styles.menuHeader}>
                                 <Text style={[styles.menuTitle, { color: themeColors.text }]}>Actions</Text>
                             </View>
@@ -180,7 +180,6 @@ const styles = StyleSheet.create({
         width: width * 0.85,
         borderRadius: 24,
         padding: spacing.md,
-        ...shadows.float(isDark),
     },
     menuHeader: {
         alignItems: 'center',

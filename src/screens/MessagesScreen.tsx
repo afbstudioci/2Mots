@@ -84,7 +84,7 @@ export default function MessagesScreen() {
 }
 
 const ConversationCard = ({ item, onPress }: any) => {
-    const { themeColors } = useTheme();
+    const { themeColors, isDark } = useTheme();
     const lastMsg = item.lastMessage;
     const isUnread = item.unreadCount > 0;
     const blinkAnim = useRef(new Animated.Value(0.4)).current;
@@ -104,7 +104,11 @@ const ConversationCard = ({ item, onPress }: any) => {
         <TouchableOpacity 
             onPress={onPress} 
             activeOpacity={0.7} 
-            style={[styles.card, { backgroundColor: themeColors.card, borderBottomColor: themeColors.overlayLight }]}
+            style={[
+                styles.card, 
+                { backgroundColor: themeColors.card, borderBottomColor: themeColors.overlayLight },
+                shadows.soft(isDark)
+            ]}
         >
             <View style={styles.avatarContainer}>
                 {item.friend.avatar ? (
