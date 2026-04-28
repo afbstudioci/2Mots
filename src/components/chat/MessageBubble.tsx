@@ -18,7 +18,7 @@ export default function MessageBubble({ item, isMe, onLongPress, onImagePress, r
     const { themeColors } = useTheme();
 
     const renderContent = () => {
-        if (item.isDeleted) {
+        if (item?.isDeleted) {
             return (
                 <Text style={[styles.bubbleText, styles.deletedText, { color: isMe ? 'rgba(255,255,255,0.6)' : themeColors.textSecondary }]}>
                     Ce message a été supprimé
@@ -47,7 +47,7 @@ export default function MessageBubble({ item, isMe, onLongPress, onImagePress, r
     return (
         <View style={[styles.container, isMe ? styles.myContainer : styles.friendContainer]}>
             <TouchableOpacity 
-                onLongPress={() => !item.isDeleted && onLongPress(item)}
+                onLongPress={() => !item?.isDeleted && onLongPress(item)}
                 activeOpacity={0.8}
                 style={[
                     styles.bubble,
@@ -72,7 +72,7 @@ export default function MessageBubble({ item, isMe, onLongPress, onImagePress, r
                 {renderContent()}
 
                 <View style={styles.meta}>
-                    {item.isEdited && !item.isDeleted && (
+                    {item?.isEdited && !item?.isDeleted && (
                         <Text style={[styles.edited, { color: isMe ? 'rgba(255,255,255,0.7)' : themeColors.textSecondary }]}>
                             Modifié
                         </Text>

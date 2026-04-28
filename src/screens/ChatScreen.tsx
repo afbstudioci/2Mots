@@ -149,7 +149,7 @@ export default function ChatScreen({ route, navigation }: any) {
                                 <Text style={[styles.menuText, { color: themeColors.text }]}>Répondre</Text>
                             </TouchableOpacity>
 
-                            {selectedMessage?.sender?._id === user?.id && !selectedMessage.isDeleted && (
+                            {selectedMessage && selectedMessage.sender?._id === user?.id && !selectedMessage.isDeleted && (
                                 <TouchableOpacity style={styles.menuItem} onPress={() => { setIsEditing(true); setSelectedMessage(null); }}>
                                     <Ionicons name="create-outline" size={20} color={themeColors.text} />
                                     <Text style={[styles.menuText, { color: themeColors.text }]}>Modifier</Text>

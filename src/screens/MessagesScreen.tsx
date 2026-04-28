@@ -147,7 +147,7 @@ const ConversationCard = ({ item, onPress }: any) => {
                         ]} 
                         numberOfLines={1}
                     >
-                        {!lastMsg ? 'Démarrer la discussion...' : (lastMsg.isDeleted ? 'Message supprimé' : (lastMsg.text || 'Média'))}
+                        {!lastMsg ? 'Démarrer la discussion...' : (lastMsg?.isDeleted ? 'Message supprimé' : (lastMsg.text || 'Média'))}
                     </Text>
                     {isUnread && (
                         <View style={styles.badge}>
