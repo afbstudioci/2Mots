@@ -172,7 +172,7 @@ export default function MissionsScreen() {
                                         onClaim={() => handleClaim(mission.id)}
                                         isClaiming={claimingId === mission.id}
                                         themeColors={themeColors}
-                                        onPress={() => mission.targetAction && navigation.navigate(mission.targetAction as any)}
+                                        onPress={() => navigation.navigate((mission.targetAction || 'Home') as any)}
                                     />
                                 ))}
                             </View>
@@ -188,6 +188,7 @@ export default function MissionsScreen() {
                                         onClaim={() => handleClaim(mission.id)}
                                         isClaiming={claimingId === mission.id}
                                         themeColors={themeColors}
+                                        onPress={() => navigation.navigate((mission.targetAction || 'Home') as any)}
                                     />
                                 ))}
                             </View>
