@@ -6,11 +6,14 @@ import { getToken, getRefreshToken, saveTokens, clearTokens } from './authStorag
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 if (!API_URL) {
-  console.warn("Attention: EXPO_PUBLIC_API_URL n'est pas defini dans le fichier .env");
+  console.warn("Attention: EXPO_PUBLIC_API_URL n'est pas défini dans le fichier .env");
+} else {
+  console.log(`[API] Connecté à : ${API_URL}`);
 }
 
 const api = axios.create({
   baseURL: API_URL,
+  timeout: 60000, // 60 secondes pour laisser Render se réveiller
   headers: {
     'Content-Type': 'application/json',
   },

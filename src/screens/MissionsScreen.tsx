@@ -1,8 +1,7 @@
 //src/screens/MissionsScreen.tsx
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, DeviceEventEmitter, Animated, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, DeviceEventEmitter, Animated, Alert, TextInput, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import EmptyState from '../components/common/EmptyState';
@@ -11,12 +10,17 @@ import { useData } from '../context/DataContext';
 import { spacing, borderRadius, typography, colors } from '../theme/theme';
 import api from '../services/api';
 import * as Haptics from 'expo-haptics';
+import { useAuth } from '../context/AuthContext';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function MissionsScreen() {
     const { themeColors } = useTheme();
+    const { user, refreshProfile } = useAuth();
     const { missions, isLoading, updateMissions } = useData();
     const [error, setError] = useState(false);
     const [claimingId, setClaimingId] = useState<string | null>(null);
+    const [referralCode, setReferralCode] = useState('');
+    const [isSubmittingReferral, setIsSubmittingReferral] = useState(false);
     const scrollRef = useRef<ScrollView>(null);
 
     useEffect(() => {
@@ -29,7 +33,7 @@ export default function MissionsScreen() {
     const onRefresh = async () => {
         try {
             setError(false);
-            await updateMissions();
+            await Promise.all([updateMissions(), refreshProfile()]);
         } catch (err) {
             setError(true);
         }
@@ -40,11 +44,36 @@ export default function MissionsScreen() {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         try {
             await api.post(`/missions/claim/${missionId}`);
-            await updateMissions(); // Rafraîchir pour voir l'état 'claimed'
+            await Promise.all([updateMissions(), refreshProfile()]);
         } catch (e) {
             Alert.alert("Erreur", "Erreur lors de la réclamation");
         } finally {
             setClaimingId(null);
+        }
+    };
+
+    const handleShare = async () => {
+        try {
+            await Share.share({
+                message: `Rejoins-moi sur 2MOTS ! Utilise mon code ${user?.referralCode} pour gagner 100 Kevs dès ton inscription. Télécharge l'app ici : https://2mots.app`,
+            });
+        } catch (error) {
+            console.log("Share error", error);
+        }
+    };
+
+    const submitReferral = async () => {
+        if (!referralCode.trim()) return;
+        setIsSubmittingReferral(true);
+        try {
+            const response = await api.post('/friends/referral', { code: referralCode.trim() });
+            Alert.alert("Succès", response.data.message);
+            setReferralCode('');
+            await refreshProfile();
+        } catch (e: any) {
+            Alert.alert("Erreur", e.response?.data?.message || "Code invalide");
+        } finally {
+            setIsSubmittingReferral(false);
         }
     };
 
@@ -73,6 +102,48 @@ export default function MissionsScreen() {
                     <RefreshControl refreshing={isLoading} onRefresh={onRefresh} tintColor={colors.coral} />
                 }
             >
+                {/* Parrainage Section */}
+                <View style={[styles.referralCard, { backgroundColor: themeColors.card }]}>
+                    <LinearGradient colors={[colors.coral, '#FF8C66']} style={styles.referralHeader}>
+                        <Ionicons name="people" size={24} color={colors.white} />
+                        <Text style={styles.referralTitle}>PARRAINAGE</Text>
+                    </LinearGradient>
+                    
+                    <View style={styles.referralBody}>
+                        <Text style={[styles.referralDesc, { color: themeColors.textSecondary }]}>
+                            Invite tes amis et gagne <Text style={{ color: colors.coral, fontWeight: 'bold' }}>500 Kevs</Text> par ami parrainé !
+                        </Text>
+                        
+                        <View style={[styles.codeBox, { backgroundColor: themeColors.surface }]}>
+                            <Text style={[styles.codeLabel, { color: themeColors.textSecondary }]}>TON CODE :</Text>
+                            <Text style={[styles.codeText, { color: themeColors.text }]}>{user?.referralCode || '...'}</Text>
+                            <TouchableOpacity onPress={handleShare} style={styles.shareBtn}>
+                                <Ionicons name="share-social" size={20} color={colors.coral} />
+                            </TouchableOpacity>
+                        </View>
+
+                        {!user?.referredBy && (
+                            <View style={styles.inputRow}>
+                                <TextInput 
+                                    style={[styles.referralInput, { color: themeColors.text, backgroundColor: themeColors.surface }]}
+                                    placeholder="Code d'un ami ?"
+                                    placeholderTextColor={themeColors.textSecondary}
+                                    value={referralCode}
+                                    onChangeText={setReferralCode}
+                                    autoCapitalize="characters"
+                                />
+                                <TouchableOpacity 
+                                    onPress={submitReferral} 
+                                    disabled={isSubmittingReferral}
+                                    style={[styles.submitBtn, { backgroundColor: colors.coral }]}
+                                >
+                                    <Ionicons name="arrow-forward" size={20} color={colors.white} />
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    </View>
+                </View>
+
                 {missions.length === 0 ? (
                     <EmptyState 
                         icon="rocket"
@@ -185,6 +256,21 @@ const styles = StyleSheet.create({
     header: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, alignItems: 'center' },
     headerTitle: { ...typography.buttonPrimary, fontSize: 18, letterSpacing: 3 },
     scrollContent: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: 120 },
+    
+    // Referral Styles
+    referralCard: { borderRadius: borderRadius.lg, overflow: 'hidden', marginBottom: spacing.xl, borderWidth: 1, borderColor: 'rgba(255, 90, 95, 0.2)' },
+    referralHeader: { flexDirection: 'row', alignItems: 'center', padding: spacing.md },
+    referralTitle: { ...typography.buttonPrimary, color: colors.white, fontSize: 14, marginLeft: 10, letterSpacing: 2 },
+    referralBody: { padding: spacing.lg },
+    referralDesc: { ...typography.bodySmall, fontSize: 13, marginBottom: spacing.md, textAlign: 'center' },
+    codeBox: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, borderRadius: borderRadius.md, marginBottom: spacing.md },
+    codeLabel: { fontSize: 10, fontWeight: 'bold', marginRight: 10 },
+    codeText: { flex: 1, fontSize: 20, fontFamily: 'Poppins_700Bold', letterSpacing: 2 },
+    shareBtn: { padding: 8 },
+    inputRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs },
+    referralInput: { flex: 1, height: 45, borderRadius: borderRadius.md, paddingHorizontal: 15, fontFamily: 'Poppins_600SemiBold' },
+    submitBtn: { width: 45, height: 45, borderRadius: borderRadius.md, justifyContent: 'center', alignItems: 'center', marginLeft: 10 },
+
     section: { marginBottom: spacing.xl },
     sectionTitle: { ...typography.bodySmall, fontSize: 10, letterSpacing: 2, marginBottom: spacing.md, marginLeft: spacing.xs },
     missionCard: { borderRadius: borderRadius.lg, padding: spacing.lg, marginBottom: spacing.md, borderWidth: 1 },

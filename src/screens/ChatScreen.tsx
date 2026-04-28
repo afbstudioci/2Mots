@@ -8,7 +8,9 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
-import { colors, spacing } from '../theme/theme';
+import { colors, spacing, shadows } from '../theme/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../context/AuthContext';
 import ChatHeader from '../components/chat/ChatHeader';
 import MessageList from '../components/chat/MessageList';
 import ChatInput from '../components/chat/ChatInput';
@@ -23,6 +25,7 @@ const { width } = Dimensions.get('window');
 export default function ChatScreen({ route, navigation }: any) {
     const { friendName, friendId, friendAvatar } = route.params;
     const { themeColors, isDark } = useTheme();
+    const { user } = useAuth();
     const { messages, isLoading, isTyping, send, edit, remove, react, handleTyping } = useChat(friendId);
     const { isRecording, recordingTime, start, stop } = useAudioRecording();
 
@@ -177,7 +180,7 @@ const styles = StyleSheet.create({
         width: width * 0.85,
         borderRadius: 24,
         padding: spacing.md,
-        ...shadows.float(true),
+        ...shadows.float(isDark),
     },
     menuHeader: {
         alignItems: 'center',
