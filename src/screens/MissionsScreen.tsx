@@ -13,8 +13,14 @@ import * as Haptics from 'expo-haptics';
 import { useAuth } from '../context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import CustomAlert from '../components/common/CustomAlert';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../App';
+
+type MissionsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Missions'>;
 
 export default function MissionsScreen() {
+    const navigation = useNavigation<MissionsScreenNavigationProp>();
     const { themeColors } = useTheme();
     const { user, refreshProfile } = useAuth();
     const { missions, isLoading, updateMissions } = useData();
@@ -166,6 +172,7 @@ export default function MissionsScreen() {
                                         onClaim={() => handleClaim(mission.id)}
                                         isClaiming={claimingId === mission.id}
                                         themeColors={themeColors}
+                                        onPress={() => mission.targetAction && navigation.navigate(mission.targetAction as any)}
                                     />
                                 ))}
                             </View>
@@ -200,15 +207,19 @@ export default function MissionsScreen() {
     );
 }
 
-const MissionCard = ({ mission, onClaim, isClaiming, themeColors }: any) => {
+const MissionCard = ({ mission, onClaim, isClaiming, themeColors, onPress }: any) => {
     const isReady = mission.completed && !mission.claimed;
     
     return (
-        <View style={[
-            styles.missionCard, 
-            { backgroundColor: themeColors.card, borderColor: isReady ? colors.coral : themeColors.border },
-            mission.claimed && { opacity: 0.6 }
-        ]}>
+        <TouchableOpacity 
+            activeOpacity={0.8}
+            onPress={onPress}
+            style={[
+                styles.missionCard, 
+                { backgroundColor: themeColors.card, borderColor: isReady ? colors.coral : themeColors.border },
+                mission.claimed && { opacity: 0.6 }
+            ]}
+        >
             <View style={styles.missionHeader}>
                 <View style={styles.missionInfo}>
                     <Text style={[
@@ -259,7 +270,7 @@ const MissionCard = ({ mission, onClaim, isClaiming, themeColors }: any) => {
                     )}
                 </View>
             )}
-        </View>
+        </TouchableOpacity>
     );
 };
 
