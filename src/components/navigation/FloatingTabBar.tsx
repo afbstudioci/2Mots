@@ -3,14 +3,14 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated, DeviceEventEmitter } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
-import { colors, spacing, borderRadius, shadows } from '../../theme/theme';
+import { colors, spacing, shadows } from '../../theme/theme';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useData } from '../../context/DataContext';
 
 export default function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
     const { themeColors } = useTheme();
     const { unreadChatCount } = useData();
-    
+
     const tabs = [
         { id: 'HomeTab', label: 'Accueil', icon: 'home' },
         { id: 'Shop', label: 'Boutique', icon: 'basket' },
@@ -23,7 +23,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
             <View style={[styles.tabBar, { backgroundColor: themeColors.card }]}>
                 {tabs.map((tab, index) => {
                     const isActive = state.index === index;
-                    
+
                     const handlePress = () => {
                         const event = navigation.emit({
                             type: 'tabPress',
@@ -32,7 +32,6 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
                         });
 
                         if (isActive) {
-                            // Scroll to top si on clique sur l'onglet déjà actif
                             DeviceEventEmitter.emit('SCROLL_TO_TOP_' + tab.id);
                         }
 
@@ -42,7 +41,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
                     };
 
                     return (
-                        <TabItem 
+                        <TabItem
                             key={tab.id}
                             item={tab}
                             isActive={isActive}
@@ -85,20 +84,20 @@ const TabItem = ({ item, isActive, onPress, themeColors, unreadChatCount }: any)
         <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut} style={styles.tabItem}>
             <View style={styles.iconContainer}>
                 <Animated.View style={[
-                    styles.activeBubble, 
-                    { 
+                    styles.activeBubble,
+                    {
                         backgroundColor: colors.coral + '15',
                         opacity: activeBubbleAnim,
-                        transform: [{ 
-                            scale: activeBubbleAnim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }) 
+                        transform: [{
+                            scale: activeBubbleAnim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] })
                         }]
                     }
                 ]} />
                 <Animated.View style={{ transform: [{ scale: scaleIconAnim }] }}>
-                    <Ionicons 
-                        name={isActive ? (item.icon as any) : (`${item.icon}-outline` as any)} 
-                        size={22} 
-                        color={isActive ? colors.coral : themeColors.textSecondary} 
+                    <Ionicons
+                        name={isActive ? (item.icon as any) : (`${item.icon}-outline` as any)}
+                        size={24}
+                        color={isActive ? colors.coral : themeColors.textSecondary}
                     />
                     {item.id === 'Messages' && unreadChatCount > 0 && (
                         <View style={styles.badge}>
@@ -115,69 +114,70 @@ const TabItem = ({ item, isActive, onPress, themeColors, unreadChatCount }: any)
 };
 
 const styles = StyleSheet.create({
-    container: { 
-        position: 'absolute', 
-        bottom: spacing.lg, 
-        left: 0, 
-        right: 0, 
-        alignItems: 'center', 
+    container: {
+        position: 'absolute',
+        bottom: spacing.lg,
+        left: 0,
+        right: 0,
+        alignItems: 'center',
         zIndex: 100,
         backgroundColor: 'transparent'
     },
-    tabBar: { 
-        flexDirection: 'row', 
-        alignItems: 'center', 
-        justifyContent: 'space-around', 
-        paddingVertical: spacing.sm, 
-        paddingHorizontal: spacing.sm, 
-        borderRadius: 30, 
-        width: '92%', 
-        height: 70,
-        ...shadows.soft(true),
+    tabBar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-around',
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.sm,
+        borderRadius: 35,
+        width: '92%',
+        height: 75,
+        ...shadows.medium(true),
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)'
+        borderColor: 'rgba(255, 255, 255, 0.05)'
     },
-    tabItem: { 
-        alignItems: 'center', 
-        justifyContent: 'center', 
+    tabItem: {
+        alignItems: 'center',
+        justifyContent: 'center',
         flex: 1,
     },
-    iconContainer: { 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        height: 40, 
-        width: 40 
+    iconContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: 44,
+        width: 44
     },
-    activeBubble: { 
-        position: 'absolute', 
-        width: 44, 
-        height: 44, 
-        borderRadius: 22 
+    activeBubble: {
+        position: 'absolute',
+        width: 48,
+        height: 48,
+        borderRadius: 24
     },
-    tabText: { 
-        fontFamily: 'Poppins_700Bold', 
-        fontSize: 9, 
-        marginTop: 2,
+    tabText: {
+        fontFamily: 'Poppins_700Bold',
+        fontSize: 10,
+        marginTop: 4,
         letterSpacing: 0.5
     },
     badge: {
         position: 'absolute',
-        top: -4,
-        right: -6,
+        top: -6,
+        right: -8,
         backgroundColor: colors.error,
-        borderRadius: 8,
-        minWidth: 16,
-        height: 16,
+        borderRadius: 10,
+        minWidth: 20,
+        height: 20,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 2,
-        borderWidth: 1.5,
-        borderColor: colors.nightBlue,
+        paddingHorizontal: 4,
+        borderWidth: 2,
+        borderColor: '#FFF',
+        ...shadows.medium(false)
     },
     badgeText: {
-        color: colors.white,
-        fontSize: 8,
-        fontFamily: 'Poppins_700Bold',
+        color: '#FFF',
+        fontSize: 10,
+        fontFamily: 'Poppins_900Black',
         includeFontPadding: false,
     }
 });

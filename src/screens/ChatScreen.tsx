@@ -1,19 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-    StyleSheet, KeyboardAvoidingView, Platform, 
-    Alert, Modal, View, TouchableOpacity, Text, 
-    Keyboard, Dimensions, TextInput 
+//src/screens/ChatScreen.tsx
+import React, { useState, useEffect } from 'react';
+import {
+    StyleSheet, KeyboardAvoidingView, Platform,
+    Modal, View, TouchableOpacity, Text,
+    Keyboard, Dimensions, TextInput
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
-import { colors, spacing, shadows, borderRadius } from '../theme/theme';
+import { colors, spacing, shadows } from '../theme/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import ChatHeader from '../components/chat/ChatHeader';
 import MessageList from '../components/chat/MessageList';
 import ChatInput from '../components/chat/ChatInput';
 import ChatSettingsModal from '../components/chat/ChatSettingsModal';
+import CustomAlert from '../components/common/CustomAlert';
 import { useChat } from '../hooks/useChat';
 import { useAudioRecording } from '../hooks/useAudioRecording';
 import { useChatSounds } from '../hooks/useChatSounds';
@@ -21,7 +23,13 @@ import api from '../services/api';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
+
+// Utilisation stricte de codes Unicode pour éviter les emojis visuels dans le code source
+const REACTIONS_UNICODE = [
+    '\u2764\uFE0F', '\uD83D\uDE02', '\uD83D\uDE2E',
+    '\uD83D\uDE22', '\uD83D\uDD25', '\uD83D\uDC4D'
+];
 
 export default function ChatScreen({ route, navigation }: any) {
     const { friendName, friendId, friendAvatar } = route.params;
@@ -38,14 +46,14 @@ export default function ChatScreen({ route, navigation }: any) {
     const [isMuted, setIsMuted] = useState(false);
     const [activeTheme, setActiveTheme] = useState('default');
 
-    // Sons lors de l'envoi/réception
+    // Configuration de l'alerte personnalisée
+    const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '', onConfirm: () => { } });
+
     useEffect(() => {
         if (messages.length > 0) {
             const last = messages[0];
             const currentUserId = user?._id || user?.id;
-            if (last.sender?._id?.toString() === currentUserId?.toString()) {
-                // playSound('send'); // Désactivé si fichiers non présents
-            } else {
+            if (last.sender?._id?.toString() !== currentUserId?.toString()) {
                 // playSound('receive');
             }
         }
@@ -56,7 +64,7 @@ export default function ChatScreen({ route, navigation }: any) {
             const formData = new FormData();
             const filename = uri.split('/').pop() || 'upload';
             const ext = filename.split('.').pop() || (type === 'audio' ? 'm4a' : 'jpg');
-            
+
             formData.append('file', {
                 uri: Platform.OS === 'ios' ? uri.replace('file://', '') : uri,
                 type: type === 'audio' ? `audio/${ext}` : (type === 'video' ? 'video/mp4' : 'image/jpeg'),
@@ -71,16 +79,21 @@ export default function ChatScreen({ route, navigation }: any) {
             const { fileUrl, duration } = response.data.data;
             send('', type, { fileUrl, duration });
         } catch (e) {
-            console.error('[MEDIA] Upload error:', e);
-            Alert.alert("Erreur", "Impossible d'envoyer le média.");
+            console.error('[MEDIA] Erreur upload:', e);
+            setAlertConfig({
+                visible: true,
+                title: "Erreur d'envoi",
+                message: "Impossible d'envoyer le média sécurisé. Veuillez réessayer.",
+                onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false }))
+            });
         }
     };
 
     const pickMedia = async () => {
-        const result = await ImagePicker.launchImageLibraryAsync({ 
-            mediaTypes: ['images', 'videos'], 
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images', 'videos'],
             quality: 0.7,
-            allowsEditing: true 
+            allowsEditing: true
         });
         if (!result.canceled) {
             handleSendMedia(result.assets[0].uri, result.assets[0].type === 'video' ? 'video' : 'image');
@@ -89,7 +102,7 @@ export default function ChatScreen({ route, navigation }: any) {
 
     const handleStopRecording = async (cancel = false) => {
         const uri = await stop(cancel);
-        if (uri) handleSendMedia(uri, 'audio');
+        if (uri && !cancel) handleSendMedia(uri, 'audio');
     };
 
     const handleLongPress = (item: any) => {
@@ -112,12 +125,25 @@ export default function ChatScreen({ route, navigation }: any) {
         setEditValue('');
     };
 
+    const confirmDelete = () => {
+        setAlertConfig({
+            visible: true,
+            title: "Suppression définitive",
+            message: "Voulez-vous vraiment supprimer ce message pour les deux interlocuteurs ?",
+            onConfirm: () => {
+                remove(selectedMessage._id);
+                setAlertConfig(prev => ({ ...prev, visible: false }));
+            }
+        });
+        setSelectedMessage(null);
+    };
+
     const getThemeColors = () => {
         switch (activeTheme) {
             case 'sunset': return ['#FF7E5F', '#FEB47B'];
             case 'forest': return ['#134E5E', '#71B280'];
-            case 'ocean': return ['#00c6ff', '#0072ff'];
-            case 'luxury': return ['#1a1a1a', '#434343'];
+            case 'ocean': return ['#00C6FF', '#0072FF'];
+            case 'luxury': return ['#1A1A1A', '#434343'];
             default: return isDark ? ['#0F172A', '#1E293B'] : ['#F8FAFC', '#F1F5F9'];
         }
     };
@@ -125,31 +151,30 @@ export default function ChatScreen({ route, navigation }: any) {
     return (
         <ScreenWrapper style={{ flex: 1 }}>
             <LinearGradient colors={getThemeColors() as [string, string, ...string[]]} style={StyleSheet.absoluteFillObject} />
-            
-            <ChatHeader 
-                friendName={friendName} 
-                friendAvatar={friendAvatar} 
+
+            <ChatHeader
+                friendName={friendName}
+                friendAvatar={friendAvatar}
                 onBack={() => navigation.goBack()}
                 onSettings={() => setShowSettings(true)}
             />
 
-            <KeyboardAvoidingView 
+            <KeyboardAvoidingView
                 style={styles.container}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
             >
-
-                <MessageList 
+                <MessageList
                     messages={messages}
-                    isLoading={isLoading}
+                    isLoading={false}
                     friendName={friendName}
                     isTyping={isTyping}
                     onLongPress={handleLongPress}
-                    onImagePress={() => {}}
+                    onImagePress={() => { }}
                 />
 
                 <View style={[styles.inputWrapper, { borderTopColor: themeColors.overlayLight, backgroundColor: themeColors.surface }]}>
-                    <ChatInput 
+                    <ChatInput
                         onSend={(t) => send(t)}
                         onMediaPress={pickMedia}
                         onStartRecording={start}
@@ -160,14 +185,15 @@ export default function ChatScreen({ route, navigation }: any) {
                     />
                 </View>
 
+                {/* MODAL ACTIONS LONG-PRESS */}
                 <Modal visible={!!selectedMessage} transparent animationType="fade">
                     <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setSelectedMessage(null)}>
-                        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(0,0,0,0.4)' }]} />
+                        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(0,0,0,0.5)' }]} />
                         <View style={[styles.menuContainer, { backgroundColor: themeColors.surface }]}>
                             <View style={styles.reactionRow}>
-                                {['❤️', '😂', '😮', '😢', '🔥', '👍'].map(emoji => (
-                                    <TouchableOpacity 
-                                        key={emoji} 
+                                {REACTIONS_UNICODE.map(emoji => (
+                                    <TouchableOpacity
+                                        key={emoji}
                                         style={styles.reactionBtn}
                                         onPress={() => { react(selectedMessage._id, emoji); setSelectedMessage(null); }}
                                     >
@@ -181,27 +207,14 @@ export default function ChatScreen({ route, navigation }: any) {
                                 <Text style={[styles.menuText, { color: themeColors.text }]}>Répondre</Text>
                             </TouchableOpacity>
 
-                            {(selectedMessage?.sender?._id || selectedMessage?.sender)?.toString() === (user?._id || user?.id)?.toString() && !selectedMessage?.isDeleted && (
+                            {(selectedMessage?.sender?._id || selectedMessage?.sender)?.toString() === (user?._id || user?.id)?.toString() && !selectedMessage?.isDeletedForEveryone && (
                                 <TouchableOpacity style={styles.menuItem} onPress={handleEditStart}>
                                     <Ionicons name="create-outline" size={20} color={themeColors.text} />
                                     <Text style={[styles.menuText, { color: themeColors.text }]}>Modifier</Text>
                                 </TouchableOpacity>
                             )}
 
-                            <TouchableOpacity 
-                                style={styles.menuItem} 
-                                onPress={() => {
-                                    Alert.alert(
-                                        "Supprimer", 
-                                        "Voulez-vous vraiment supprimer ce message pour tout le monde ?",
-                                        [
-                                            { text: "Annuler", style: "cancel" },
-                                            { text: "Supprimer", style: "destructive", onPress: () => remove(selectedMessage._id) }
-                                        ]
-                                    );
-                                    setSelectedMessage(null);
-                                }}
-                            >
+                            <TouchableOpacity style={styles.menuItem} onPress={confirmDelete}>
                                 <Ionicons name="trash-outline" size={20} color={colors.error} />
                                 <Text style={[styles.menuText, { color: colors.error }]}>Supprimer pour tous</Text>
                             </TouchableOpacity>
@@ -211,10 +224,10 @@ export default function ChatScreen({ route, navigation }: any) {
 
                 {/* MODAL EDITION */}
                 <Modal visible={isEditing} transparent animationType="fade">
-                    <View style={[styles.editOverlay, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
+                    <View style={[styles.editOverlay, { backgroundColor: 'rgba(0,0,0,0.75)' }]}>
                         <View style={[styles.editBox, { backgroundColor: themeColors.surface }]}>
-                            <Text style={[styles.editTitle, { color: themeColors.text }]}>Modifier le message</Text>
-                            <TextInput 
+                            <Text style={[styles.editTitle, { color: themeColors.text }]}>Modification</Text>
+                            <TextInput
                                 style={[styles.editInput, { color: themeColors.text, backgroundColor: themeColors.card }]}
                                 value={editValue}
                                 onChangeText={setEditValue}
@@ -225,10 +238,7 @@ export default function ChatScreen({ route, navigation }: any) {
                                 <TouchableOpacity onPress={() => setIsEditing(false)}>
                                     <Text style={[styles.cancelText, { color: themeColors.textSecondary }]}>Annuler</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity 
-                                    onPress={handleEditSave}
-                                    style={[styles.saveBtn, { backgroundColor: colors.coral }]}
-                                >
+                                <TouchableOpacity onPress={handleEditSave} style={[styles.saveBtn, { backgroundColor: colors.coral }]}>
                                     <Text style={styles.saveBtnText}>Sauvegarder</Text>
                                 </TouchableOpacity>
                             </View>
@@ -236,17 +246,27 @@ export default function ChatScreen({ route, navigation }: any) {
                     </View>
                 </Modal>
 
-                <ChatSettingsModal 
+                <ChatSettingsModal
                     visible={showSettings}
                     onClose={() => setShowSettings(false)}
                     friendName={friendName}
                     isMuted={isMuted}
                     onMute={setIsMuted}
-                    onBlock={() => {}}
-                    onClearHistory={() => {}}
+                    onBlock={() => { }}
+                    onClearHistory={() => { }}
                     onThemeChange={setActiveTheme}
                 />
             </KeyboardAvoidingView>
+
+            {alertConfig.visible && (
+                <CustomAlert
+                    visible={alertConfig.visible}
+                    title={alertConfig.title}
+                    message={alertConfig.message}
+                    onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+                    onConfirm={alertConfig.onConfirm}
+                />
+            )}
         </ScreenWrapper>
     );
 }
@@ -254,17 +274,17 @@ export default function ChatScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    menuContainer: { width: width * 0.85, borderRadius: 28, padding: spacing.md, ...shadows.float(true) },
+    menuContainer: { width: width * 0.85, borderRadius: 28, padding: spacing.md, ...shadows.medium(true) },
     reactionRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.lg, paddingHorizontal: spacing.sm },
     reactionBtn: { padding: 8 },
-    reactionEmoji: { fontSize: 26 },
+    reactionEmoji: { fontSize: 28 },
     menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: spacing.md },
     menuText: { fontSize: 16, fontFamily: 'Poppins_600SemiBold', marginLeft: 12 },
     inputWrapper: { borderTopWidth: 1 },
     editOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
-    editBox: { width: '100%', borderRadius: 24, padding: spacing.lg, ...shadows.float(true) },
+    editBox: { width: '100%', borderRadius: 24, padding: spacing.lg, ...shadows.medium(true) },
     editTitle: { fontSize: 18, fontFamily: 'Poppins_700Bold', marginBottom: spacing.md, textAlign: 'center' },
-    editInput: { borderRadius: 16, padding: spacing.md, fontSize: 16, fontFamily: 'Poppins_400Regular', minHeight: 100, textAlignVertical: 'top' },
+    editInput: { borderRadius: 16, padding: spacing.md, fontSize: 16, fontFamily: 'Poppins_400Regular', minHeight: 110, textAlignVertical: 'top' },
     editActions: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: spacing.lg },
     cancelText: { fontFamily: 'Poppins_600SemiBold', marginRight: spacing.xl },
     saveBtn: { paddingHorizontal: spacing.xl, paddingVertical: spacing.sm, borderRadius: 20 },

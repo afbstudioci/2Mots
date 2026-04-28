@@ -1,8 +1,8 @@
 //src/components/chat/ChatHeader.tsx
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { spacing, colors, typography } from '../../theme/theme';
+import { spacing, colors } from '../../theme/theme';
 import { useTheme } from '../../context/ThemeContext';
 
 interface ChatHeaderProps {
@@ -15,11 +15,11 @@ interface ChatHeaderProps {
     onVideo?: () => void;
 }
 
-export default function ChatHeader({ 
-    friendName, 
-    friendAvatar, 
-    isOnline = true, 
-    onBack, 
+export default function ChatHeader({
+    friendName,
+    friendAvatar,
+    isOnline = true,
+    onBack,
     onSettings,
     onCall,
     onVideo
@@ -31,13 +31,13 @@ export default function ChatHeader({
             <TouchableOpacity onPress={onBack} style={styles.iconBtn}>
                 <Ionicons name="chevron-back" size={28} color={themeColors.text} />
             </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.profileArea} activeOpacity={0.7}>
+
+            <TouchableOpacity style={styles.profileArea} activeOpacity={0.8}>
                 {friendAvatar ? (
                     <Image source={{ uri: friendAvatar }} style={styles.avatar} />
                 ) : (
                     <View style={[styles.avatarPlaceholder, { backgroundColor: colors.coral + '20' }]}>
-                        <Text style={styles.avatarInitial}>{friendName.charAt(0)}</Text>
+                        <Text style={styles.avatarInitial}>{friendName.charAt(0).toUpperCase()}</Text>
                     </View>
                 )}
                 <View style={styles.infoArea}>
@@ -61,7 +61,7 @@ export default function ChatHeader({
                     <Ionicons name="videocam-outline" size={24} color={themeColors.text} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={onSettings} style={styles.iconBtn}>
-                    <Ionicons name="ellipsis-horizontal" size={24} color={themeColors.text} />
+                    <Ionicons name="ellipsis-vertical" size={22} color={themeColors.text} />
                 </TouchableOpacity>
             </View>
         </View>
@@ -75,10 +75,10 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.sm,
         paddingVertical: spacing.sm,
         borderBottomWidth: 1,
-        height: 70,
+        height: 75,
     },
     iconBtn: {
-        padding: 8,
+        padding: 10,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -89,14 +89,14 @@ const styles = StyleSheet.create({
         marginLeft: 4,
     },
     avatar: {
-        width: 42,
-        height: 42,
-        borderRadius: 21,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
     },
     avatarPlaceholder: {
-        width: 42,
-        height: 42,
-        borderRadius: 21,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -112,6 +112,7 @@ const styles = StyleSheet.create({
     name: {
         fontSize: 16,
         fontFamily: 'Poppins_700Bold',
+        letterSpacing: 0.3,
     },
     statusRow: {
         flexDirection: 'row',
@@ -122,10 +123,10 @@ const styles = StyleSheet.create({
         width: 6,
         height: 6,
         borderRadius: 3,
-        marginRight: 4,
+        marginRight: 6,
     },
     statusText: {
-        fontSize: 11,
+        fontSize: 12,
         fontFamily: 'Poppins_600SemiBold',
     },
     actions: {

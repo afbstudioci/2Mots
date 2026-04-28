@@ -1,12 +1,12 @@
 //src/components/chat/ChatInput.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-    View, TextInput, TouchableOpacity, StyleSheet, Animated, 
-    Text, Platform, PanResponder 
+import {
+    View, TextInput, TouchableOpacity, StyleSheet, Animated,
+    Text, Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { spacing, colors, borderRadius, shadows } from '../../theme/theme';
+import { spacing, colors, shadows } from '../../theme/theme';
 import { useTheme } from '../../context/ThemeContext';
 import * as Haptics from 'expo-haptics';
 
@@ -20,10 +20,10 @@ interface ChatInputProps {
     onTyping: () => void;
 }
 
-export default function ChatInput({ 
-    onSend, 
-    onMediaPress, 
-    onStartRecording, 
+export default function ChatInput({
+    onSend,
+    onMediaPress,
+    onStartRecording,
     onStopRecording,
     isRecording,
     recordingTime,
@@ -31,10 +31,7 @@ export default function ChatInput({
 }: ChatInputProps) {
     const { themeColors } = useTheme();
     const [text, setText] = useState('');
-    const [isLocked, setIsLocked] = useState(false);
-    
-    const micScale = useRef(new Animated.Value(1)).current;
-    const slideAnim = useRef(new Animated.Value(0)).current;
+
     const pulseAnim = useRef(new Animated.Value(1)).current;
 
     const formatTime = (s: number) => {
@@ -47,8 +44,8 @@ export default function ChatInput({
         if (isRecording) {
             Animated.loop(
                 Animated.sequence([
-                    Animated.timing(pulseAnim, { toValue: 0.4, duration: 500, useNativeDriver: true }),
-                    Animated.timing(pulseAnim, { toValue: 1, duration: 500, useNativeDriver: true })
+                    Animated.timing(pulseAnim, { toValue: 0.3, duration: 600, useNativeDriver: true }),
+                    Animated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: true })
                 ])
             ).start();
         } else {
@@ -60,9 +57,6 @@ export default function ChatInput({
         if (!isRecording) {
             onStartRecording();
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        } else {
-            onStopRecording(false);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
     };
 
@@ -96,7 +90,7 @@ export default function ChatInput({
             ) : (
                 <View style={styles.inputRow}>
                     <TouchableOpacity onPress={onMediaPress} style={styles.actionBtn}>
-                        <Ionicons name="add" size={30} color={themeColors.textSecondary} />
+                        <Ionicons name="add-circle" size={32} color={themeColors.textSecondary} />
                     </TouchableOpacity>
 
                     <TextInput
@@ -117,7 +111,7 @@ export default function ChatInput({
                         </TouchableOpacity>
                     ) : (
                         <TouchableOpacity onPress={handleMicPress} style={styles.actionBtn}>
-                            <Ionicons name="mic" size={26} color={colors.coral} />
+                            <Ionicons name="mic" size={28} color={colors.coral} />
                         </TouchableOpacity>
                     )}
                 </View>
@@ -143,7 +137,8 @@ const styles = StyleSheet.create({
         flex: 1,
         borderRadius: 24,
         paddingHorizontal: 16,
-        paddingVertical: 10,
+        paddingTop: 12,
+        paddingBottom: 12,
         maxHeight: 120,
         fontFamily: 'Poppins_500Medium',
         fontSize: 15,
@@ -167,9 +162,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.sm,
     },
     recordActionBtn: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
+        width: 46,
+        height: 46,
+        borderRadius: 23,
         backgroundColor: colors.error + '15',
         justifyContent: 'center',
         alignItems: 'center',
@@ -178,32 +173,32 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: colors.coral + '10',
-        paddingHorizontal: 20,
-        paddingVertical: 8,
-        borderRadius: 25,
+        paddingHorizontal: 24,
+        paddingVertical: 10,
+        borderRadius: 30,
     },
     dot: {
-        width: 10,
-        height: 10,
-        borderRadius: 5,
+        width: 12,
+        height: 12,
+        borderRadius: 6,
         backgroundColor: colors.error,
         marginRight: 10,
     },
     timer: {
         fontSize: 18,
         fontFamily: 'Poppins_700Bold',
-        letterSpacing: 1,
+        letterSpacing: 1.5,
     },
     sendRecordBtn: {
-        width: 44,
-        height: 44,
+        width: 46,
+        height: 46,
     },
     sendGradientSmall: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
+        width: 46,
+        height: 46,
+        borderRadius: 23,
         justifyContent: 'center',
         alignItems: 'center',
-        ...shadows.soft(true),
+        ...shadows.medium(true),
     }
 });

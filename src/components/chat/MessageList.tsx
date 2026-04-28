@@ -15,10 +15,10 @@ interface MessageListProps {
     friendName: string;
 }
 
-export default function MessageList({ 
-    messages, 
-    isLoading, 
-    onLongPress, 
+export default function MessageList({
+    messages,
+    isLoading,
+    onLongPress,
     onImagePress,
     isTyping,
     friendName
@@ -40,13 +40,17 @@ export default function MessageList({
             inverted
             keyExtractor={(item) => item._id}
             contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
             renderItem={({ item }) => {
                 const currentUserId = (user?._id || user?.id)?.toString();
                 const senderId = (item.sender?._id || item.sender)?.toString();
+                const isMe = senderId === currentUserId;
+
                 return (
-                    <MessageBubble 
-                        item={item} 
-                        isMe={senderId === currentUserId}
+                    <MessageBubble
+                        item={item}
+                        isMe={isMe}
                         onLongPress={onLongPress}
                         onImagePress={onImagePress}
                     />
@@ -59,7 +63,6 @@ export default function MessageList({
                     </Text>
                 </View>
             ) : null}
-            keyboardShouldPersistTaps="handled"
         />
     );
 }
@@ -74,11 +77,12 @@ const styles = StyleSheet.create({
         paddingVertical: spacing.md,
     },
     typingContainer: {
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.xs,
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.sm,
+        alignItems: 'flex-start',
     },
     typingText: {
-        fontSize: 12,
+        fontSize: 13,
         fontFamily: 'Poppins_500Medium',
         fontStyle: 'italic',
     },

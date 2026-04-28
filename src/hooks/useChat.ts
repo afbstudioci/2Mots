@@ -6,7 +6,7 @@ import { useSocket } from './useSocket';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 
-// Cache global pour les messages (persiste entre les écrans)
+// Cache global pour une ouverture instantanée
 const messageCache: Record<string, any[]> = {};
 
 export const prefetchChat = async (friendId: string) => {
@@ -15,7 +15,7 @@ export const prefetchChat = async (friendId: string) => {
         messageCache[friendId] = response.data.data || [];
         return messageCache[friendId];
     } catch (error) {
-        console.error(`[CHAT] Prefetch error for ${friendId}:`, error);
+        console.error(`[CHAT] Erreur de préchargement pour ${friendId}:`, error);
         return [];
     }
 };
@@ -36,9 +36,9 @@ export const useChat = (friendId: string) => {
             const response = await api.get(`/chat/history/${friendId}`);
             const data = response.data.data || [];
             setMessages(data);
-            messageCache[friendId] = data; // Mise à jour du cache
+            messageCache[friendId] = data;
         } catch (error) {
-            console.error('[CHAT] History error:', error);
+            console.error('[CHAT] Erreur historique:', error);
         } finally {
             setIsLoading(false);
         }
@@ -50,7 +50,7 @@ export const useChat = (friendId: string) => {
             socketRead(friendId);
             updateUnreadCount();
         } catch (error) {
-            console.error('[CHAT] Mark read error:', error);
+            console.error('[CHAT] Erreur de lecture:', error);
         }
     }, [friendId, socketRead, updateUnreadCount]);
 
@@ -64,7 +64,7 @@ export const useChat = (friendId: string) => {
                 LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                 setMessages(prev => {
                     const newMessages = [msg, ...prev];
-                    messageCache[friendId] = newMessages; // Sync Cache
+                    messageCache[friendId] = newMessages;
                     return newMessages;
                 });
                 markRead();
@@ -91,8 +91,8 @@ export const useChat = (friendId: string) => {
         const unsubDelete = subscribe('message_deleted', (data) => {
             LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
             setMessages(prev => {
-                const newMessages = prev.map(m => 
-                    m._id === data.messageId ? { ...m, text: data.text, isDeleted: true, fileUrl: null } : m
+                const newMessages = prev.map(m =>
+                    m._id === data.messageId ? { ...m, text: data.text, isDeletedForEveryone: true, fileUrl: null } : m
                 );
                 messageCache[friendId] = newMessages;
                 return newMessages;
@@ -101,7 +101,7 @@ export const useChat = (friendId: string) => {
 
         const unsubReaction = subscribe('reaction_updated', (data) => {
             setMessages(prev => {
-                const newMessages = prev.map(m => 
+                const newMessages = prev.map(m =>
                     m._id === data.messageId ? { ...m, reactions: data.reactions } : m
                 );
                 messageCache[friendId] = newMessages;
@@ -127,7 +127,7 @@ export const useChat = (friendId: string) => {
             text, type, ...mediaData,
             status: 'sent', createdAt: new Date().toISOString()
         };
-        
+
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setMessages(prev => {
             const newMessages = [newMsg, ...prev];
@@ -147,7 +147,6 @@ export const useChat = (friendId: string) => {
 
     const edit = (messageId: string, text: string) => {
         socketEdit({ messageId, recipientId: friendId, text });
-        // Optimistic update
         setMessages(prev => prev.map(m => m._id === messageId ? { ...m, text, isEdited: true } : m));
     };
 

@@ -1,14 +1,14 @@
 //src/screens/MessagesScreen.tsx
 import React, { useEffect, useState, useRef } from 'react';
-import { 
-    View, Text, StyleSheet, FlatList, TouchableOpacity, 
-    Image, RefreshControl, ActivityIndicator, Animated 
+import {
+    View, Text, StyleSheet, FlatList, TouchableOpacity,
+    Image, RefreshControl, Animated
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
-import { colors, spacing, borderRadius, typography, shadows } from '../theme/theme';
+import { colors, spacing, typography, shadows } from '../theme/theme';
 import api from '../services/api';
 import { useData } from '../context/DataContext';
 import { prefetchChat } from '../hooks/useChat';
@@ -26,14 +26,13 @@ export default function MessagesScreen() {
             const response = await api.get('/chat/conversations');
             const data = response.data.data || [];
             setConversations(data);
-            
-            // PREFETCH : Charger les messages en arrière-plan pour chaque discussion
+
             data.forEach((conv: any) => {
                 prefetchChat(conv.friend._id);
             });
-            
+
         } catch (e) {
-            console.error('[MESSAGES] Fetch error:', e);
+            console.error('[MESSAGES] Erreur de récupération:', e);
         } finally {
             setIsLoading(false);
         }
@@ -52,8 +51,8 @@ export default function MessagesScreen() {
         <ScreenWrapper>
             <View style={styles.header}>
                 <Text style={[styles.headerTitle, { color: themeColors.text }]}>MESSAGES</Text>
-                <TouchableOpacity 
-                    onPress={() => navigation.navigate('Friends')} 
+                <TouchableOpacity
+                    onPress={() => navigation.navigate('Friends')}
                     style={[styles.communityBtn, { backgroundColor: colors.coral + '15' }]}
                 >
                     <Ionicons name="people" size={20} color={colors.coral} />
@@ -69,15 +68,15 @@ export default function MessagesScreen() {
                     <RefreshControl refreshing={isLoading} onRefresh={fetchConversations} tintColor={colors.coral} />
                 }
                 renderItem={({ item }) => (
-                    <ConversationCard 
-                        item={item} 
+                    <ConversationCard
+                        item={item}
                         onPress={() => {
-                            navigation.navigate('Chat', { 
-                                friendId: item.friend._id, 
-                                friendName: item.friend.login, 
-                                friendAvatar: item.friend.avatar 
+                            navigation.navigate('Chat', {
+                                friendId: item.friend._id,
+                                friendName: item.friend.login,
+                                friendAvatar: item.friend.avatar
                             });
-                        }} 
+                        }}
                     />
                 )}
                 ListEmptyComponent={() => !isLoading ? (
@@ -88,7 +87,7 @@ export default function MessagesScreen() {
                         <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
                             Aucune discussion active.{"\n"}Lancez-en une avec vos amis !
                         </Text>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             onPress={() => navigation.navigate('Friends')}
                             style={[styles.startBtn, { backgroundColor: colors.coral }]}
                         >
@@ -105,36 +104,35 @@ const ConversationCard = ({ item, onPress }: any) => {
     const { themeColors, isDark } = useTheme();
     const lastMsg = item.lastMessage;
     const isUnread = item.unreadCount > 0;
-    const blinkAnim = useRef(new Animated.Value(0.4)).current;
+    const blinkAnim = useRef(new Animated.Value(1)).current;
 
     useEffect(() => {
         if (isUnread) {
             Animated.loop(
                 Animated.sequence([
-                    Animated.timing(blinkAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-                    Animated.timing(blinkAnim, { toValue: 0.4, duration: 800, useNativeDriver: true })
+                    Animated.timing(blinkAnim, { toValue: 0.5, duration: 1000, useNativeDriver: true }),
+                    Animated.timing(blinkAnim, { toValue: 1, duration: 1000, useNativeDriver: true })
                 ])
             ).start();
         }
     }, [isUnread]);
 
     return (
-        <TouchableOpacity 
-            onPress={onPress} 
-            activeOpacity={0.7} 
+        <TouchableOpacity
+            onPress={onPress}
+            activeOpacity={0.8}
             style={[
-                styles.card, 
-                { 
-                    backgroundColor: themeColors.card, 
-                    // Contour corail en mode jour, bordure subtile en mode nuit
-                    borderColor: !isDark ? colors.coral : themeColors.overlayLight,
-                    borderWidth: !isDark ? 2 : 1,
+                styles.card,
+                {
+                    backgroundColor: isUnread ? (isDark ? '#2A1F1F' : '#FFF5F5') : themeColors.card,
+                    borderColor: isUnread ? colors.coral : (isDark ? themeColors.overlayLight : '#E5E5E5'),
+                    borderWidth: isUnread ? 2 : 1,
                 },
-                shadows.soft(isDark)
+                shadows.medium(isDark)
             ]}
         >
             <View style={styles.avatarContainer}>
-                <View style={[styles.avatarWrapper, { borderColor: isUnread ? colors.coral : 'transparent' }]}>
+                <Animated.View style={[styles.avatarWrapper, { borderColor: isUnread ? colors.coral : 'transparent', opacity: blinkAnim }]}>
                     {item.friend.avatar ? (
                         <Image source={{ uri: item.friend.avatar }} style={styles.avatar} />
                     ) : (
@@ -142,11 +140,11 @@ const ConversationCard = ({ item, onPress }: any) => {
                             <Text style={styles.avatarInitial}>{item.friend.login.charAt(0).toUpperCase()}</Text>
                         </View>
                     )}
-                </View>
+                </Animated.View>
                 {isUnread && (
-                    <Animated.View style={[styles.unreadBadge, { opacity: blinkAnim }]}>
-                        <Text style={styles.unreadCountText}>{item.unreadCount}</Text>
-                    </Animated.View>
+                    <View style={styles.unreadBadge}>
+                        <Text style={styles.unreadCountText}>{item.unreadCount > 9 ? '9+' : item.unreadCount}</Text>
+                    </View>
                 )}
             </View>
 
@@ -155,8 +153,8 @@ const ConversationCard = ({ item, onPress }: any) => {
                     <Text style={[styles.name, { color: themeColors.text }]} numberOfLines={1}>
                         {item.friend.login}
                     </Text>
-                    <Text style={[styles.time, { color: themeColors.textSecondary }]}>
-                        {lastMsg 
+                    <Text style={[styles.time, { color: isUnread ? colors.coral : themeColors.textSecondary }]}>
+                        {lastMsg
                             ? new Date(lastMsg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                             : ''
                         }
@@ -165,104 +163,102 @@ const ConversationCard = ({ item, onPress }: any) => {
                 <View style={styles.row}>
                     <View style={styles.previewContainer}>
                         {lastMsg && lastMsg.sender !== item.friend._id && (
-                            <Ionicons 
-                                name={lastMsg.read ? "checkmark-done" : "checkmark"} 
-                                size={14} 
-                                color={lastMsg.read ? colors.mint : themeColors.textSecondary} 
-                                style={{ marginRight: 4 }}
+                            <Ionicons
+                                name={lastMsg.isRead ? "checkmark-done" : "checkmark"}
+                                size={15}
+                                color={lastMsg.isRead ? colors.mint : themeColors.textSecondary}
+                                style={{ marginRight: 6 }}
                             />
                         )}
-                        <Text 
+                        <Text
                             style={[
-                                styles.preview, 
-                                { 
-                                    color: isUnread ? themeColors.text : themeColors.textSecondary, 
+                                styles.preview,
+                                {
+                                    color: isUnread ? themeColors.text : themeColors.textSecondary,
                                     fontFamily: isUnread ? 'Poppins_700Bold' : 'Poppins_400Regular',
                                 }
-                            ]} 
+                            ]}
                             numberOfLines={1}
                         >
-                            {!lastMsg ? 'Démarrer la discussion...' : (lastMsg?.isDeleted ? 'Message supprimé' : (lastMsg.text || 'Média'))}
+                            {!lastMsg ? 'Démarrer la discussion...' : (lastMsg?.isDeletedForEveryone ? 'Ce message a été supprimé' : (lastMsg.text || 'Média'))}
                         </Text>
                     </View>
                 </View>
             </View>
-            
-            <Ionicons name="chevron-forward" size={18} color={themeColors.overlayMedium} />
         </TouchableOpacity>
     );
 };
 
 const styles = StyleSheet.create({
-    header: { 
-        paddingHorizontal: spacing.lg, 
-        paddingVertical: spacing.md, 
-        flexDirection: 'row', 
-        alignItems: 'center', 
-        justifyContent: 'space-between' 
+    header: {
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.md,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between'
     },
-    headerTitle: { ...typography.buttonPrimary, fontSize: 18, letterSpacing: 3 },
-    communityBtn: { 
-        flexDirection: 'row', 
-        alignItems: 'center', 
-        paddingHorizontal: 12, 
-        paddingVertical: 6, 
-        borderRadius: 20 
+    headerTitle: { ...typography.buttonPrimary, fontSize: 18, letterSpacing: 2 },
+    communityBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 20
     },
-    communityBtnText: { 
-        marginLeft: 6, 
-        fontSize: 10, 
-        fontFamily: 'Poppins_700Bold', 
-        color: colors.coral 
+    communityBtnText: {
+        marginLeft: 6,
+        fontSize: 11,
+        fontFamily: 'Poppins_700Bold',
+        color: colors.coral
     },
     listContent: { paddingHorizontal: spacing.md, paddingBottom: 120, paddingTop: spacing.sm },
-    card: { 
-        flexDirection: 'row', 
-        padding: spacing.md, 
-        borderRadius: 24, 
+    card: {
+        flexDirection: 'row',
+        padding: spacing.md,
+        borderRadius: 24,
         marginBottom: spacing.md,
         alignItems: 'center',
     },
     avatarContainer: { position: 'relative' },
     avatarWrapper: {
         padding: 2,
-        borderRadius: 30,
+        borderRadius: 32,
         borderWidth: 2,
     },
-    avatar: { width: 54, height: 54, borderRadius: 27 },
-    avatarPlaceholder: { 
-        width: 54, height: 54, borderRadius: 27, 
-        justifyContent: 'center', alignItems: 'center' 
+    avatar: { width: 56, height: 56, borderRadius: 28 },
+    avatarPlaceholder: {
+        width: 56, height: 56, borderRadius: 28,
+        justifyContent: 'center', alignItems: 'center'
     },
-    avatarInitial: { fontSize: 20, fontFamily: 'Poppins_700Bold', color: colors.coral },
-    unreadBadge: { 
-        position: 'absolute', top: -4, right: -4, 
-        minWidth: 22, height: 22, borderRadius: 11, 
-        backgroundColor: colors.coral, 
+    avatarInitial: { fontSize: 22, fontFamily: 'Poppins_700Bold', color: colors.coral },
+    unreadBadge: {
+        position: 'absolute', top: -2, right: -2,
+        minWidth: 24, height: 24, borderRadius: 12,
+        backgroundColor: colors.coral,
         justifyContent: 'center', alignItems: 'center',
         borderWidth: 2, borderColor: '#FFF',
-        paddingHorizontal: 4
+        paddingHorizontal: 5
     },
-    unreadCountText: { color: '#FFF', fontSize: 10, fontFamily: 'Poppins_900Black' },
+    unreadCountText: { color: '#FFF', fontSize: 11, fontFamily: 'Poppins_900Black' },
     content: { flex: 1, marginLeft: spacing.md, justifyContent: 'center' },
-    row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
-    name: { fontSize: 16, fontFamily: 'Poppins_700Bold', letterSpacing: 0.5 },
-    time: { fontSize: 11, fontFamily: 'Poppins_500Medium', opacity: 0.6 },
+    row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+    name: { fontSize: 16, fontFamily: 'Poppins_700Bold', letterSpacing: 0.3 },
+    time: { fontSize: 12, fontFamily: 'Poppins_500Medium' },
     previewContainer: { flexDirection: 'row', alignItems: 'center', flex: 1 },
     preview: { fontSize: 13, flex: 1 },
-    empty: { alignItems: 'center', marginTop: 60, paddingHorizontal: spacing.xl },
+    empty: { alignItems: 'center', marginTop: 80, paddingHorizontal: spacing.xl },
     emptyIconContainer: {
         width: 120, height: 120, borderRadius: 60,
         justifyContent: 'center', alignItems: 'center',
         marginBottom: spacing.xl,
-        ...shadows.soft(false)
+        ...shadows.medium(false)
     },
     emptyText: { textAlign: 'center', marginBottom: spacing.xl, fontFamily: 'Poppins_500Medium', lineHeight: 24, fontSize: 16 },
     startBtn: {
         paddingHorizontal: spacing.xl,
         paddingVertical: spacing.md,
         borderRadius: 30,
-        ...shadows.soft(false)
+        ...shadows.medium(false)
     },
-    startBtnText: { color: '#FFF', fontFamily: 'Poppins_700Bold', fontSize: 14 }
+    startBtnText: { color: '#FFF', fontFamily: 'Poppins_700Bold', fontSize: 15 }
 });
