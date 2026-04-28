@@ -62,7 +62,11 @@ export const useChat = (friendId: string) => {
             const senderId = msg.sender?._id || msg.sender;
             if (senderId.toString() === friendId.toString()) {
                 LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                setMessages(prev => [msg, ...prev]);
+                setMessages(prev => {
+                    const newMessages = [msg, ...prev];
+                    messageCache[friendId] = newMessages; // Sync Cache
+                    return newMessages;
+                });
                 markRead();
             }
         });
@@ -77,20 +81,32 @@ export const useChat = (friendId: string) => {
 
         const unsubEdit = subscribe('message_edited', (msg) => {
             LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-            setMessages(prev => prev.map(m => m._id === msg._id ? msg : m));
+            setMessages(prev => {
+                const newMessages = prev.map(m => m._id === msg._id ? msg : m);
+                messageCache[friendId] = newMessages;
+                return newMessages;
+            });
         });
 
         const unsubDelete = subscribe('message_deleted', (data) => {
             LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-            setMessages(prev => prev.map(m => 
-                m._id === data.messageId ? { ...m, text: data.text, isDeleted: true, fileUrl: null } : m
-            ));
+            setMessages(prev => {
+                const newMessages = prev.map(m => 
+                    m._id === data.messageId ? { ...m, text: data.text, isDeleted: true, fileUrl: null } : m
+                );
+                messageCache[friendId] = newMessages;
+                return newMessages;
+            });
         });
 
         const unsubReaction = subscribe('reaction_updated', (data) => {
-            setMessages(prev => prev.map(m => 
-                m._id === data.messageId ? { ...m, reactions: data.reactions } : m
-            ));
+            setMessages(prev => {
+                const newMessages = prev.map(m => 
+                    m._id === data.messageId ? { ...m, reactions: data.reactions } : m
+                );
+                messageCache[friendId] = newMessages;
+                return newMessages;
+            });
         });
 
         return () => {
@@ -107,13 +123,17 @@ export const useChat = (friendId: string) => {
         const tempId = Date.now().toString();
         const newMsg = {
             _id: tempId,
-            sender: { _id: user?.id, login: user?.login, avatar: user?.avatar },
+            sender: { _id: user?._id || user?.id, login: user?.login, avatar: user?.avatar },
             text, type, ...mediaData,
             status: 'sent', createdAt: new Date().toISOString()
         };
         
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        setMessages(prev => [newMsg, ...prev]);
+        setMessages(prev => {
+            const newMessages = [newMsg, ...prev];
+            messageCache[friendId] = newMessages;
+            return newMessages;
+        });
         sendMessage({ recipientId: friendId, text, type, ...mediaData });
     };
 

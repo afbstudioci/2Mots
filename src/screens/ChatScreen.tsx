@@ -42,7 +42,8 @@ export default function ChatScreen({ route, navigation }: any) {
     useEffect(() => {
         if (messages.length > 0) {
             const last = messages[0];
-            if (last.sender._id === user?.id) {
+            const currentUserId = user?._id || user?.id;
+            if (last.sender?._id?.toString() === currentUserId?.toString()) {
                 // playSound('send'); // Désactivé si fichiers non présents
             } else {
                 // playSound('receive');
@@ -123,19 +124,20 @@ export default function ChatScreen({ route, navigation }: any) {
 
     return (
         <ScreenWrapper style={{ flex: 1 }}>
+            <LinearGradient colors={getThemeColors() as [string, string, ...string[]]} style={StyleSheet.absoluteFillObject} />
+            
+            <ChatHeader 
+                friendName={friendName} 
+                friendAvatar={friendAvatar} 
+                onBack={() => navigation.goBack()}
+                onSettings={() => setShowSettings(true)}
+            />
+
             <KeyboardAvoidingView 
                 style={styles.container}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
             >
-                <LinearGradient colors={getThemeColors() as [string, string, ...string[]]} style={StyleSheet.absoluteFillObject} />
-
-                <ChatHeader 
-                    friendName={friendName} 
-                    friendAvatar={friendAvatar} 
-                    onBack={() => navigation.goBack()}
-                    onSettings={() => setShowSettings(true)}
-                />
 
                 <MessageList 
                     messages={messages}
@@ -146,7 +148,7 @@ export default function ChatScreen({ route, navigation }: any) {
                     onImagePress={() => {}}
                 />
 
-                <View style={[styles.inputWrapper, { borderTopColor: themeColors.overlayLight }]}>
+                <View style={[styles.inputWrapper, { borderTopColor: themeColors.overlayLight, backgroundColor: themeColors.surface }]}>
                     <ChatInput 
                         onSend={(t) => send(t)}
                         onMediaPress={pickMedia}
@@ -179,7 +181,7 @@ export default function ChatScreen({ route, navigation }: any) {
                                 <Text style={[styles.menuText, { color: themeColors.text }]}>Répondre</Text>
                             </TouchableOpacity>
 
-                            {selectedMessage?.sender?._id === user?.id && !selectedMessage?.isDeleted && (
+                            {(selectedMessage?.sender?._id || selectedMessage?.sender)?.toString() === (user?._id || user?.id)?.toString() && !selectedMessage?.isDeleted && (
                                 <TouchableOpacity style={styles.menuItem} onPress={handleEditStart}>
                                     <Ionicons name="create-outline" size={20} color={themeColors.text} />
                                     <Text style={[styles.menuText, { color: themeColors.text }]}>Modifier</Text>

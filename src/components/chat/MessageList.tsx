@@ -40,14 +40,18 @@ export default function MessageList({
             inverted
             keyExtractor={(item) => item._id}
             contentContainerStyle={styles.listContent}
-            renderItem={({ item }) => (
-                <MessageBubble 
-                    item={item} 
-                    isMe={(item.sender?._id || item.sender) === user?.id}
-                    onLongPress={onLongPress}
-                    onImagePress={onImagePress}
-                />
-            )}
+            renderItem={({ item }) => {
+                const currentUserId = (user?._id || user?.id)?.toString();
+                const senderId = (item.sender?._id || item.sender)?.toString();
+                return (
+                    <MessageBubble 
+                        item={item} 
+                        isMe={senderId === currentUserId}
+                        onLongPress={onLongPress}
+                        onImagePress={onImagePress}
+                    />
+                );
+            }}
             ListHeaderComponent={() => isTyping ? (
                 <View style={styles.typingContainer}>
                     <Text style={[styles.typingText, { color: themeColors.textSecondary }]}>
