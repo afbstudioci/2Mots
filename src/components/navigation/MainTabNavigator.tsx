@@ -5,6 +5,7 @@ import FloatingTabBar from './FloatingTabBar';
 
 import HomeScreen from '../../screens/HomeScreen';
 import ShopScreen from '../../screens/ShopScreen';
+import MissionsScreen from '../../screens/MissionsScreen';
 import MessagesScreen from '../../screens/MessagesScreen';
 import FriendsScreen from '../../screens/FriendsScreen';
 
