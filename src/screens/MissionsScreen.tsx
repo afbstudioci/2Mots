@@ -216,7 +216,11 @@ const MissionCard = ({ mission, onClaim, isClaiming, themeColors, onPress }: any
             onPress={onPress}
             style={[
                 styles.missionCard, 
-                { backgroundColor: themeColors.card, borderColor: isReady ? colors.coral : themeColors.border },
+                { 
+                    backgroundColor: themeColors.card, 
+                    borderColor: isReady ? colors.coral : themeColors.cardBorder,
+                    borderWidth: isReady ? 2 : themeColors.cardBorderWidth 
+                },
                 mission.claimed && { opacity: 0.6 }
             ]}
         >
@@ -280,7 +284,7 @@ const styles = StyleSheet.create({
     scrollContent: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: 120 },
     
     // Referral Styles
-    referralCard: { borderRadius: borderRadius.lg, overflow: 'hidden', marginBottom: spacing.xl, borderWidth: 1, borderColor: 'rgba(255, 90, 95, 0.2)' },
+    referralCard: { borderRadius: borderRadius.lg, overflow: 'hidden', marginBottom: spacing.xl, borderWidth: 2, borderColor: colors.coral },
     referralHeader: { flexDirection: 'row', alignItems: 'center', padding: spacing.md },
     referralTitle: { ...typography.buttonPrimary, color: colors.white, fontSize: 14, marginLeft: 10, letterSpacing: 2 },
     referralBody: { padding: spacing.lg },

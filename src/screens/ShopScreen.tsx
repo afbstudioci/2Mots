@@ -80,7 +80,11 @@ export default function ShopScreen() {
                         
                         <View style={styles.itemsGrid}>
                             {shopItems.map((item, index) => (
-                                <View key={index} style={[styles.itemCard, { backgroundColor: themeColors.card }]}>
+                                <View key={index} style={[styles.itemCard, { 
+                                    backgroundColor: themeColors.card,
+                                    borderColor: themeColors.cardBorder,
+                                    borderWidth: themeColors.cardBorderWidth
+                                }]}>
                                     <View style={[styles.iconWrapper, { backgroundColor: 'rgba(255, 127, 80, 0.1)' }]}>
                                         <Ionicons name="time" size={32} color={themeColors.primary} />
                                     </View>

@@ -174,8 +174,8 @@ const styles = StyleSheet.create({
         borderRadius: 24,
         padding: spacing.lg,
         marginBottom: spacing.xl,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 90, 95, 0.3)',
+        borderWidth: themeColors.cardBorderWidth,
+        borderColor: themeColors.cardBorder,
     },
     correctionsTitle: {
         fontFamily: 'Poppins_700Bold',
@@ -204,6 +204,8 @@ const styles = StyleSheet.create({
         width: '100%',
         borderRadius: 32, 
         padding: spacing.xl,
+        borderWidth: themeColors.cardBorderWidth,
+        borderColor: themeColors.cardBorder,
     },
     detailRow: {
         flexDirection: 'row',

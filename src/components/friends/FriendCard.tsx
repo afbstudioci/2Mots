@@ -29,8 +29,8 @@ export default function FriendCard({ friend, onPress, onChallenge, rightElement 
                 styles.card, 
                 { 
                     backgroundColor: themeColors.card,
-                    borderColor: !isDark ? colors.coral : themeColors.border,
-                    borderWidth: !isDark ? 1.5 : 1,
+                    borderColor: themeColors.cardBorder,
+                    borderWidth: themeColors.cardBorderWidth,
                 }
             ]}
         >
