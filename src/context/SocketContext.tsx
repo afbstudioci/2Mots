@@ -87,18 +87,20 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         return () => {};
     };
 
+    const contextValue = React.useMemo(() => ({
+        socket: socketRef.current,
+        sendMessage,
+        startTyping,
+        stopTyping,
+        editMessage,
+        deleteMessage,
+        toggleReaction,
+        markAsRead,
+        subscribe
+    }), [socketRef.current, user]); // Seul un changement de socket ou d'utilisateur déclenche une mise à jour
+
     return (
-        <SocketContext.Provider value={{
-            socket: socketRef.current,
-            sendMessage,
-            startTyping,
-            stopTyping,
-            editMessage,
-            deleteMessage,
-            toggleReaction,
-            markAsRead,
-            subscribe
-        }}>
+        <SocketContext.Provider value={contextValue}>
             {children}
         </SocketContext.Provider>
     );

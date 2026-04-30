@@ -176,8 +176,8 @@ export default function ChatScreen({ route, navigation }: any) {
 
             <KeyboardAvoidingView
                 style={styles.container}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 47 : 0}
+                behavior="padding"
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
             >
                 <ChatHeader
                     friendName={friendName}

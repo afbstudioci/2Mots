@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+// v1.1 - Correction du layout et du clavier
 import {
     View, TextInput, TouchableOpacity, StyleSheet, Animated, Text, Keyboard, Platform
 } from 'react-native';
@@ -31,6 +32,34 @@ export default function ChatInput({
     const { themeColors } = useTheme();
     const insets = useSafeAreaInsets();
     const [text, setText] = useState('');
+    const bottomPadding = useRef(new Animated.Value(Math.max(insets.bottom, spacing.md))).current;
+
+    useEffect(() => {
+        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+        const showSub = Keyboard.addListener(showEvent, () => {
+            Animated.timing(bottomPadding, {
+                toValue: 20, // 2cm au-dessus du clavier
+                duration: 250,
+                useNativeDriver: false
+            }).start();
+        });
+
+        const hideSub = Keyboard.addListener(hideEvent, () => {
+            Animated.timing(bottomPadding, {
+                toValue: Math.max(insets.bottom, spacing.md),
+                duration: 250,
+                useNativeDriver: false
+            }).start();
+        });
+
+        return () => {
+            showSub.remove();
+            hideSub.remove();
+        };
+    }, [insets.bottom]);
+
     const pulseAnim = useRef(new Animated.Value(1)).current;
 
     const formatTime = (s: number) => {
@@ -68,11 +97,11 @@ export default function ChatInput({
     };
 
     return (
-        <View style={[
+        <Animated.View style={[
             styles.container,
             {
                 backgroundColor: themeColors.surface,
-                paddingBottom: Math.max(insets.bottom, spacing.md)
+                paddingBottom: bottomPadding
             }
         ]}>
             {isRecording ? (
@@ -121,7 +150,7 @@ export default function ChatInput({
                     )}
                 </View>
             )}
-        </View>
+        </Animated.View>
     );
 }
 
