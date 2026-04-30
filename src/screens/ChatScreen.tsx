@@ -226,7 +226,7 @@ export default function ChatScreen({ route, navigation }: any) {
 
                 {/* MODAL EDITION */}
                 <Modal visible={isEditing} transparent animationType="fade">
-                    <KeyboardAvoidingView 
+                    <KeyboardAvoidingView
                         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                         keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 20}
                         style={{ flex: 1 }}

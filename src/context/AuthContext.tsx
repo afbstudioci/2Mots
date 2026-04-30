@@ -37,8 +37,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     loadStorageData();
 
-    const authFailedListener = DeviceEventEmitter.addListener('AUTH_FAILED', () => {
-      if (isMounted) setUser(null);
+    const authFailedListener = DeviceEventEmitter.addListener('AUTH_FAILED', async () => {
+      if (isMounted) {
+        await clearTokens();
+        setUser(null);
+      }
     });
 
     return () => {

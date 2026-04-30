@@ -10,6 +10,7 @@ import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { SettingsProvider } from './src/context/SettingsContext';
 import { DataProvider } from './src/context/DataContext';
 import { AudioProvider } from './src/context/AudioContext';
+import { SocketProvider } from './src/context/SocketContext';
 
 import SplashScreen from './src/screens/SplashScreen';
 import LoginScreen from './src/screens/LoginScreen';
@@ -175,9 +176,11 @@ export default function App() {
       <SettingsProvider>
         <AudioProvider>
           <ThemeProvider>
-            <DataProvider>
-              <AppContent />
-            </DataProvider>
+            <SocketProvider>
+              <DataProvider>
+                <AppContent />
+              </DataProvider>
+            </SocketProvider>
           </ThemeProvider>
         </AudioProvider>
       </SettingsProvider>
