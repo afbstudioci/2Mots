@@ -174,26 +174,28 @@ export default function ChatScreen({ route, navigation }: any) {
         <ScreenWrapper style={{ flex: 1 }}>
             <LinearGradient colors={getThemeColors() as [string, string, ...string[]]} style={StyleSheet.absoluteFillObject} />
 
-            <ChatHeader
-                friendName={friendName}
-                friendAvatar={friendAvatar}
-                onBack={() => navigation.goBack()}
-                onSettings={() => setShowSettings(true)}
-            />
-
             <KeyboardAvoidingView
                 style={styles.container}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 47 : 0}
             >
-                <MessageList
-                    messages={messages}
-                    isLoading={false}
+                <ChatHeader
                     friendName={friendName}
-                    isTyping={isTyping}
-                    onLongPress={handleLongPress}
-                    onImagePress={() => { }}
+                    friendAvatar={friendAvatar}
+                    onBack={() => navigation.goBack()}
+                    onSettings={() => setShowSettings(true)}
                 />
+
+                <View style={{ flex: 1 }}>
+                    <MessageList
+                        messages={messages}
+                        isLoading={false}
+                        friendName={friendName}
+                        isTyping={isTyping}
+                        onLongPress={handleLongPress}
+                        onImagePress={() => { }}
+                    />
+                </View>
 
                 <View style={[styles.inputWrapper, { borderTopColor: themeColors.overlayLight, backgroundColor: themeColors.surface }]}>
                     <ChatInput

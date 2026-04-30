@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-    View, TextInput, TouchableOpacity, StyleSheet, Animated,
-    Text, Platform, Keyboard
+    View, TextInput, TouchableOpacity, StyleSheet, Animated, Text, Keyboard, Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -32,34 +31,6 @@ export default function ChatInput({
     const { themeColors } = useTheme();
     const insets = useSafeAreaInsets();
     const [text, setText] = useState('');
-    const paddingBottomAnim = useRef(new Animated.Value(Math.max(insets.bottom, spacing.md))).current;
-
-    useEffect(() => {
-        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-        const showSub = Keyboard.addListener(showEvent, () => {
-            Animated.timing(paddingBottomAnim, {
-                toValue: spacing.xs,
-                duration: 250,
-                useNativeDriver: false,
-            }).start();
-        });
-
-        const hideSub = Keyboard.addListener(hideEvent, () => {
-            Animated.timing(paddingBottomAnim, {
-                toValue: Math.max(insets.bottom, spacing.md),
-                duration: 250,
-                useNativeDriver: false,
-            }).start();
-        });
-
-        return () => {
-            showSub.remove();
-            hideSub.remove();
-        };
-    }, [insets.bottom]);
-
     const pulseAnim = useRef(new Animated.Value(1)).current;
 
     const formatTime = (s: number) => {
@@ -97,11 +68,11 @@ export default function ChatInput({
     };
 
     return (
-        <Animated.View style={[
+        <View style={[
             styles.container,
             {
                 backgroundColor: themeColors.surface,
-                paddingBottom: paddingBottomAnim
+                paddingBottom: Math.max(insets.bottom, spacing.md)
             }
         ]}>
             {isRecording ? (
@@ -150,7 +121,7 @@ export default function ChatInput({
                     )}
                 </View>
             )}
-        </Animated.View>
+        </View>
     );
 }
 
