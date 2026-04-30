@@ -35,16 +35,16 @@ export default function ChatSettingsModal({
         { id: 'luxury', color: '#333333', name: 'Luxe' },
     ];
 
-    const OptionItem = ({ icon, label, onPress, color = themeColors.text, showSwitch = false, value = false, onToggle = () => {} }: any) => (
+    const OptionItem = ({ icon, label, onPress, color = themeColors.text, showSwitch = false, value = false, onToggle = () => { } }: any) => (
         <TouchableOpacity style={styles.option} onPress={onPress} activeOpacity={0.7}>
             <View style={[styles.iconBox, { backgroundColor: color + '15' }]}>
                 <Ionicons name={icon} size={20} color={color} />
             </View>
             <Text style={[styles.optionLabel, { color: themeColors.text }]}>{label}</Text>
             {showSwitch ? (
-                <Switch 
-                    value={value} 
-                    onValueChange={onToggle} 
+                <Switch
+                    value={value}
+                    onValueChange={onToggle}
                     trackColor={{ false: '#767577', true: colors.coral }}
                     thumbColor="#f4f3f4"
                 />
@@ -60,7 +60,7 @@ export default function ChatSettingsModal({
                 <TouchableOpacity style={styles.dismiss} onPress={onClose} />
                 <View style={[styles.container, { backgroundColor: themeColors.surface }]}>
                     <View style={[styles.handle, { backgroundColor: themeColors.overlayLight }]} />
-                    
+
                     <View style={styles.header}>
                         <Text style={[styles.title, { color: themeColors.text }]}>Paramètres du chat</Text>
                         <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>avec {friendName}</Text>
@@ -69,17 +69,17 @@ export default function ChatSettingsModal({
                     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
                         <View style={styles.section}>
                             <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>PRÉFÉRENCES</Text>
-                            <OptionItem 
-                                icon="notifications-off-outline" 
-                                label="Mettre en sourdine" 
-                                showSwitch 
+                            <OptionItem
+                                icon="notifications-off-outline"
+                                label="Mettre en sourdine"
+                                showSwitch
                                 value={isMuted}
                                 onToggle={onMute}
                             />
-                            <OptionItem 
-                                icon="images-outline" 
-                                label="Médias partagés" 
-                                onPress={() => {}}
+                            <OptionItem
+                                icon="images-outline"
+                                label="Médias partagés"
+                                onPress={() => { }}
                             />
                         </View>
 
@@ -88,9 +88,9 @@ export default function ChatSettingsModal({
                             <Text style={[styles.label, { color: themeColors.text }]}>Arrière-plan</Text>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.themeScroll}>
                                 {themes.map(t => (
-                                    <TouchableOpacity 
-                                        key={t.id} 
-                                        style={styles.themeCircle} 
+                                    <TouchableOpacity
+                                        key={t.id}
+                                        style={styles.themeCircle}
                                         onPress={() => onThemeChange(t.id)}
                                     >
                                         <View style={[styles.themeColor, { backgroundColor: t.color }]} />
@@ -102,28 +102,27 @@ export default function ChatSettingsModal({
 
                         <View style={styles.section}>
                             <Text style={[styles.sectionTitle, { color: colors.error }]}>ZONE DE DANGER</Text>
-                            <OptionItem 
-                                icon="trash-outline" 
-                                label="Effacer l'historique" 
+                            <OptionItem
+                                icon="trash-outline"
+                                label="Effacer l'historique"
                                 color={colors.error}
                                 onPress={onClearHistory}
                             />
-                            <OptionItem 
-                                icon="ban-outline" 
-                                label="Bloquer l'utilisateur" 
+                            <OptionItem
+                                icon="ban-outline"
+                                label="Bloquer l'utilisateur"
                                 color={colors.error}
                                 onPress={onBlock}
                             />
                         </View>
 
-                        {/* 5 Actions Supplémentaires au choix */}
                         <View style={styles.section}>
                             <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>AUTRES ACTIONS</Text>
-                            <OptionItem icon="star-outline" label="Ajouter aux favoris" onPress={() => {}} />
-                            <OptionItem icon="search-outline" label="Rechercher dans la discussion" onPress={() => {}} />
-                            <OptionItem icon="time-outline" label="Messages temporaires" onPress={() => {}} />
-                            <OptionItem icon="lock-closed-outline" label="Chiffrer la discussion" onPress={() => {}} />
-                            <OptionItem icon="share-social-outline" label="Partager le contact" onPress={() => {}} />
+                            <OptionItem icon="star-outline" label="Ajouter aux favoris" onPress={() => { }} />
+                            <OptionItem icon="search-outline" label="Rechercher dans la discussion" onPress={() => { }} />
+                            <OptionItem icon="time-outline" label="Messages temporaires" onPress={() => { }} />
+                            <OptionItem icon="lock-closed-outline" label="Chiffrer la discussion" onPress={() => { }} />
+                            <OptionItem icon="share-social-outline" label="Partager le contact" onPress={() => { }} />
                         </View>
                     </ScrollView>
                 </View>

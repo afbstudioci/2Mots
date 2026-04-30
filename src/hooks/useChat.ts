@@ -1,4 +1,3 @@
-//src/hooks/useChat.ts
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { LayoutAnimation } from 'react-native';
 import api from '../services/api';
@@ -6,7 +5,6 @@ import { useSocket } from './useSocket';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 
-// Cache global pour une ouverture instantanée
 const messageCache: Record<string, any[]> = {};
 
 export const prefetchChat = async (friendId: string) => {
@@ -72,11 +70,9 @@ export const useChat = (friendId: string) => {
             }
         });
 
-        // NOUVEAU: Écoute de la confirmation d'envoi pour lier le vrai ID MongoDB
         const unsubSent = subscribe('message_sent', (savedMsg) => {
             setMessages(prev => {
                 const newMessages = prev.map(m =>
-                    // Remplace le message local (tempId 13 caractères) par le message sauvegardé (MongoID 24 caractères)
                     (m?._id && m._id.toString().length < 24 && m.text === savedMsg.text) ? savedMsg : m
                 );
                 messageCache[friendId] = newMessages;
@@ -131,7 +127,7 @@ export const useChat = (friendId: string) => {
             unsubDelete();
             unsubReaction();
         };
-    }, [friendId]); // DÉPENDANCE STRICTE : Ce hook ne se déclenchera plus jamais par accident.
+    }, [friendId]);
 
     const send = (text: string, type = 'text', mediaData = {}) => {
         const tempId = Date.now().toString();

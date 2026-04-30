@@ -1,4 +1,3 @@
-//src/screens/ChatScreen.tsx
 import React, { useState, useEffect } from 'react';
 import {
     StyleSheet, KeyboardAvoidingView, Platform,
@@ -22,10 +21,10 @@ import { useChatSounds } from '../hooks/useChatSounds';
 import api from '../services/api';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
-// Utilisation stricte de codes Unicode pour éviter les emojis visuels dans le code source
 const REACTIONS_UNICODE = [
     '\u2764\uFE0F', '\uD83D\uDE02', '\uD83D\uDE2E',
     '\uD83D\uDE22', '\uD83D\uDD25', '\uD83D\uDC4D'
@@ -46,8 +45,30 @@ export default function ChatScreen({ route, navigation }: any) {
     const [isMuted, setIsMuted] = useState(false);
     const [activeTheme, setActiveTheme] = useState('default');
 
-    // Configuration de l'alerte personnalisée
     const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '', onConfirm: () => { } });
+
+    useEffect(() => {
+        const loadChatTheme = async () => {
+            try {
+                const savedTheme = await AsyncStorage.getItem(`@chat_theme_${friendId}`);
+                if (savedTheme) {
+                    setActiveTheme(savedTheme);
+                }
+            } catch (error) {
+                console.error('[THEME] Erreur de chargement du theme:', error);
+            }
+        };
+        loadChatTheme();
+    }, [friendId]);
+
+    const handleThemeChange = async (themeId: string) => {
+        setActiveTheme(themeId);
+        try {
+            await AsyncStorage.setItem(`@chat_theme_${friendId}`, themeId);
+        } catch (error) {
+            console.error('[THEME] Erreur de sauvegarde du theme:', error);
+        }
+    };
 
     useEffect(() => {
         if (messages.length > 0) {
@@ -114,7 +135,6 @@ export default function ChatScreen({ route, navigation }: any) {
     const handleEditStart = () => {
         setEditValue(selectedMessage.text);
         setIsEditing(true);
-        // On garde selectedMessage pour handleEditSave
     };
 
     const handleEditSave = () => {
@@ -163,8 +183,8 @@ export default function ChatScreen({ route, navigation }: any) {
 
             <KeyboardAvoidingView
                 style={styles.container}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 120 : 50}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
             >
                 <MessageList
                     messages={messages}
@@ -187,7 +207,6 @@ export default function ChatScreen({ route, navigation }: any) {
                     />
                 </View>
 
-                {/* MODAL ACTIONS LONG-PRESS */}
                 <Modal visible={!!selectedMessage} transparent animationType="fade">
                     <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setSelectedMessage(null)}>
                         <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(0,0,0,0.5)' }]} />
@@ -224,11 +243,10 @@ export default function ChatScreen({ route, navigation }: any) {
                     </TouchableOpacity>
                 </Modal>
 
-                {/* MODAL EDITION */}
                 <Modal visible={isEditing} transparent animationType="fade">
                     <KeyboardAvoidingView
-                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                        keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 20}
+                        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                        keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
                         style={{ flex: 1 }}
                     >
                         <View style={[styles.editOverlay, { backgroundColor: 'rgba(0,0,0,0.75)' }]}>
@@ -262,7 +280,7 @@ export default function ChatScreen({ route, navigation }: any) {
                     onMute={setIsMuted}
                     onBlock={() => { }}
                     onClearHistory={() => { }}
-                    onThemeChange={setActiveTheme}
+                    onThemeChange={handleThemeChange}
                 />
             </KeyboardAvoidingView>
 

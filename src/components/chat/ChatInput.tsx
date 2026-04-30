@@ -98,8 +98,8 @@ export default function ChatInput({
 
     return (
         <Animated.View style={[
-            styles.container, 
-            { 
+            styles.container,
+            {
                 backgroundColor: themeColors.surface,
                 paddingBottom: paddingBottomAnim
             }
