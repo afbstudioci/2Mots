@@ -44,7 +44,7 @@ export default function Skeleton({ width, height, borderRadius = 8, style }: Ske
                     borderRadius,
                     backgroundColor,
                     opacity,
-                },
+                } as any,
                 style,
             ]}
         />

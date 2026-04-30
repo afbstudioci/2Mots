@@ -13,6 +13,7 @@ import GameTimer from '../components/game/GameTimer';
 import GamePlayArea from '../components/game/GamePlayArea';
 import GameInputArea, { GameInputAreaRef } from '../components/game/GameInputArea';
 import SuccessRipple from '../components/game/SuccessRipple';
+import CustomAlert from '../components/common/CustomAlert';
 
 const { width } = Dimensions.get('window');
 
@@ -24,37 +25,45 @@ export default function GameScreen({ navigation }: any) {
         wordPairs, currentIndex, setCurrentIndex, timeLeft, answer, setAnswer,
         isLoading, errorMessage, isChecking, setIsChecking, userLevel, 
         currentXp, xpNeeded, timeWon, setTimeWon, successTrigger, lastAccuracy, 
-        submitAnswer, playHint
+        submitAnswer, playHint, showLevelUpModal, setShowLevelUpModal
     } = useGameLogic(navigation);
 
     const slideWordsAnim = useRef(new Animated.Value(0)).current;
     const inputAreaRef = useRef<GameInputAreaRef>(null);
 
-    const handleAction = async () => {
-        // submitAnswer gère maintenant les vibrations via useFeedback
-        const isCorrect = await submitAnswer(inputAreaRef);
-        
-        if (isCorrect) {
-            // Animation de transition : on chasse le mot actuel vers la gauche
-            Animated.timing(slideWordsAnim, { 
-                toValue: -width, 
-                duration: 200, 
+    const startNextWordAnimation = () => {
+        // Animation de transition : on chasse le mot actuel vers la gauche
+        Animated.timing(slideWordsAnim, { 
+            toValue: -width, 
+            duration: 200, 
+            useNativeDriver: true 
+        }).start(() => {
+            setCurrentIndex((prev: number) => prev + 1);
+            setAnswer('');
+            
+            // On place le nouveau mot à droite (hors écran) et on le fait entrer
+            slideWordsAnim.setValue(width);
+            Animated.spring(slideWordsAnim, { 
+                toValue: 0, 
+                friction: 7, 
+                tension: 50, 
                 useNativeDriver: true 
             }).start(() => {
-                setCurrentIndex((prev: number) => prev + 1);
-                setAnswer('');
-                
-                // On place le nouveau mot à droite (hors écran) et on le fait entrer
-                slideWordsAnim.setValue(width);
-                Animated.spring(slideWordsAnim, { 
-                    toValue: 0, 
-                    friction: 7, 
-                    tension: 50, 
-                    useNativeDriver: true 
-                }).start(() => {
-                    setIsChecking(false);
-                });
+                setIsChecking(false);
             });
+        });
+    };
+
+    const handleAction = async () => {
+        const result = await submitAnswer(inputAreaRef);
+        
+        if (result.isCorrect) {
+            if (result.isLevelUp) {
+                // On attend la fermeture de la modale (via onClose) pour lancer l'anim
+                // Le boolean showLevelUpModal est déjà mis à true par useGameLogic
+            } else {
+                startNextWordAnimation();
+            }
         }
     };
 
@@ -191,6 +200,18 @@ export default function GameScreen({ navigation }: any) {
                     }}
                 />
             </KeyboardAvoidingView>
+
+            <CustomAlert 
+                visible={showLevelUpModal}
+                title="FÉLICITATIONS !"
+                message={`Vous venez de passer au niveau ${userLevel} ! Continuez ainsi pour débloquer de nouveaux défis.`}
+                onClose={() => {
+                    setShowLevelUpModal(false);
+                    startNextWordAnimation();
+                }}
+                type="success"
+                buttonText="C'est parti !"
+            />
         </ScreenWrapper>
     );
 }

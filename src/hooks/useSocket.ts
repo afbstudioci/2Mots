@@ -16,7 +16,7 @@ export const useSocket = () => {
         socketRef.current = io(SOCKET_URL);
 
         // Rejoindre la room privée
-        socketRef.current.emit('join', user.id);
+        socketRef.current.emit('join', user._id || user.id);
 
         socketRef.current.on('connect', () => {
             console.log('[SOCKET] Connecté au serveur');
@@ -32,10 +32,11 @@ export const useSocket = () => {
 
     const emitEvent = (event: string, data: any) => {
         if (socketRef.current && user) {
+            const userId = user._id || user.id;
             socketRef.current.emit(event, {
                 ...data,
-                userId: user.id,
-                senderId: user.id,
+                userId: userId,
+                senderId: userId,
                 senderName: user.login
             });
         }

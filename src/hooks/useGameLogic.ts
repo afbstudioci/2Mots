@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { AppState, Dimensions } from 'react-native';
 import api from '../services/api';
+import { useIsFocused } from '@react-navigation/native';
 import { useFeedback } from './useFeedback';
 import { useAudio } from './useAudio';
 import { useAuth } from '../context/AuthContext';
@@ -10,8 +11,9 @@ const { width } = Dimensions.get('window');
 
 export const useGameLogic = (navigation: any) => {
     const { user } = useAuth();
+    const isFocused = useIsFocused();
     const { triggerSuccessVibration, triggerErrorVibration, triggerWarningVibration, triggerVibration } = useFeedback();
-    const { playSuccess, playLevelUp, playGameOver, stopGameOver, playBgm, stopBgm, playHint, playError } = useAudio();
+    const { playSuccess, playLevelUp, playGameOver, stopGameOver, playBgm, stopBgm, playHint, playError, playDanger } = useAudio();
 
     const [wordPairs, setWordPairs] = useState<any[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -21,6 +23,7 @@ export const useGameLogic = (navigation: any) => {
     const [errorMessage, setErrorMessage] = useState('');
     const [isChecking, setIsChecking] = useState(false);
     const [isGameOver, setIsGameOver] = useState(false);
+    const [showLevelUpModal, setShowLevelUpModal] = useState(false);
 
     // Stats de session (Initialisées avec les données locales de l'utilisateur)
     const [userLevel, setUserLevel] = useState(user?.level || 1);
@@ -75,7 +78,8 @@ export const useGameLogic = (navigation: any) => {
         
         // On vérifie s'il y a eu au moins une bonne réponse dans la session
         const hasScore = sessionAnswersRef.current.some(a => a.isCorrect);
-        playGameOver(hasScore);
+        // On ne joue pas le son ici pour éviter les coupures lors de la transition
+        // playGameOver(hasScore); 
         
         const currentPair = wordPairs[currentIndex];
         if (currentPair) {
@@ -99,18 +103,88 @@ export const useGameLogic = (navigation: any) => {
                 navigation.replace('GameOver', { 
                     score: result.totalScore, 
                     details: formattedDetails,
-                    corrections: result.corrections || []
+                    corrections: result.corrections || [],
+                    hasScore: hasScore
                 });
             })
             .catch(() => navigation.replace('Home'));
     }, [navigation, wordPairs, currentIndex, answer]);
 
+    // Gestion du focus pour la musique et synchronisation du temps
+    useEffect(() => {
+        const unsubscribeFocus = navigation.addListener('focus', () => {
+            if (!hasTriggeredGameOver.current && !isLoading) {
+                playBgm();
+                
+                // Si on revient d'un écran (ex: Shop) et que le temps s'est écoulé
+                if (backgroundTimeRef.current) {
+                    const elapsed = Math.floor((Date.now() - backgroundTimeRef.current) / 1000);
+                    setTimeLeft(prev => {
+                        const newTime = Math.max(0, prev - elapsed);
+                        if (newTime <= 0 && !hasTriggeredGameOver.current) {
+                            // On laisse l'UI se mettre à jour puis on trigger
+                            setTimeout(() => triggerGameOver(), 100);
+                        }
+                        return newTime;
+                    });
+                    backgroundTimeRef.current = null;
+                }
+            }
+        });
+
+        const unsubscribeBlur = navigation.addListener('blur', () => {
+            if (!hasTriggeredGameOver.current) {
+                stopBgm();
+                // On marque le temps de départ pour la synchro au retour
+                backgroundTimeRef.current = Date.now();
+            }
+        });
+
+        return () => {
+            unsubscribeFocus();
+            unsubscribeBlur();
+        };
+    }, [navigation, isLoading, triggerGameOver]);
+
+    // Gestion de l'AppState (Background/Foreground)
+    useEffect(() => {
+        const subscription = AppState.addEventListener('change', nextAppState => {
+            if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+                if (backgroundTimeRef.current) {
+                    const elapsed = Math.floor((Date.now() - backgroundTimeRef.current) / 1000);
+                    setTimeLeft(prev => {
+                        const newTime = Math.max(0, prev - elapsed);
+                        if (newTime <= 0 && !hasTriggeredGameOver.current) {
+                            setTimeout(() => triggerGameOver(), 100);
+                        }
+                        return newTime;
+                    });
+                    backgroundTimeRef.current = null;
+                }
+            }
+            if (nextAppState.match(/inactive|background/)) {
+                backgroundTimeRef.current = Date.now();
+            }
+            appState.current = nextAppState;
+        });
+
+        return () => subscription.remove();
+    }, [triggerGameOver]);
+
+
     // Timer et Anti-triche
     useEffect(() => {
+        // Le temps ne s'arrête jamais, même si !isFocused
         if (isLoading || hasTriggeredGameOver.current || timeLeft <= 0) {
             if (timeLeft <= 0 && !hasTriggeredGameOver.current && !isLoading) triggerGameOver();
             return;
         }
+
+        // Alerte sonore pour le Panic Mode (5 dernières secondes)
+        if (timeLeft <= 5 && timeLeft > 0) {
+            playDanger();
+        }
+
         timerRef.current = setInterval(() => {
             setTimeLeft(prev => {
                 if (prev <= 1) {
@@ -122,14 +196,15 @@ export const useGameLogic = (navigation: any) => {
             });
         }, 1000);
         return () => { if (timerRef.current) clearInterval(timerRef.current); };
-    }, [isLoading, currentIndex, triggerGameOver, timeLeft]);
+    }, [isLoading, currentIndex, triggerGameOver, timeLeft, isFocused]);
 
     // Soumission de la réponse
-    const submitAnswer = async (inputAreaRef: any) => {
-        if (!answer.trim() || isChecking || hasTriggeredGameOver.current) return;
+    const submitAnswer = async (inputAreaRef: any): Promise<{ isCorrect: boolean, isLevelUp: boolean }> => {
+        if (!answer.trim() || isChecking || hasTriggeredGameOver.current) return { isCorrect: false, isLevelUp: false };
         setIsChecking(true);
         triggerVibration(); 
-
+        
+        let isLevelUp = false;
         const currentPair = wordPairs[currentIndex];
         try {
             const response = await api.post('/game/check', {
@@ -144,9 +219,10 @@ export const useGameLogic = (navigation: any) => {
                 setSuccessTrigger(prev => prev + 1);
                 triggerSuccessVibration();
                 
-                // Si on passe au niveau supérieur, on joue le son LevelUp, sinon le son Succès normal
+                // Si on passe au niveau supérieur, on joue le son LevelUp et on affiche la modale, sinon le son Succès normal
                 if (result.newLevel > userLevel) {
                     playLevelUp();
+                    setShowLevelUpModal(true);
                 } else {
                     playSuccess();
                 }
@@ -160,17 +236,17 @@ export const useGameLogic = (navigation: any) => {
                 sessionAnswersRef.current.push({
                     wordPairId: currentPair._id, answer: answer.trim(), isCorrect: true, accuracy: result.accuracy
                 });
-                return true; // Indique au screen de lancer l'animation de slide
+                return { isCorrect: true, isLevelUp: result.newLevel > userLevel }; 
             } else {
                 triggerErrorVibration();
                 playError(); // Son d'erreur
                 inputAreaRef.current?.triggerShake();
                 setIsChecking(false);
-                return false;
+                return { isCorrect: false, isLevelUp: false };
             }
         } catch (error) { 
             setIsChecking(false); 
-            return false;
+            return { isCorrect: false, isLevelUp: false };
         }
     };
 
@@ -178,7 +254,6 @@ export const useGameLogic = (navigation: any) => {
     useEffect(() => {
         return () => {
             stopBgm();
-            stopGameOver();
             if (timerRef.current) clearInterval(timerRef.current);
         };
     }, []);
@@ -187,6 +262,7 @@ export const useGameLogic = (navigation: any) => {
         wordPairs, currentIndex, setCurrentIndex, timeLeft, setTimeLeft,
         answer, setAnswer, isLoading, errorMessage, isChecking, setIsChecking,
         userLevel, currentXp, xpNeeded, timeWon, setTimeWon, successTrigger, lastAccuracy,
-        submitAnswer, hasTriggeredGameOver, playHint, stopGameOver
+        submitAnswer, hasTriggeredGameOver, playHint, stopGameOver,
+        showLevelUpModal, setShowLevelUpModal
     };
 };

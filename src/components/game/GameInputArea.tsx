@@ -82,7 +82,7 @@ export default function GameInputArea({
                 <TouchableOpacity 
                     onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                        playHint(); // Jouer le son d'indice
+                        playHint(); 
                         navigation.navigate('Shop');
                     }}
                     style={[styles.hintIconBtn, { backgroundColor: colors.mint + '15' }]}

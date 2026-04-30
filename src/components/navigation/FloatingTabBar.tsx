@@ -1,14 +1,28 @@
-//src/components/navigation/FloatingTabBar.tsx
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Animated, DeviceEventEmitter } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated, DeviceEventEmitter, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { colors, spacing, shadows } from '../../theme/theme';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useData } from '../../context/DataContext';
 
+let BlurView: any;
+try {
+    BlurView = require('expo-blur').BlurView;
+} catch (e) {
+    BlurView = null;
+}
+
+const absoluteFill = {
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+};
+
 export default function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
-    const { themeColors } = useTheme();
+    const { themeColors, isDark } = useTheme();
     const { unreadChatCount } = useData();
 
     const tabs = [
@@ -18,9 +32,33 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
         { id: 'Messages', label: 'Messages', icon: 'chatbubbles' },
     ];
 
+    // Fallback pour BlurView si le module n'est pas encore prêt
+    const Blur = BlurView || View;
+
     return (
         <View style={styles.container}>
-            <View style={[styles.tabBar, { backgroundColor: themeColors.card }]}>
+            <View style={[
+                styles.tabBar, 
+                { 
+                    backgroundColor: 'transparent', 
+                    overflow: 'hidden',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.5)',
+                }
+            ]}>
+                <Blur 
+                    intensity={100} 
+                    tint={isDark ? 'dark' : 'light'} 
+                    style={absoluteFill} 
+                />
+                
+                <View style={[
+                    absoluteFill, 
+                    { 
+                        backgroundColor: themeColors.card, 
+                        opacity: isDark ? 0.4 : 0.6,
+                    }
+                ]} />
+                
                 {tabs.map((tab, index) => {
                     const isActive = state.index === index;
 
@@ -86,7 +124,7 @@ const TabItem = ({ item, isActive, onPress, themeColors, unreadChatCount }: any)
                 <Animated.View style={[
                     styles.activeBubble,
                     {
-                        backgroundColor: colors.coral + '15',
+                        backgroundColor: colors.coral + '20',
                         opacity: activeBubbleAnim,
                         transform: [{
                             scale: activeBubbleAnim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] })
@@ -134,7 +172,6 @@ const styles = StyleSheet.create({
         height: 75,
         ...shadows.medium(true),
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)'
     },
     tabItem: {
         alignItems: 'center',

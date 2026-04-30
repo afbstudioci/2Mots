@@ -40,6 +40,7 @@ export type RootStackParamList = {
     score: number; 
     details: { word: string; accuracy: number; label: string }[];
     corrections?: { word1: string; word2: string; expectedAnswer: string; userAnswer: string }[];
+    hasScore: boolean;
   };
   Leaderboard: undefined;
   Profile: undefined;
@@ -90,13 +91,14 @@ const AppNavigator = () => {
       ) : user ? (
         <Stack.Group>
           <Stack.Screen name="Home" component={MainTabNavigator} />
-          <Stack.Screen name="Game" component={GameScreen} />
+          <Stack.Screen name="Game" component={GameScreen} options={{ freezeOnBlur: false }} />
           <Stack.Screen name="GameOver" component={GameOverScreen} />
           <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="Friends" component={FriendsScreen} />
           <Stack.Screen name="Chat" component={ChatScreen} />
           <Stack.Screen name="Settings" component={SettingsScreen} />
+          <Stack.Screen name="Shop" component={ShopScreen} />
           <Stack.Screen name="Contact" component={ContactScreen} />
           <Stack.Screen name="Rules" component={RulesScreen} />
           <Stack.Screen name="Privacy" component={PrivacyScreen} />

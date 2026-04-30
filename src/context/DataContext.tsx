@@ -1,6 +1,7 @@
-//src/context/DataContext.tsx
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import api from '../services/api';
+import { useSocket } from '../hooks/useSocket';
+import { useAuth } from './AuthContext';
 
 interface DataContextType {
   shopItems: any[];
@@ -21,6 +22,32 @@ interface DataContextType {
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
+
+// Composant interne pour gérer les sockets sans créer de cycle de dépendance
+const DataSocketHandler = ({ updateUnreadCount }: { updateUnreadCount: () => void }) => {
+  const { user } = useAuth();
+  const { subscribe } = useSocket();
+
+  useEffect(() => {
+    if (!user) return;
+
+    // Mise à jour temps réel du compteur
+    const unsubMsg = subscribe('receive_message', () => {
+      updateUnreadCount();
+    });
+
+    const unsubRead = subscribe('messages_marked_read', () => {
+      updateUnreadCount();
+    });
+
+    return () => {
+      unsubMsg();
+      unsubRead();
+    };
+  }, [user, subscribe, updateUnreadCount]);
+
+  return null;
+};
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [shopItems, setShopItems] = useState<any[]>([]);
@@ -90,7 +117,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshAll = useCallback(async () => {
     setIsLoading(true);
     try {
-      // On lance tout en parallèle pour une vitesse maximale
       await Promise.all([
         updateShop(),
         updateMissions(),
@@ -125,6 +151,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateUnreadCount
       }}
     >
+      <DataSocketHandler updateUnreadCount={updateUnreadCount} />
       {children}
     </DataContext.Provider>
   );

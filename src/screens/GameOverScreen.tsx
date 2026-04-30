@@ -12,9 +12,9 @@ import { useAudio } from '../hooks/useAudio';
 type GameOverScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'GameOver'>;
 
 export default function GameOverScreen({ route, navigation }: { route: any, navigation: GameOverScreenNavigationProp }) {
-    const { score, details, corrections } = route.params;
+    const { score, details, corrections, hasScore } = route.params;
     const { themeColors } = useTheme();
-    const { stopGameOver } = useAudio();
+    const { playGameOver, stopGameOver } = useAudio();
 
     // Animation du score
     const [displayScore, setDisplayScore] = useState(0);
@@ -25,7 +25,20 @@ export default function GameOverScreen({ route, navigation }: { route: any, navi
 
     useEffect(() => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        
+        console.log("[GAME OVER] hasScore:", hasScore);
+        
+        // Délai pour laisser la transition se terminer et le système audio se libérer
+        const timer = setTimeout(() => {
+            playGameOver(hasScore);
+        }, 500);
 
+        return () => {
+            clearTimeout(timer);
+        };
+    }, [hasScore]);
+
+    useEffect(() => {
         // Animation de la liste
         Animated.timing(listAnim, {
             toValue: 1,
@@ -34,23 +47,19 @@ export default function GameOverScreen({ route, navigation }: { route: any, navi
         }).start();
 
         // Compteur de Score animé
-        scoreAnim.addListener(({ value }) => {
+        const scoreListener = scoreAnim.addListener(({ value }) => {
             setDisplayScore(Math.floor(value));
         });
+
         Animated.timing(scoreAnim, {
             toValue: score,
-            duration: 1500, // Durée du comptage
+            duration: 1500,
             useNativeDriver: false,
-        }).start(() => {
-            // Une fois que le score est affiché, on peut arrêter le son gameover
-            setTimeout(() => {
-                stopGameOver();
-            }, 500); // Petit délai supplémentaire pour la fluidité
-        });
+        }).start();
 
         return () => {
-            scoreAnim.removeAllListeners();
-            stopGameOver(); // Sécurité au démontage
+            scoreAnim.removeListener(scoreListener);
+            stopGameOver();
         };
     }, [score]);
 

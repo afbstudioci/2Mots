@@ -45,28 +45,15 @@ const HomeScreen = ({ navigation }: { navigation: HomeScreenNavigationProp }) =>
             Animated.spring(slideAnim, { toValue: 0, tension: 40, friction: 7, useNativeDriver: true })
         ]).start();
 
-        // Pulsation du bouton JOUER (Plus marquée)
+        // Pulsation du bouton JOUER
         Animated.loop(
             Animated.sequence([
-                Animated.timing(breathAnim, { toValue: 1.08, duration: 1000, useNativeDriver: true }),
-                Animated.timing(breathAnim, { toValue: 1, duration: 1000, useNativeDriver: true })
+                Animated.timing(breathAnim, { toValue: 1.08, duration: 1200, useNativeDriver: true }),
+                Animated.timing(breathAnim, { toValue: 1, duration: 1200, useNativeDriver: true })
             ])
         ).start();
 
-        // Animation des Halos (Effet de propagation/Ripple)
-        const createHaloAnim = (anim: Animated.Value, delay: number) => {
-            return Animated.loop(
-                Animated.sequence([
-                    Animated.delay(delay),
-                    Animated.parallel([
-                        Animated.timing(anim, { toValue: 1, duration: 2500, useNativeDriver: true }),
-                        Animated.timing(anim, { toValue: 1.5, duration: 2500, useNativeDriver: true }) // Not useful but parallel needs same type often or sequence
-                    ])
-                ])
-            );
-        };
-        
-        // On va plutôt faire un timing simple pour l'opacité et l'échelle
+        // Animation des Halos
         const startHalo = (anim: Animated.Value, delay: number) => {
             anim.setValue(0);
             Animated.loop(
@@ -80,7 +67,9 @@ const HomeScreen = ({ navigation }: { navigation: HomeScreenNavigationProp }) =>
         startHalo(halo1Anim, 0);
         startHalo(halo2Anim, 1000);
         startHalo(halo3Anim, 2000);
+    }, []); // On mount only for animations
 
+    useEffect(() => {
         // Check for referral bonus notification
         if (user?.referredBy && user?.level === 1 && !user?.referralRewardClaimed) {
             const timer = setTimeout(() => {
@@ -88,7 +77,7 @@ const HomeScreen = ({ navigation }: { navigation: HomeScreenNavigationProp }) =>
             }, 1500);
             return () => clearTimeout(timer);
         }
-    }, [breathAnim, fadeAnim, slideAnim, halo1Anim, halo2Anim, halo3Anim, user]);
+    }, [user]);
 
     const handlePressIn = () => {
         Animated.spring(scalePressAnim, { toValue: 0.94, useNativeDriver: true }).start();

@@ -141,11 +141,11 @@ export default function LeaderboardItem({ rank, user, index }: LeaderboardItemPr
                             styles.scoreText, 
                             { color: isPodium ? cardConfig.textColor : colors.coral }
                         ]}>
-                            {user.bestScore.toLocaleString()}
+                            {user.level || 1}
                         </Text>
                         {isPodium && (
                             <Text style={[styles.pointsLabel, { color: cardConfig.textColor, opacity: 0.5 }]}>
-                                POINTS
+                                NIVEAU
                             </Text>
                         )}
                     </View>
@@ -155,8 +155,8 @@ export default function LeaderboardItem({ rank, user, index }: LeaderboardItemPr
                 {expanded && (
                     <View style={[styles.detailsContainer, { borderTopColor: isPodium ? 'rgba(0,0,0,0.1)' : themeColors.overlayLight }]}>
                         <View style={styles.detailItem}>
-                            <Text style={[styles.detailValue, { color: cardConfig.textColor }]}>{user.level || 1}</Text>
-                            <Text style={[styles.detailLabel, { color: cardConfig.textColor, opacity: 0.6 }]}>Niveau</Text>
+                            <Text style={[styles.detailValue, { color: cardConfig.textColor }]}>{user.bestScore.toLocaleString()}</Text>
+                            <Text style={[styles.detailLabel, { color: cardConfig.textColor, opacity: 0.6 }]}>Record</Text>
                         </View>
                         <View style={[styles.divider, { backgroundColor: isPodium ? 'rgba(0,0,0,0.1)' : themeColors.overlayLight }]} />
                         <View style={styles.detailItem}>

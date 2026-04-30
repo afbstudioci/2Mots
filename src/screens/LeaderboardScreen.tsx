@@ -73,7 +73,10 @@ export default function LeaderboardScreen() {
                 </View>
 
                 <FlatList
-                    data={leaderboard}
+                    data={[...leaderboard].sort((a, b) => {
+                        if ((b.level || 1) !== (a.level || 1)) return (b.level || 1) - (a.level || 1);
+                        return (b.xp || 0) - (a.xp || 0);
+                    })}
                     keyExtractor={(item) => item._id}
                     refreshing={isLoading}
                     onRefresh={onRefresh}

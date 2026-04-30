@@ -15,6 +15,8 @@ interface MessageListProps {
     friendName: string;
 }
 
+import Skeleton from '../common/Skeleton';
+
 export default function MessageList({
     messages,
     isLoading,
@@ -28,8 +30,10 @@ export default function MessageList({
 
     if (isLoading && messages.length === 0) {
         return (
-            <View style={styles.center}>
-                <ActivityIndicator size="large" color={colors.coral} />
+            <View style={styles.listContent}>
+                {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                    <MessageSkeleton key={i} isMe={i % 2 === 0} />
+                ))}
             </View>
         );
     }
@@ -67,6 +71,23 @@ export default function MessageList({
     );
 }
 
+const MessageSkeleton = ({ isMe }: { isMe: boolean }) => {
+    const { themeColors } = useTheme();
+    return (
+        <View style={[styles.skeletonContainer, isMe ? styles.myContainer : styles.friendContainer]}>
+            <Skeleton 
+                width={Math.random() * 100 + 100} 
+                height={45} 
+                borderRadius={20} 
+                style={{
+                    borderBottomRightRadius: isMe ? 4 : 20,
+                    borderBottomLeftRadius: isMe ? 20 : 4,
+                }}
+            />
+        </View>
+    );
+};
+
 const styles = StyleSheet.create({
     center: {
         flex: 1,
@@ -86,4 +107,11 @@ const styles = StyleSheet.create({
         fontFamily: 'Poppins_500Medium',
         fontStyle: 'italic',
     },
+    skeletonContainer: {
+        marginVertical: 4,
+        paddingHorizontal: spacing.sm,
+        flexDirection: 'row',
+    },
+    myContainer: { justifyContent: 'flex-end' },
+    friendContainer: { justifyContent: 'flex-start' },
 });

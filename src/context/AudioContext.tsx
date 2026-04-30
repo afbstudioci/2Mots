@@ -1,6 +1,6 @@
 //src/context/AudioContext.tsx
 import React, { createContext, useContext, useEffect, useRef } from 'react';
-import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
+import { Audio } from 'expo-av';
 import { useSettings } from './SettingsContext';
 
 interface AudioContextData {
@@ -18,121 +18,99 @@ interface AudioContextData {
 const AudioContext = createContext<AudioContextData>({} as AudioContextData);
 
 export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { soundEnabled = true } = useSettings() as any;
+    const settings = useSettings();
+    const soundEnabled = settings?.soundEnabled ?? true;
+    
+    const bgmRef = useRef<Audio.Sound | null>(null);
+    const soundsRef = useRef<{ [key: string]: Audio.Sound }>({});
 
-    // Configuration globale
+    // Setup global
     useEffect(() => {
-        setAudioModeAsync({
-            playsInSilentMode: true,
-            shouldPlayInBackground: false,
-            allowsRecording: false,
-            shouldRouteThroughEarpiece: false,
-        }).catch(e => console.log("Audio mode error", e));
+        Audio.setAudioModeAsync({
+            playsInSilentModeIOS: true,
+            allowsRecordingIOS: false,
+            staysActiveInBackground: false,
+            playThroughEarpieceAndroid: false,
+        }).catch(() => {});
+
+        // Chargement initial
+        const load = async () => {
+            try {
+                // BGM
+                const { sound: bgm } = await Audio.Sound.createAsync(
+                    require('../../assets/sounds/bgm.mp3'),
+                    { shouldPlay: false, isLooping: true, volume: 0.4 }
+                );
+                bgmRef.current = bgm;
+
+                // Effets
+                const effectAssets: any = {
+                    success: require('../../assets/sounds/success.mp3'),
+                    danger: require('../../assets/sounds/danger.mp3'),
+                    levelup: require('../../assets/sounds/levelup.mp3'),
+                    gameover_zero: require('../../assets/sounds/gameover_zero.mp3'),
+                    gameover_score: require('../../assets/sounds/gameover_score.mp3'),
+                    hint: require('../../assets/sounds/hint.mp3'),
+                };
+
+                for (const key in effectAssets) {
+                    const { sound } = await Audio.Sound.createAsync(effectAssets[key]);
+                    soundsRef.current[key] = sound;
+                }
+            } catch (e) {
+                console.log("[AUDIO] Load error:", e);
+            }
+        };
+        load();
+
+        return () => {
+            if (bgmRef.current) bgmRef.current.unloadAsync().catch(() => {});
+            Object.values(soundsRef.current).forEach(s => s.unloadAsync().catch(() => {}));
+        };
     }, []);
 
-    // Chargement des lecteurs UNE SEULE FOIS au niveau racine
-    const successPlayer = useAudioPlayer(require('../../assets/sounds/success.mp3'));
-    const dangerPlayer = useAudioPlayer(require('../../assets/sounds/danger.mp3'));
-    const levelupPlayer = useAudioPlayer(require('../../assets/sounds/levelup.mp3'));
-    
-    // Nouveaux sons conditionnels pour le GameOver
-    const gameoverZeroPlayer = useAudioPlayer(require('../../assets/sounds/gameover_zero.mp3'));
-    const gameoverScorePlayer = useAudioPlayer(require('../../assets/sounds/gameover_score.mp3'));
-    
-    // Autres sons avec placeholders si nécessaire
-    const hintPlayer = useAudioPlayer(require('../../assets/sounds/hint.mp3')); 
-    const bgmPlayer = useAudioPlayer(require('../../assets/sounds/bgm.mp3')); 
-    const errorPlayer = useAudioPlayer(require('../../assets/sounds/danger.mp3'));
+    const playBgm = async () => {
+        if (!soundEnabled || !bgmRef.current) return;
+        try {
+            await bgmRef.current.playAsync();
+        } catch (e) {}
+    };
 
-    // Config BGM
-    useEffect(() => {
-        bgmPlayer.loop = true;
-    }, [bgmPlayer]);
+    const stopBgm = async () => {
+        if (!bgmRef.current) return;
+        try {
+            await bgmRef.current.stopAsync();
+        } catch (e) {}
+    };
 
-    // Arrêt immédiat si le son est désactivé
-    useEffect(() => {
-        if (!soundEnabled) {
-            bgmPlayer.pause();
-            gameoverZeroPlayer.pause();
-            gameoverScorePlayer.pause();
+    const playEffect = async (name: string, volume = 1.0) => {
+        if (!soundEnabled) return;
+        const sound = soundsRef.current[name];
+        if (sound) {
+            try {
+                await sound.setVolumeAsync(volume);
+                await sound.replayAsync();
+            } catch (e) {}
         }
-    }, [soundEnabled]);
-
-    const playBgm = () => {
-        if (!soundEnabled) return;
-        try {
-            if (!bgmPlayer.playing) bgmPlayer.play();
-        } catch (e) {}
-    };
-
-    const stopBgm = () => {
-        try {
-            bgmPlayer.pause();
-            bgmPlayer.seekTo(0);
-        } catch (e) {}
-    };
-
-    const playSuccess = () => {
-        if (!soundEnabled) return;
-        try {
-            successPlayer.seekTo(0);
-            successPlayer.play();
-        } catch (e) {}
-    };
-
-    const playError = () => {
-        if (!soundEnabled) return;
-        try {
-            errorPlayer.seekTo(0);
-            errorPlayer.play();
-        } catch (e) {}
-    };
-
-    const playDanger = () => {
-        if (!soundEnabled) return;
-        try {
-            dangerPlayer.seekTo(0);
-            dangerPlayer.play();
-        } catch (e) {}
-    };
-
-    const playLevelUp = () => {
-        if (!soundEnabled) return;
-        try {
-            levelupPlayer.seekTo(0);
-            levelupPlayer.play();
-        } catch (e) {}
-    };
-
-    const playGameOver = (hasScore: boolean) => {
-        if (!soundEnabled) return;
-        try {
-            bgmPlayer.pause();
-            const player = hasScore ? gameoverScorePlayer : gameoverZeroPlayer;
-            player.seekTo(0);
-            player.play();
-        } catch (e) {}
-    };
-
-    const stopGameOver = () => {
-        try {
-            gameoverZeroPlayer.pause();
-            gameoverScorePlayer.pause();
-        } catch (e) {}
-    };
-
-    const playHint = () => {
-        if (!soundEnabled) return;
-        try {
-            hintPlayer.seekTo(0);
-            hintPlayer.play();
-        } catch (e) {}
     };
 
     return (
         <AudioContext.Provider value={{
-            playBgm, stopBgm, playSuccess, playError, playDanger, 
-            playLevelUp, playGameOver, stopGameOver, playHint
+            playBgm,
+            stopBgm,
+            playSuccess: () => playEffect('success', 0.9),
+            playError: () => playEffect('danger', 0.7),
+            playDanger: () => playEffect('danger', 0.8),
+            playLevelUp: () => playEffect('levelup', 1.0),
+            playHint: () => playEffect('hint', 1.0),
+            playGameOver: (hasScore) => {
+                stopBgm();
+                playEffect(hasScore ? 'gameover_score' : 'gameover_zero', 1.0);
+            },
+            stopGameOver: () => {
+                soundsRef.current['gameover_zero']?.stopAsync().catch(() => {});
+                soundsRef.current['gameover_score']?.stopAsync().catch(() => {});
+            }
         }}>
             {children}
         </AudioContext.Provider>

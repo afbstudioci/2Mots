@@ -10,6 +10,8 @@ import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { spacing, borderRadius, typography, colors } from '../theme/theme';
 
+import Skeleton from '../components/common/Skeleton';
+
 export default function ShopScreen() {
     const { themeColors } = useTheme();
     const navigation = useNavigation();
@@ -37,7 +39,26 @@ export default function ShopScreen() {
     if (isLoading && shopItems.length === 0) {
         return (
             <ScreenWrapper>
-                <AppLoader error={error} onRetry={onRefresh} />
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                        <Ionicons name="arrow-back" size={24} color={themeColors.text} />
+                    </TouchableOpacity>
+                    <Text style={[styles.headerTitle, { color: themeColors.text }]}>BOUTIQUE</Text>
+                    <Skeleton width={80} height={28} borderRadius={borderRadius.md} />
+                </View>
+                <ScrollView contentContainerStyle={styles.scrollContent}>
+                    <Skeleton width={120} height={18} style={{ marginBottom: spacing.md }} />
+                    <View style={styles.itemsGrid}>
+                        {[1, 2, 3, 4].map(i => (
+                            <View key={i} style={[styles.itemCard, { backgroundColor: themeColors.card, width: '47%' }]}>
+                                <Skeleton width={60} height={60} borderRadius={30} style={{ marginBottom: spacing.md }} />
+                                <Skeleton width="80%" height={16} style={{ marginBottom: 8 }} />
+                                <Skeleton width="60%" height={12} style={{ marginBottom: spacing.lg }} />
+                                <Skeleton width="100%" height={32} borderRadius={borderRadius.xl} />
+                            </View>
+                        ))}
+                    </View>
+                </ScrollView>
             </ScreenWrapper>
         );
     }

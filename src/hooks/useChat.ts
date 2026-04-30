@@ -52,7 +52,7 @@ export const useChat = (friendId: string) => {
         } catch (error) {
             console.error('[CHAT] Erreur de lecture:', error);
         }
-    }, [friendId, socketRead, updateUnreadCount]);
+    }, [friendId]);
 
     useEffect(() => {
         fetchHistory();
@@ -63,12 +63,25 @@ export const useChat = (friendId: string) => {
             if (senderId.toString() === friendId.toString()) {
                 LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                 setMessages(prev => {
+                    if (prev.some(m => m && m._id === msg._id)) return prev;
                     const newMessages = [msg, ...prev];
                     messageCache[friendId] = newMessages;
                     return newMessages;
                 });
                 markRead();
             }
+        });
+
+        // NOUVEAU: Écoute de la confirmation d'envoi pour lier le vrai ID MongoDB
+        const unsubSent = subscribe('message_sent', (savedMsg) => {
+            setMessages(prev => {
+                const newMessages = prev.map(m =>
+                    // Remplace le message local (tempId 13 caractères) par le message sauvegardé (MongoID 24 caractères)
+                    (m?._id && m._id.toString().length < 24 && m.text === savedMsg.text) ? savedMsg : m
+                );
+                messageCache[friendId] = newMessages;
+                return newMessages;
+            });
         });
 
         const unsubTypingStart = subscribe('typing_start', (data) => {
@@ -111,13 +124,14 @@ export const useChat = (friendId: string) => {
 
         return () => {
             unsubMsg();
+            unsubSent();
             unsubTypingStart();
             unsubTypingStop();
             unsubEdit();
             unsubDelete();
             unsubReaction();
         };
-    }, [friendId, fetchHistory, markRead, subscribe]);
+    }, [friendId]); // DÉPENDANCE STRICTE : Ce hook ne se déclenchera plus jamais par accident.
 
     const send = (text: string, type = 'text', mediaData = {}) => {
         const tempId = Date.now().toString();
@@ -134,7 +148,15 @@ export const useChat = (friendId: string) => {
             messageCache[friendId] = newMessages;
             return newMessages;
         });
-        sendMessage({ recipientId: friendId, text, type, ...mediaData });
+
+        sendMessage({
+            recipientId: friendId,
+            text,
+            type,
+            ...mediaData,
+            senderName: user?.login,
+            senderId: user?._id || user?.id
+        });
     };
 
     const handleTyping = () => {
@@ -146,16 +168,16 @@ export const useChat = (friendId: string) => {
     };
 
     const edit = (messageId: string, text: string) => {
-        socketEdit({ messageId, recipientId: friendId, text });
+        socketEdit({ messageId, recipientId: friendId, text, userId: user?._id || user?.id });
         setMessages(prev => prev.map(m => m._id === messageId ? { ...m, text, isEdited: true } : m));
     };
 
     const remove = (messageId: string) => {
-        socketDelete({ messageId, recipientId: friendId });
+        socketDelete({ messageId, recipientId: friendId, userId: user?._id || user?.id });
     };
 
     const react = (messageId: string, emoji: string) => {
-        socketReaction({ messageId, recipientId: friendId, emoji });
+        socketReaction({ messageId, recipientId: friendId, emoji, userId: user?._id || user?.id });
     };
 
     return {

@@ -1,14 +1,14 @@
-//src/components/chat/ChatInput.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import {
     View, TextInput, TouchableOpacity, StyleSheet, Animated,
-    Text, Platform
+    Text, Platform, Keyboard
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { spacing, colors, shadows } from '../../theme/theme';
 import { useTheme } from '../../context/ThemeContext';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ChatInputProps {
     onSend: (text: string) => void;
@@ -30,7 +30,35 @@ export default function ChatInput({
     onTyping
 }: ChatInputProps) {
     const { themeColors } = useTheme();
+    const insets = useSafeAreaInsets();
     const [text, setText] = useState('');
+    const paddingBottomAnim = useRef(new Animated.Value(Math.max(insets.bottom, spacing.md))).current;
+
+    useEffect(() => {
+        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+        const showSub = Keyboard.addListener(showEvent, () => {
+            Animated.timing(paddingBottomAnim, {
+                toValue: spacing.xs,
+                duration: 250,
+                useNativeDriver: false,
+            }).start();
+        });
+
+        const hideSub = Keyboard.addListener(hideEvent, () => {
+            Animated.timing(paddingBottomAnim, {
+                toValue: Math.max(insets.bottom, spacing.md),
+                duration: 250,
+                useNativeDriver: false,
+            }).start();
+        });
+
+        return () => {
+            showSub.remove();
+            hideSub.remove();
+        };
+    }, [insets.bottom]);
 
     const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -69,7 +97,13 @@ export default function ChatInput({
     };
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.surface }]}>
+        <Animated.View style={[
+            styles.container, 
+            { 
+                backgroundColor: themeColors.surface,
+                paddingBottom: paddingBottomAnim
+            }
+        ]}>
             {isRecording ? (
                 <View style={styles.recordingContainer}>
                     <TouchableOpacity onPress={() => onStopRecording(true)} style={styles.recordActionBtn}>
@@ -116,7 +150,7 @@ export default function ChatInput({
                     )}
                 </View>
             )}
-        </View>
+        </Animated.View>
     );
 }
 
@@ -124,7 +158,6 @@ const styles = StyleSheet.create({
     container: {
         paddingHorizontal: spacing.md,
         paddingTop: spacing.sm,
-        paddingBottom: Platform.OS === 'ios' ? 34 : spacing.md,
     },
     inputRow: {
         flexDirection: 'row',

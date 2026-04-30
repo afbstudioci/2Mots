@@ -19,6 +19,8 @@ import { RootStackParamList } from '../../App';
 
 type MissionsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Missions'>;
 
+import Skeleton from '../components/common/Skeleton';
+
 export default function MissionsScreen() {
     const navigation = useNavigation<MissionsScreenNavigationProp>();
     const { themeColors } = useTheme();
@@ -86,16 +88,23 @@ export default function MissionsScreen() {
         }
     };
 
+    const dailyMissions = missions.filter(m => m.type === 'daily');
+    const achievements = missions.filter(m => m.type === 'achievement');
+
     if (isLoading && missions.length === 0) {
         return (
             <ScreenWrapper>
-                <AppLoader error={error} onRetry={onRefresh} />
+                <View style={styles.header}>
+                    <Text style={[styles.headerTitle, { color: themeColors.text }]}>OBJECTIFS</Text>
+                </View>
+                <ScrollView contentContainerStyle={styles.scrollContent}>
+                    <Skeleton width="100%" height={180} borderRadius={borderRadius.lg} style={{ marginBottom: spacing.xl }} />
+                    <Skeleton width={150} height={20} style={{ marginBottom: spacing.md }} />
+                    {[1, 2, 3].map(i => <MissionSkeleton key={i} />)}
+                </ScrollView>
             </ScreenWrapper>
         );
     }
-
-    const dailyMissions = missions.filter(m => m.type === 'daily');
-    const achievements = missions.filter(m => m.type === 'achievement');
 
     return (
         <ScreenWrapper>
@@ -207,6 +216,27 @@ export default function MissionsScreen() {
         </ScreenWrapper>
     );
 }
+
+const MissionSkeleton = () => {
+    const { themeColors } = useTheme();
+    return (
+        <View style={[styles.missionCard, { backgroundColor: themeColors.card, borderColor: themeColors.cardBorder, borderWidth: 1, marginBottom: spacing.md }]}>
+            <View style={styles.missionHeader}>
+                <View style={styles.missionInfo}>
+                    <Skeleton width={120} height={18} borderRadius={4} style={{ marginBottom: 6 }} />
+                    <Skeleton width="100%" height={14} borderRadius={4} />
+                </View>
+                <Skeleton width={50} height={24} borderRadius={12} />
+            </View>
+            <View style={styles.progressSection}>
+                <View style={styles.progressRow}>
+                    <Skeleton width="85%" height={6} borderRadius={3} style={{ marginRight: spacing.md }} />
+                    <Skeleton width={30} height={14} borderRadius={4} />
+                </View>
+            </View>
+        </View>
+    );
+};
 
 const MissionCard = ({ mission, onClaim, isClaiming, themeColors, onPress }: any) => {
     const isReady = mission.completed && !mission.claimed;

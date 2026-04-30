@@ -13,6 +13,8 @@ import api from '../services/api';
 import { useData } from '../context/DataContext';
 import { prefetchChat } from '../hooks/useChat';
 
+import Skeleton from '../components/common/Skeleton';
+
 export default function MessagesScreen() {
     const { themeColors } = useTheme();
     const navigation = useNavigation<any>();
@@ -22,7 +24,8 @@ export default function MessagesScreen() {
 
     const fetchConversations = async () => {
         try {
-            setIsLoading(true);
+            // On ne met isLoading à true que si on n'a pas encore de données
+            if (conversations.length === 0) setIsLoading(true);
             const response = await api.get('/chat/conversations');
             const data = response.data.data || [];
             setConversations(data);
@@ -60,45 +63,69 @@ export default function MessagesScreen() {
                 </TouchableOpacity>
             </View>
 
-            <FlatList
-                data={conversations}
-                keyExtractor={(item) => item.friend._id}
-                contentContainerStyle={styles.listContent}
-                refreshControl={
-                    <RefreshControl refreshing={isLoading} onRefresh={fetchConversations} tintColor={colors.coral} />
-                }
-                renderItem={({ item }) => (
-                    <ConversationCard
-                        item={item}
-                        onPress={() => {
-                            navigation.navigate('Chat', {
-                                friendId: item.friend._id,
-                                friendName: item.friend.login,
-                                friendAvatar: item.friend.avatar
-                            });
-                        }}
-                    />
-                )}
-                ListEmptyComponent={() => !isLoading ? (
-                    <View style={styles.empty}>
-                        <View style={[styles.emptyIconContainer, { backgroundColor: themeColors.card }]}>
-                            <Ionicons name="chatbubbles-outline" size={60} color={colors.coral} />
+            {isLoading && conversations.length === 0 ? (
+                <View style={styles.listContent}>
+                    {[1, 2, 3, 4, 5, 6].map(i => <ConversationSkeleton key={i} />)}
+                </View>
+            ) : (
+                <FlatList
+                    data={conversations}
+                    keyExtractor={(item) => item.friend._id}
+                    contentContainerStyle={styles.listContent}
+                    refreshControl={
+                        <RefreshControl refreshing={isLoading} onRefresh={fetchConversations} tintColor={colors.coral} />
+                    }
+                    renderItem={({ item }) => (
+                        <ConversationCard
+                            item={item}
+                            onPress={() => {
+                                navigation.navigate('Chat', {
+                                    friendId: item.friend._id,
+                                    friendName: item.friend.login,
+                                    friendAvatar: item.friend.avatar
+                                });
+                            }}
+                        />
+                    )}
+                    ListEmptyComponent={() => !isLoading ? (
+                        <View style={styles.empty}>
+                            <View style={[styles.emptyIconContainer, { backgroundColor: themeColors.card }]}>
+                                <Ionicons name="chatbubbles-outline" size={60} color={colors.coral} />
+                            </View>
+                            <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
+                                Aucune discussion active.{"\n"}Lancez-en une avec vos amis !
+                            </Text>
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('Friends')}
+                                style={[styles.startBtn, { backgroundColor: colors.coral }]}
+                            >
+                                <Text style={styles.startBtnText}>Trouver des amis</Text>
+                            </TouchableOpacity>
                         </View>
-                        <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
-                            Aucune discussion active.{"\n"}Lancez-en une avec vos amis !
-                        </Text>
-                        <TouchableOpacity
-                            onPress={() => navigation.navigate('Friends')}
-                            style={[styles.startBtn, { backgroundColor: colors.coral }]}
-                        >
-                            <Text style={styles.startBtnText}>Trouver des amis</Text>
-                        </TouchableOpacity>
-                    </View>
-                ) : null}
-            />
+                    ) : null}
+                />
+            )}
         </ScreenWrapper>
     );
 }
+
+const ConversationSkeleton = () => {
+    const { themeColors } = useTheme();
+    return (
+        <View style={[styles.card, { backgroundColor: themeColors.card, borderColor: themeColors.overlayLight, borderWidth: 1 }]}>
+            <Skeleton width={56} height={56} borderRadius={28} />
+            <View style={styles.content}>
+                <View style={styles.row}>
+                    <Skeleton width={120} height={20} borderRadius={6} />
+                    <Skeleton width={40} height={14} borderRadius={4} />
+                </View>
+                <View style={[styles.row, { marginTop: 8 }]}>
+                    <Skeleton width="80%" height={16} borderRadius={4} />
+                </View>
+            </View>
+        </View>
+    );
+};
 
 const ConversationCard = ({ item, onPress }: any) => {
     const { themeColors, isDark } = useTheme();

@@ -114,24 +114,26 @@ export default function ChatScreen({ route, navigation }: any) {
     const handleEditStart = () => {
         setEditValue(selectedMessage.text);
         setIsEditing(true);
-        setSelectedMessage(null);
+        // On garde selectedMessage pour handleEditSave
     };
 
     const handleEditSave = () => {
-        if (editValue.trim() && editValue !== selectedMessage?.text) {
+        if (selectedMessage && editValue.trim() && editValue !== selectedMessage.text) {
             edit(selectedMessage._id, editValue);
         }
         setIsEditing(false);
         setEditValue('');
+        setSelectedMessage(null);
     };
 
     const confirmDelete = () => {
+        const msgId = selectedMessage._id;
         setAlertConfig({
             visible: true,
             title: "Suppression définitive",
             message: "Voulez-vous vraiment supprimer ce message pour les deux interlocuteurs ?",
             onConfirm: () => {
-                remove(selectedMessage._id);
+                remove(msgId);
                 setAlertConfig(prev => ({ ...prev, visible: false }));
             }
         });
@@ -161,8 +163,8 @@ export default function ChatScreen({ route, navigation }: any) {
 
             <KeyboardAvoidingView
                 style={styles.container}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 120 : 50}
             >
                 <MessageList
                     messages={messages}
@@ -224,26 +226,32 @@ export default function ChatScreen({ route, navigation }: any) {
 
                 {/* MODAL EDITION */}
                 <Modal visible={isEditing} transparent animationType="fade">
-                    <View style={[styles.editOverlay, { backgroundColor: 'rgba(0,0,0,0.75)' }]}>
-                        <View style={[styles.editBox, { backgroundColor: themeColors.surface }]}>
-                            <Text style={[styles.editTitle, { color: themeColors.text }]}>Modification</Text>
-                            <TextInput
-                                style={[styles.editInput, { color: themeColors.text, backgroundColor: themeColors.card }]}
-                                value={editValue}
-                                onChangeText={setEditValue}
-                                multiline
-                                autoFocus
-                            />
-                            <View style={styles.editActions}>
-                                <TouchableOpacity onPress={() => setIsEditing(false)}>
-                                    <Text style={[styles.cancelText, { color: themeColors.textSecondary }]}>Annuler</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity onPress={handleEditSave} style={[styles.saveBtn, { backgroundColor: colors.coral }]}>
-                                    <Text style={styles.saveBtnText}>Sauvegarder</Text>
-                                </TouchableOpacity>
+                    <KeyboardAvoidingView 
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 20}
+                        style={{ flex: 1 }}
+                    >
+                        <View style={[styles.editOverlay, { backgroundColor: 'rgba(0,0,0,0.75)' }]}>
+                            <View style={[styles.editBox, { backgroundColor: themeColors.surface }]}>
+                                <Text style={[styles.editTitle, { color: themeColors.text }]}>Modification</Text>
+                                <TextInput
+                                    style={[styles.editInput, { color: themeColors.text, backgroundColor: themeColors.card }]}
+                                    value={editValue}
+                                    onChangeText={setEditValue}
+                                    multiline
+                                    autoFocus
+                                />
+                                <View style={styles.editActions}>
+                                    <TouchableOpacity onPress={() => setIsEditing(false)}>
+                                        <Text style={[styles.cancelText, { color: themeColors.textSecondary }]}>Annuler</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity onPress={handleEditSave} style={[styles.saveBtn, { backgroundColor: colors.coral }]}>
+                                        <Text style={styles.saveBtnText}>Sauvegarder</Text>
+                                    </TouchableOpacity>
+                                </View>
                             </View>
                         </View>
-                    </View>
+                    </KeyboardAvoidingView>
                 </Modal>
 
                 <ChatSettingsModal

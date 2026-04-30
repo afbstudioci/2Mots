@@ -1,10 +1,9 @@
-//src/components/chat/AudioBubble.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, shadows } from '../../theme/theme';
 import { useTheme } from '../../context/ThemeContext';
-import { Audio } from 'expo-av';
+import { Audio, AVPlaybackStatus } from 'expo-av';
 
 interface AudioBubbleProps {
     uri: string;
@@ -18,55 +17,74 @@ export default function AudioBubble({ uri, isMe, duration }: AudioBubbleProps) {
     const [isPlaying, setIsPlaying] = useState(false);
     const [position, setPosition] = useState(0);
     const [totalDuration, setTotalDuration] = useState(duration ? duration * 1000 : 0);
+    const [isLoaded, setIsLoaded] = useState(false);
+    
+    // Utilisation d'un ref pour éviter les problèmes de stale closure dans le callback
+    const soundRef = useRef<Audio.Sound | null>(null);
 
-    useEffect(() => {
-        return () => {
-            if (sound) {
-                sound.unloadAsync();
-            }
-        };
-    }, [sound]);
-
-    const onPlaybackStatusUpdate = (status: any) => {
+    const onPlaybackStatusUpdate = useCallback((status: AVPlaybackStatus) => {
         if (status.isLoaded) {
             setPosition(status.positionMillis);
-            setTotalDuration(status.durationMillis || totalDuration);
+            if (status.durationMillis) {
+                setTotalDuration(status.durationMillis);
+            }
+            setIsPlaying(status.isPlaying);
+            
             if (status.didJustFinish) {
                 setIsPlaying(false);
                 setPosition(0);
-                sound?.setPositionAsync(0);
+                if (soundRef.current) {
+                    soundRef.current.setPositionAsync(0);
+                }
             }
+        } else if (status.error) {
+            console.error(`[AUDIO] Playback error: ${status.error}`);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            if (soundRef.current) {
+                soundRef.current.unloadAsync();
+            }
+        };
+    }, []);
 
     const playPause = async () => {
         try {
+            // Configuration du mode audio avant toute action
             await Audio.setAudioModeAsync({
                 allowsRecordingIOS: false,
                 playsInSilentModeIOS: true,
-                staysActiveInBackground: true,
+                staysActiveInBackground: false,
                 shouldDuckAndroid: true,
+                playThroughEarpieceAndroid: false,
             });
 
-            if (sound) {
+            if (soundRef.current) {
                 if (isPlaying) {
-                    await sound.pauseAsync();
-                    setIsPlaying(false);
+                    await soundRef.current.pauseAsync();
                 } else {
-                    await sound.playAsync();
-                    setIsPlaying(true);
+                    await soundRef.current.playAsync();
                 }
             } else {
+                // Chargement initial
+                setIsLoaded(false);
                 const { sound: newSound } = await Audio.Sound.createAsync(
                     { uri },
-                    { shouldPlay: true },
+                    { shouldPlay: true, progressUpdateIntervalMillis: 100 },
                     onPlaybackStatusUpdate
                 );
+                soundRef.current = newSound;
                 setSound(newSound);
-                setIsPlaying(true);
+                setIsLoaded(true);
             }
         } catch (e) {
             console.error("[AUDIO] Play error", e);
+            // Si erreur de chargement, on réinitialise
+            soundRef.current = null;
+            setSound(null);
+            setIsPlaying(false);
         }
     };
 
@@ -84,6 +102,7 @@ export default function AudioBubble({ uri, isMe, duration }: AudioBubbleProps) {
             <TouchableOpacity 
                 onPress={playPause} 
                 style={[styles.playBtn, { backgroundColor: isMe ? colors.white : colors.coral }]}
+                disabled={uri ? false : true}
             >
                 <Ionicons 
                     name={isPlaying ? "pause" : "play"} 
@@ -97,7 +116,7 @@ export default function AudioBubble({ uri, isMe, duration }: AudioBubbleProps) {
                     <View style={[
                         styles.progress, 
                         { 
-                            width: `${progress * 100}%`,
+                            width: `${Math.min(progress * 100, 100)}%`,
                             backgroundColor: isMe ? colors.white : colors.coral 
                         }
                     ]} />
