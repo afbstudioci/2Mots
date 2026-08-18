@@ -1,34 +1,39 @@
-//src/screens/LoginScreen.tsx
-import React, { useState } from 'react';
+﻿//src/screens/LoginScreen.tsx
+import React, { useState, useEffect } from 'react';
 import {
-  StyleSheet,
   View,
   Text,
+  StyleSheet,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Keyboard,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAuth } from '../context/AuthContext';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing, borderRadius } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
-import CustomAlert from '../components/common/CustomAlert';
 import AuthInput from '../components/auth/AuthInput';
+import CustomAlert from '../components/common/CustomAlert';
 import ServerWakeUpLoader from '../components/auth/ServerWakeUpLoader';
-import { borderRadius, colors, spacing, typography } from '../theme/theme';
-import { useKeyboard } from '../hooks/useKeyboard';
 
 const LoginScreen = ({ navigation }: any) => {
+  const { themeColors } = useTheme();
+  const { login } = useAuth();
+
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+
   const [alert, setAlert] = useState<{
     visible: boolean;
     title: string;
     message: string;
-    type: 'success' | 'error';
+    type: 'error' | 'success' | 'info';
   }>({
     visible: false,
     title: '',
@@ -36,12 +41,17 @@ const LoginScreen = ({ navigation }: any) => {
     type: 'error',
   });
 
-  const { login } = useAuth();
-  const { themeColors } = useTheme();
-  const { isKeyboardVisible } = useKeyboard();
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const handleLogin = async () => {
-    if (!identifier || !password) {
+    if (!identifier.trim() || !password.trim()) {
       setAlert({
         visible: true,
         title: 'Champs requis',
@@ -53,12 +63,13 @@ const LoginScreen = ({ navigation }: any) => {
 
     setLoading(true);
     try {
-      await login({ login: identifier, password });
+      await login({ login: identifier.trim(), password });
+      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
     } catch (err: any) {
       setAlert({
         visible: true,
-        title: 'Erreur',
-        message: err.message || 'Identifiants incorrects.',
+        title: 'Erreur de connexion',
+        message: err.message || 'Identifiants incorrects ou serveur indisponible.',
         type: 'error',
       });
     } finally {

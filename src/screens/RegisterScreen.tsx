@@ -1,18 +1,18 @@
 ﻿//src/screens/RegisterScreen.tsx
 import React, { useState } from 'react';
 import {
-  StyleSheet,
   View,
   Text,
+  StyleSheet,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAuth } from '../context/AuthContext';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import CustomAlert from '../components/common/CustomAlert';
 import AuthInput from '../components/auth/AuthInput';
@@ -72,7 +72,6 @@ const RegisterScreen = ({ navigation }: any) => {
       return;
     }
 
-    // Si on n'a pas encore demandé le code promo, on ouvre la modal
     if (referralCode === undefined) {
       setShowReferralModal(true);
       return;
@@ -100,6 +99,7 @@ const RegisterScreen = ({ navigation }: any) => {
         password,
         referralCode: code?.trim() || undefined,
       });
+      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
     } catch (err: any) {
       setAlert({
         visible: true,
@@ -107,7 +107,7 @@ const RegisterScreen = ({ navigation }: any) => {
         message: err.message || "Erreur lors de l'inscription.",
         type: 'error',
       });
-      setReferralCode(undefined); // Reset pour retenter
+      setReferralCode(undefined);
     } finally {
       setLoading(false);
     }
@@ -117,7 +117,6 @@ const RegisterScreen = ({ navigation }: any) => {
     <ScreenWrapper>
       {loading && <ServerWakeUpLoader />}
 
-      {/* Top Bar avec Bouton Retour */}
       <View style={styles.topBar}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}

@@ -1,5 +1,5 @@
 ﻿//App.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer, DefaultTheme, DarkTheme as NavDarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -57,9 +57,8 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AppNavigator = () => {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
   const { themeColors } = useTheme();
-  const [isSplashDone, setIsSplashDone] = useState(false);
   const pushRegistered = useRef(false);
 
   useEffect(() => {
@@ -74,6 +73,7 @@ const AppNavigator = () => {
 
   return (
     <Stack.Navigator
+      initialRouteName="Splash"
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: themeColors.background },
@@ -81,42 +81,21 @@ const AppNavigator = () => {
         orientation: 'portrait',
       }}
     >
-      {loading || !isSplashDone ? (
-        <Stack.Screen 
-          name="Splash" 
-          options={{ animation: 'fade' }}
-        >
-          {(props) => <SplashScreen {...props} onFinish={() => setIsSplashDone(true)} />}
-        </Stack.Screen>
-      ) : user ? (
-        <Stack.Group>
-          <Stack.Screen name="Home" component={MainTabNavigator} options={{ animation: 'fade' }} />
-          <Stack.Screen name="Game" component={GameScreen} options={{ animation: 'slide_from_right' }} />
-          <Stack.Screen name="GameOver" component={GameOverScreen} options={{ animation: 'fade' }} />
-          <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
-          <Stack.Screen name="Profile" component={ProfileScreen} />
-          <Stack.Screen name="Friends" component={FriendsScreen} />
-          <Stack.Screen name="Chat" component={ChatScreen} />
-          <Stack.Screen name="Settings" component={SettingsScreen} />
-          <Stack.Screen name="Shop" component={ShopScreen} />
-          <Stack.Screen name="Contact" component={ContactScreen} />
-          <Stack.Screen name="Rules" component={RulesScreen} />
-          <Stack.Screen name="Privacy" component={PrivacyScreen} />
-        </Stack.Group>
-      ) : (
-        <Stack.Group>
-          <Stack.Screen 
-            name="Login" 
-            component={LoginScreen} 
-            options={{ animation: 'fade' }}
-          />
-          <Stack.Screen 
-            name="Register" 
-            component={RegisterScreen} 
-            options={{ animation: 'slide_from_right' }}
-          />
-        </Stack.Group>
-      )}
+      <Stack.Screen name="Splash" component={SplashScreen} options={{ animation: 'fade' }} />
+      <Stack.Screen name="Login" component={LoginScreen} options={{ animation: 'fade' }} />
+      <Stack.Screen name="Register" component={RegisterScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="Home" component={MainTabNavigator} options={{ animation: 'fade' }} />
+      <Stack.Screen name="Game" component={GameScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="GameOver" component={GameOverScreen} options={{ animation: 'fade' }} />
+      <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
+      <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="Friends" component={FriendsScreen} />
+      <Stack.Screen name="Chat" component={ChatScreen} />
+      <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="Shop" component={ShopScreen} />
+      <Stack.Screen name="Contact" component={ContactScreen} />
+      <Stack.Screen name="Rules" component={RulesScreen} />
+      <Stack.Screen name="Privacy" component={PrivacyScreen} />
     </Stack.Navigator>
   );
 };

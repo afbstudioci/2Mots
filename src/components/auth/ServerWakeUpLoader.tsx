@@ -1,143 +1,144 @@
+﻿//src/components/auth/ServerWakeUpLoader.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Modal, Animated } from 'react-native';
-import { colors, typography, borderRadius, spacing } from '../../theme/theme';
+import { colors, borderRadius, spacing } from '../../theme/theme';
 import { useTheme } from '../../context/ThemeContext';
 
 const MESSAGES = [
-    "Réveil du serveur...",
-    "Échauffement des processeurs...",
-    "Préparation de vos défis...",
-    "Connexion sécurisée...",
-    "Presque là...",
+  'Connexion au serveur...',
+  'Synchronisation de vos données...',
+  'Préparation de vos défis...',
+  'Sécurisation de la session...',
+  'Presque prêt...',
 ];
 
 const ServerWakeUpLoader = () => {
-    const { themeColors } = useTheme();
-    const [messageIndex, setMessageIndex] = useState(0);
-    
-    const pulseAnim = useRef(new Animated.Value(1)).current;
-    const fadeAnim = useRef(new Animated.Value(1)).current;
+  const { themeColors } = useTheme();
+  const [messageIndex, setMessageIndex] = useState(0);
 
-    // Logique d'intelligence : Rotation des messages
-    useEffect(() => {
-        const interval = setInterval(() => {
-            Animated.timing(fadeAnim, {
-                toValue: 0,
-                duration: 300,
-                useNativeDriver: true
-            }).start(() => {
-                setMessageIndex((prev) => (prev + 1) % MESSAGES.length);
-                Animated.timing(fadeAnim, {
-                    toValue: 1,
-                    duration: 300,
-                    useNativeDriver: true
-                }).start();
-            });
-        }, 3000);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const fadeAnim = useRef(new Animated.Value(1)).current;
 
-        return () => clearInterval(interval);
-    }, [fadeAnim]);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }).start(() => {
+        setMessageIndex((prev) => (prev + 1) % MESSAGES.length);
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }).start();
+      });
+    }, 2800);
 
-    // Animation de pulsation Premium
-    useEffect(() => {
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(pulseAnim, {
-                    toValue: 1.2,
-                    duration: 1000,
-                    useNativeDriver: true
-                }),
-                Animated.timing(pulseAnim, {
-                    toValue: 1,
-                    duration: 1000,
-                    useNativeDriver: true
-                })
-            ])
-        ).start();
-    }, [pulseAnim]);
+    return () => clearInterval(interval);
+  }, [fadeAnim]);
 
-    return (
-        <Modal transparent animationType="fade" statusBarTranslucent>
-            <View style={styles.overlay}>
-                <View style={[styles.container, { backgroundColor: themeColors.card }]}>
-                    
-                    {/* Indicateur Visuel Animé */}
-                    <View style={styles.animationContainer}>
-                        <Animated.View style={[
-                            styles.pulseCircle, 
-                            { transform: [{ scale: pulseAnim }], borderColor: colors.coral }
-                        ]} />
-                        <View style={[styles.dot, { backgroundColor: colors.coral }]} />
-                    </View>
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.25,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, [pulseAnim]);
 
-                    <Animated.Text style={[
-                        styles.title, 
-                        { color: themeColors.text, opacity: fadeAnim }
-                    ]}>
-                        {MESSAGES[messageIndex]}
-                    </Animated.Text>
-                    
-                    <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-                        Le serveur démarre sa session
-                    </Text>
+  return (
+    <Modal transparent animationType="fade" statusBarTranslucent>
+      <View style={styles.overlay}>
+        <View style={[styles.container, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
+          <View style={styles.animationContainer}>
+            <Animated.View
+              style={[
+                styles.pulseCircle,
+                { transform: [{ scale: pulseAnim }], borderColor: colors.coral },
+              ]}
+            />
+            <View style={[styles.dot, { backgroundColor: colors.coral }]} />
+          </View>
 
-                </View>
-            </View>
-        </Modal>
-    );
+          <Animated.Text
+            style={[
+              styles.title,
+              { color: themeColors.text, opacity: fadeAnim },
+            ]}
+          >
+            {MESSAGES[messageIndex]}
+          </Animated.Text>
+
+          <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+            Veuillez patienter quelques instants
+          </Text>
+        </View>
+      </View>
+    </Modal>
+  );
 };
 
 const styles = StyleSheet.create({
-    overlay: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(11, 19, 43, 0.9)', // Bleu Nuit profond translucide
-    },
-    container: {
-        width: '85%',
-        paddingVertical: spacing.xl,
-        paddingHorizontal: spacing.lg,
-        borderRadius: borderRadius.lg,
-        alignItems: 'center',
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.3,
-        shadowRadius: 20,
-        elevation: 15,
-    },
-    animationContainer: {
-        height: 80,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: spacing.md,
-    },
-    pulseCircle: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        borderWidth: 2,
-        position: 'absolute',
-    },
-    dot: {
-        width: 12,
-        height: 12,
-        borderRadius: 6,
-    },
-    title: {
-        ...typography.bodyMedium,
-        fontFamily: 'Poppins_800ExtraBold',
-        fontSize: 20,
-        textAlign: 'center',
-        height: 30,
-    },
-    subtitle: {
-        ...typography.bodyMedium,
-        textAlign: 'center',
-        marginTop: spacing.xs,
-        fontSize: 14,
-        opacity: 0.6,
-    },
+  overlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(11, 19, 43, 0.85)',
+  },
+  container: {
+    width: '85%',
+    maxWidth: 340,
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.xl,
+    borderWidth: 1,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 15,
+  },
+  animationContainer: {
+    height: 70,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  pulseCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2.5,
+    position: 'absolute',
+  },
+  dot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+  },
+  title: {
+    fontFamily: 'Poppins_700Bold',
+    fontSize: 18,
+    textAlign: 'center',
+    minHeight: 28,
+  },
+  subtitle: {
+    fontFamily: 'Poppins_400Regular',
+    textAlign: 'center',
+    marginTop: spacing.xs,
+    fontSize: 13,
+    opacity: 0.75,
+  },
 });
 
 export default ServerWakeUpLoader;
