@@ -24,6 +24,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const bgmPlayerRef = useRef<AudioPlayer | null>(null);
   const sfxPlayersRef = useRef<{ [key: string]: AudioPlayer }>({});
   const shouldPlayBgm = useRef(false);
+  const duckTimerRef = useRef<any>(null);
 
   useEffect(() => {
     setAudioModeAsync({
@@ -53,7 +54,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       for (const [key, asset] of Object.entries(effectAssets)) {
         const player = createAudioPlayer(asset);
-        player.volume = 0.85;
+        player.volume = 0.9;
         sfxPlayersRef.current[key] = player;
       }
     } catch (err) {
@@ -62,6 +63,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     return () => {
       try {
+        if (duckTimerRef.current) clearTimeout(duckTimerRef.current);
         if (bgmPlayerRef.current) {
           bgmPlayerRef.current.pause();
           bgmPlayerRef.current.release();
@@ -79,6 +81,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!soundEnabled) return;
     if (bgmPlayerRef.current) {
       try {
+        bgmPlayerRef.current.volume = 0.35;
         if (!bgmPlayerRef.current.playing) {
           bgmPlayerRef.current.play();
         }
@@ -88,6 +91,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const stopBgm = () => {
     shouldPlayBgm.current = false;
+    if (duckTimerRef.current) clearTimeout(duckTimerRef.current);
     if (bgmPlayerRef.current) {
       try {
         bgmPlayerRef.current.pause();
@@ -96,8 +100,22 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const playEffect = (name: string, vol = 0.85) => {
+  const duckBgm = (durationMs = 900) => {
+    if (!bgmPlayerRef.current || !soundEnabled || !shouldPlayBgm.current) return;
+    try {
+      if (duckTimerRef.current) clearTimeout(duckTimerRef.current);
+      bgmPlayerRef.current.volume = 0.08;
+      duckTimerRef.current = setTimeout(() => {
+        if (bgmPlayerRef.current && shouldPlayBgm.current) {
+          bgmPlayerRef.current.volume = 0.35;
+        }
+      }, durationMs);
+    } catch (e) {}
+  };
+
+  const playEffect = (name: string, vol = 0.9, duckDuration = 900) => {
     if (!soundEnabled) return;
+    duckBgm(duckDuration);
     const player = sfxPlayersRef.current[name];
     if (player) {
       try {
@@ -113,14 +131,14 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       value={{
         playBgm,
         stopBgm,
-        playSuccess: () => playEffect('success', 0.9),
-        playError: () => playEffect('danger', 0.75),
-        playDanger: () => playEffect('danger', 0.8),
-        playLevelUp: () => playEffect('levelup', 1.0),
-        playHint: () => playEffect('hint', 0.9),
+        playSuccess: () => playEffect('success', 0.95, 800),
+        playError: () => playEffect('danger', 0.85, 900),
+        playDanger: () => playEffect('danger', 0.85, 900),
+        playLevelUp: () => playEffect('levelup', 1.0, 1500),
+        playHint: () => playEffect('hint', 0.95, 1000),
         playGameOver: (hasScore) => {
           stopBgm();
-          playEffect(hasScore ? 'gameover_score' : 'gameover_zero', 1.0);
+          playEffect(hasScore ? 'gameover_score' : 'gameover_zero', 1.0, 0);
         },
         stopGameOver: () => {
           try {

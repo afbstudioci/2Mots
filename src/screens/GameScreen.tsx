@@ -3,6 +3,7 @@ import React, { useRef, useEffect } from 'react';
 import { View, StyleSheet, Dimensions, Animated, ScrollView } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { colors, spacing } from '../theme/theme';
+import { useAudioContext } from '../context/AudioContext';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import GameHeader from '../components/game/GameHeader';
 import GameTimer from '../components/game/GameTimer';
@@ -18,11 +19,13 @@ const { width } = Dimensions.get('window');
 
 export default function GameScreen({ navigation }: any) {
   const { themeColors } = useTheme();
+  const { playBgm, stopBgm } = useAudioContext();
   const {
     wordPairs,
     currentIndex,
     setCurrentIndex,
     timeLeft,
+    setTimeLeft,
     selectedChoice,
     correctChoice,
     isCorrectState,
@@ -46,6 +49,13 @@ export default function GameScreen({ navigation }: any) {
     showLevelUpModal,
     setShowLevelUpModal,
   } = useGameLogic();
+
+  useEffect(() => {
+    playBgm();
+    return () => {
+      stopBgm();
+    };
+  }, []);
 
   const slideWordsAnim = useRef(new Animated.Value(0)).current;
 
@@ -90,7 +100,7 @@ export default function GameScreen({ navigation }: any) {
   }, [orb1Anim, orb2Anim]);
 
   useEffect(() => {
-    if (timeLeft <= 5 && timeLeft > 0) {
+    if (timeLeft <= 5 && timeLeft > 0 && !showLevelUpModal) {
       Animated.loop(
         Animated.sequence([
           Animated.timing(panicAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
@@ -101,7 +111,7 @@ export default function GameScreen({ navigation }: any) {
       panicAnim.stopAnimation();
       panicAnim.setValue(0);
     }
-  }, [timeLeft, panicAnim]);
+  }, [timeLeft, panicAnim, showLevelUpModal]);
 
   if (isLoading) return <GameLoading />;
 
@@ -183,13 +193,14 @@ export default function GameScreen({ navigation }: any) {
         />
       </ScrollView>
 
-      {/* Alerte Passage de Niveau */}
+      {/* Alerte Passage de Niveau avec Reset Chrono */}
       <CustomAlert
         visible={showLevelUpModal}
         title="FELICITATIONS !"
         message={`Vous venez de franchir le niveau ${userLevel} ! Bravo pour vos performances.`}
         onClose={() => {
           setShowLevelUpModal(false);
+          setTimeLeft(30);
           startNextWordAnimation();
         }}
         type="success"

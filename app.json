@@ -37,6 +37,14 @@
     "plugins": [
       "expo-audio",
       [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#1A202C"
+        }
+      ],
+      [
         "expo-notifications",
         {
           "icon": "./assets/icon.png",

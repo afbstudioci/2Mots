@@ -1,18 +1,20 @@
 ﻿//src/hooks/useGameLogic.ts
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as Haptics from 'expo-haptics';
-import { RootStackParamList } from '../../App';
 import api from '../services/api';
+import { RootStackParamList } from '../../App';
 import { useAudioContext } from '../context/AudioContext';
 
-const vib = (t: string) => {
-  if (t === 'light') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-  if (t === 'success') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-  if (t === 'error') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-  if (t === 'warn') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+const vib = (type: 'light' | 'success' | 'warn' | 'error') => {
+  try {
+    if (type === 'light') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    else if (type === 'success') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    else if (type === 'warn') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    else if (type === 'error') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+  } catch (e) {}
 };
 
 export interface EnrichedWordPair {
@@ -114,7 +116,7 @@ export const useGameLogic = () => {
   }, [navigation, wordPairs, currentIndex, selectedChoice, stopBgm]);
 
   useEffect(() => {
-    if (isLoading || hasTriggeredGameOver.current) return;
+    if (isLoading || hasTriggeredGameOver.current || showLevelUpModal) return;
     timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
@@ -127,7 +129,7 @@ export const useGameLogic = () => {
       });
     }, 1000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [isLoading, triggerGameOver, playDanger]);
+  }, [isLoading, triggerGameOver, playDanger, showLevelUpModal]);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => {
@@ -196,7 +198,12 @@ export const useGameLogic = () => {
         setLastAccuracy(r.accuracy || 100);
         setSuccessTrigger((prev) => prev + 1);
         vib('success');
-        if (r.newLevel > userLevel) { playLevelUp(); setShowLevelUpModal(true); } else { playSuccess(); }
+        if (r.newLevel > userLevel) { 
+          playLevelUp(); 
+          setShowLevelUpModal(true); 
+        } else { 
+          playSuccess(); 
+        }
         const gained = r.timeWon || 8;
         setTimeWon(gained);
         setTimeLeft((prev) => Math.min(30, prev + gained));
@@ -212,7 +219,9 @@ export const useGameLogic = () => {
       setTimeout(() => {
         setSelectedChoice(null); setCorrectChoice(null); setIsCorrectState(null);
         setEliminatedChoice(null); setIsHintUsed(false); setIsChecking(false);
-        onSuccessTransition();
+        if (!showLevelUpModal) {
+          onSuccessTransition();
+        }
       }, isCorrect ? 450 : 750);
     } catch {
       setSelectedChoice(null); setCorrectChoice(null); setIsCorrectState(null);

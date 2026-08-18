@@ -1,10 +1,9 @@
 ﻿//src/screens/SplashScreen.tsx
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Image } from 'react-native';
 import { typography, colors, spacing } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
 import { useData } from '../context/DataContext';
-import { Ionicons } from '@expo/vector-icons';
 
 interface SplashScreenProps {
   onFinish?: () => void;
@@ -16,13 +15,13 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
   const [progress, setProgress] = useState(0);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const scaleAnim = useRef(new Animated.Value(0.92)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 300,
+        duration: 350,
         useNativeDriver: true,
       }),
       Animated.spring(scaleAnim, {
@@ -37,13 +36,12 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
       refreshAll();
     } catch (e) {}
 
-    // Progression garantie et appel systématique de onFinish
     const timer = setTimeout(() => {
       setProgress(100);
       if (onFinish) {
         onFinish();
       }
-    }, 1000);
+    }, 1200);
 
     const progressInterval = setInterval(() => {
       setProgress((prev) => {
@@ -65,9 +63,11 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
         <View style={styles.centerBlock}>
-          <View style={styles.iconCircle}>
-            <Ionicons name="infinite" size={54} color={colors.coral} />
-          </View>
+          <Image
+            source={require('../../assets/icon.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
           <Text style={styles.logoText}>2Mots</Text>
           <Text style={styles.signatureText}>@By_Kevy</Text>
         </View>
@@ -100,19 +100,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  iconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255, 127, 80, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
+  logoImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 22,
     marginBottom: spacing.xs,
   },
   logoText: {
     ...typography.titleHuge,
     color: colors.coral,
-    fontSize: 50,
+    fontSize: 48,
     fontWeight: '900',
     letterSpacing: -1.5,
     marginTop: spacing.xs,
