@@ -1,4 +1,4 @@
-//src/screens/RegisterScreen.tsx
+﻿//src/screens/RegisterScreen.tsx
 import React, { useState } from 'react';
 import {
   StyleSheet,
@@ -50,7 +50,7 @@ const RegisterScreen = ({ navigation }: any) => {
   const handleRegister = async () => {
     const { login, email, password } = formData;
 
-    if (!login || !email || !password) {
+    if (!login.trim() || !email.trim() || !password) {
       setAlert({
         visible: true,
         title: 'Champs requis',
@@ -66,7 +66,7 @@ const RegisterScreen = ({ navigation }: any) => {
       setAlert({
         visible: true,
         title: 'Sécurité',
-        message: 'Le mot de passe ne respecte pas les critères.',
+        message: 'Le mot de passe ne respecte pas tous les critères.',
         type: 'error',
       });
       return;
@@ -78,37 +78,28 @@ const RegisterScreen = ({ navigation }: any) => {
       return;
     }
 
-    setLoading(true);
-    try {
-      await register({ login, email, password, referralCode });
-      // Le succès redirigera automatiquement vers Home via AuthContext
-    } catch (err: any) {
-      setAlert({
-        visible: true,
-        title: 'Erreur',
-        message: err.message || "Erreur lors de l'inscription.",
-        type: 'error',
-      });
-      setReferralCode(undefined); // Reset pour pouvoir re-tenter avec/sans code
-    } finally {
-      setLoading(false);
-    }
+    await executeRegistration(referralCode);
   };
 
   const onReferralSubmit = (code?: string) => {
     setShowReferralModal(false);
-    setReferralCode(code || '');
-    // Une fois le code (ou son absence) validé, on lance l'inscription
+    const cleanedCode = code?.trim() || '';
+    setReferralCode(cleanedCode);
     setTimeout(() => {
-        handleRegisterWithCode(code || '');
+      executeRegistration(cleanedCode);
     }, 100);
   };
 
-  const handleRegisterWithCode = async (code: string) => {
+  const executeRegistration = async (code?: string) => {
     const { login, email, password } = formData;
     setLoading(true);
     try {
-      await register({ login, email, password, referralCode: code });
+      await register({
+        login: login.trim(),
+        email: email.trim().toLowerCase(),
+        password,
+        referralCode: code?.trim() || undefined,
+      });
     } catch (err: any) {
       setAlert({
         visible: true,
@@ -116,7 +107,7 @@ const RegisterScreen = ({ navigation }: any) => {
         message: err.message || "Erreur lors de l'inscription.",
         type: 'error',
       });
-      setReferralCode(undefined);
+      setReferralCode(undefined); // Reset pour retenter
     } finally {
       setLoading(false);
     }
@@ -125,6 +116,18 @@ const RegisterScreen = ({ navigation }: any) => {
   return (
     <ScreenWrapper>
       {loading && <ServerWakeUpLoader />}
+
+      {/* Top Bar avec Bouton Retour */}
+      <View style={styles.topBar}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={[styles.backButton, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
+          activeOpacity={0.7}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <Ionicons name="arrow-back" size={22} color={themeColors.text} />
+        </TouchableOpacity>
+      </View>
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -142,7 +145,7 @@ const RegisterScreen = ({ navigation }: any) => {
               <View style={styles.header}>
                 <Text style={[styles.logoText, { color: themeColors.primary }]}>S'INSCRIRE</Text>
                 <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-                  Rejoignez la communauté.
+                  Rejoignez l'arène 2Mots.
                 </Text>
               </View>
             )}
@@ -175,7 +178,7 @@ const RegisterScreen = ({ navigation }: any) => {
                 onPress={handleRegister}
                 disabled={loading}
                 activeOpacity={0.85}
-                style={{ marginTop: spacing.md }}
+                style={{ marginTop: spacing.sm }}
               >
                 <LinearGradient
                   colors={[colors.coral, '#FF8C66']}
@@ -222,47 +225,62 @@ const RegisterScreen = ({ navigation }: any) => {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  topBar: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.xl,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+  },
   scrollContent: { flexGrow: 1 },
   mainContainer: {
     flex: 1,
-    paddingHorizontal: 28,
-    paddingVertical: 15,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
     justifyContent: 'center',
   },
   header: {
     alignItems: 'flex-start',
-    marginBottom: 36,
+    marginBottom: 24,
   },
   logoText: {
     fontFamily: 'Poppins_900Black',
-    fontSize: 34,
+    fontSize: 32,
     letterSpacing: 1,
   },
   subtitle: {
     fontFamily: 'Poppins_500Medium',
-    fontSize: 15,
+    fontSize: 14,
     marginTop: 4,
   },
   form: { width: '100%' },
   registerButton: {
-    height: 58,
+    height: 56,
     borderRadius: borderRadius.xl,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: colors.coral,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 14,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 8,
   },
   registerButtonText: {
     fontFamily: 'Poppins_700Bold',
     color: '#FFF',
-    fontSize: 17,
+    fontSize: 16,
     letterSpacing: 0.5,
   },
-  loginLink: { marginTop: 20, alignItems: 'center', paddingBottom: 10 },
+  loginLink: { marginTop: 18, alignItems: 'center', paddingBottom: 10 },
   loginLinkText: { fontFamily: 'Poppins_500Medium', fontSize: 14 },
 });
 

@@ -1,25 +1,13 @@
-//src/hooks/useChatSounds.ts
-import { Audio } from 'expo-av';
+﻿//src/hooks/useChatSounds.ts
+import { createAudioPlayer, AudioPlayer } from 'expo-audio';
 import { useCallback, useEffect, useRef } from 'react';
 
 export const useChatSounds = () => {
-    const soundsRef = useRef<Record<string, Audio.Sound>>({});
+    const soundsRef = useRef<Record<string, AudioPlayer>>({});
 
-    const loadSounds = async () => {
+    const loadSounds = () => {
         try {
-            // Ces fichiers devront être ajoutés dans assets/sounds/
-            // Pour l'instant on prépare la structure
-            /*
-            const { sound: sendSound } = await Audio.Sound.createAsync(require('../../assets/sounds/send.mp3'));
-            const { sound: receiveSound } = await Audio.Sound.createAsync(require('../../assets/sounds/receive.mp3'));
-            const { sound: reactionSound } = await Audio.Sound.createAsync(require('../../assets/sounds/reaction.mp3'));
-            
-            soundsRef.current = {
-                send: sendSound,
-                receive: receiveSound,
-                reaction: reactionSound
-            };
-            */
+            // Structure prête pour expo-audio
         } catch (error) {
             console.log('[SOUNDS] Load error:', error);
         }
@@ -28,20 +16,20 @@ export const useChatSounds = () => {
     useEffect(() => {
         loadSounds();
         return () => {
-            // Nettoyage
-            Object.values(soundsRef.current).forEach(s => s.unloadAsync());
+            Object.values(soundsRef.current).forEach(s => {
+                try { s.pause(); s.release(); } catch (e) {}
+            });
         };
     }, []);
 
-    const playSound = useCallback(async (type: 'send' | 'receive' | 'reaction') => {
+    const playSound = useCallback((type: 'send' | 'receive' | 'reaction') => {
         try {
             const sound = soundsRef.current[type];
             if (sound) {
-                await sound.replayAsync();
+                sound.seekTo(0);
+                sound.play();
             }
-        } catch (e) {
-            // Ignorer si pas chargé
-        }
+        } catch (e) {}
     }, []);
 
     return { playSound };

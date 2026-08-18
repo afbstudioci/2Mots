@@ -1,4 +1,4 @@
-//src/components/auth/AuthInput.tsx
+﻿//src/components/auth/AuthInput.tsx
 import React, { useState } from 'react';
 import {
   StyleSheet,
@@ -6,10 +6,11 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
-import { borderRadius, colors } from '../../theme/theme';
+import { borderRadius, colors, spacing } from '../../theme/theme';
 
 interface AuthInputProps {
   label: string;
@@ -21,6 +22,7 @@ interface AuthInputProps {
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   error?: string;
   onFocus?: () => void;
+  onBlur?: () => void;
 }
 
 const AuthInput: React.FC<AuthInputProps> = ({
@@ -33,8 +35,10 @@ const AuthInput: React.FC<AuthInputProps> = ({
   autoCapitalize = 'none',
   error,
   onFocus,
+  onBlur,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const { themeColors } = useTheme();
 
   return (
@@ -47,12 +51,21 @@ const AuthInput: React.FC<AuthInputProps> = ({
           styles.inputContainer,
           {
             backgroundColor: themeColors.surface,
-            borderColor: error ? colors.error : themeColors.border,
+            borderColor: error
+              ? colors.error
+              : isFocused
+              ? colors.coral
+              : themeColors.border,
+            borderWidth: isFocused ? 1.5 : 1,
           },
         ]}
       >
         <TextInput
-          style={[styles.input, { color: themeColors.text }]}
+          style={[
+            styles.input,
+            { color: themeColors.text },
+            Platform.OS === 'web' && ({ outlineStyle: 'none', outline: 'none' } as any),
+          ]}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
@@ -60,12 +73,23 @@ const AuthInput: React.FC<AuthInputProps> = ({
           secureTextEntry={isPassword && !showPassword}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
-          onFocus={onFocus}
+          underlineColorAndroid="transparent"
+          selectionColor={colors.coral}
+          onFocus={() => {
+            setIsFocused(true);
+            onFocus?.();
+          }}
+          onBlur={() => {
+            setIsFocused(false);
+            onBlur?.();
+          }}
         />
         {isPassword && (
           <TouchableOpacity
             onPress={() => setShowPassword(!showPassword)}
             style={styles.eyeIcon}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons
               name={showPassword ? 'eye-off-outline' : 'eye-outline'}
@@ -75,41 +99,43 @@ const AuthInput: React.FC<AuthInputProps> = ({
           </TouchableOpacity>
         )}
       </View>
-      {error && <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>}
+      {error ? <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text> : null}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   label: {
-    fontSize: 14,
-    marginBottom: 8,
+    fontSize: 13,
+    marginBottom: 6,
     fontWeight: '600',
-    marginLeft: 16,
+    marginLeft: 8,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 60,
-    borderWidth: 1,
+    height: 56,
     borderRadius: borderRadius.xl,
-    paddingHorizontal: 20,
+    paddingHorizontal: 18,
   },
   input: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
     height: '100%',
+    paddingVertical: 0,
   },
   eyeIcon: {
-    padding: 4,
+    padding: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   errorText: {
     fontSize: 12,
     marginTop: 4,
-    marginLeft: 16,
+    marginLeft: 12,
   },
 });
 

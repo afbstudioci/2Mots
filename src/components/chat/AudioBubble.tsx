@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿//src/components/chat/AudioBubble.tsx
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, shadows } from '../../theme/theme';
 import { useTheme } from '../../context/ThemeContext';
-import { Audio, AVPlaybackStatus } from 'expo-av';
+import { createAudioPlayer, AudioPlayer } from 'expo-audio';
 
 interface AudioBubbleProps {
     uri: string;
@@ -13,77 +14,41 @@ interface AudioBubbleProps {
 
 export default function AudioBubble({ uri, isMe, duration }: AudioBubbleProps) {
     const { themeColors } = useTheme();
-    const [sound, setSound] = useState<Audio.Sound | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [position, setPosition] = useState(0);
     const [totalDuration, setTotalDuration] = useState(duration ? duration * 1000 : 0);
-    const [isLoaded, setIsLoaded] = useState(false);
-    
-    // Utilisation d'un ref pour éviter les problèmes de stale closure dans le callback
-    const soundRef = useRef<Audio.Sound | null>(null);
-
-    const onPlaybackStatusUpdate = useCallback((status: AVPlaybackStatus) => {
-        if (status.isLoaded) {
-            setPosition(status.positionMillis);
-            if (status.durationMillis) {
-                setTotalDuration(status.durationMillis);
-            }
-            setIsPlaying(status.isPlaying);
-            
-            if (status.didJustFinish) {
-                setIsPlaying(false);
-                setPosition(0);
-                if (soundRef.current) {
-                    soundRef.current.setPositionAsync(0);
-                }
-            }
-        } else if (status.error) {
-            console.error(`[AUDIO] Playback error: ${status.error}`);
-        }
-    }, []);
+    const playerRef = useRef<AudioPlayer | null>(null);
 
     useEffect(() => {
         return () => {
-            if (soundRef.current) {
-                soundRef.current.unloadAsync();
+            if (playerRef.current) {
+                try {
+                    playerRef.current.pause();
+                    playerRef.current.release();
+                } catch (e) {}
             }
         };
     }, []);
 
-    const playPause = async () => {
+    const playPause = () => {
+        if (!uri) return;
         try {
-            // Configuration du mode audio avant toute action
-            await Audio.setAudioModeAsync({
-                allowsRecordingIOS: false,
-                playsInSilentModeIOS: true,
-                staysActiveInBackground: false,
-                shouldDuckAndroid: true,
-                playThroughEarpieceAndroid: false,
-            });
-
-            if (soundRef.current) {
-                if (isPlaying) {
-                    await soundRef.current.pauseAsync();
-                } else {
-                    await soundRef.current.playAsync();
-                }
+            if (!playerRef.current) {
+                const player = createAudioPlayer({ uri });
+                playerRef.current = player;
+                player.play();
+                setIsPlaying(true);
             } else {
-                // Chargement initial
-                setIsLoaded(false);
-                const { sound: newSound } = await Audio.Sound.createAsync(
-                    { uri },
-                    { shouldPlay: true, progressUpdateIntervalMillis: 100 },
-                    onPlaybackStatusUpdate
-                );
-                soundRef.current = newSound;
-                setSound(newSound);
-                setIsLoaded(true);
+                if (isPlaying) {
+                    playerRef.current.pause();
+                    setIsPlaying(false);
+                } else {
+                    playerRef.current.play();
+                    setIsPlaying(true);
+                }
             }
         } catch (e) {
             console.error("[AUDIO] Play error", e);
-            // Si erreur de chargement, on réinitialise
-            soundRef.current = null;
-            setSound(null);
             setIsPlaying(false);
         }
     };
@@ -102,7 +67,7 @@ export default function AudioBubble({ uri, isMe, duration }: AudioBubbleProps) {
             <TouchableOpacity 
                 onPress={playPause} 
                 style={[styles.playBtn, { backgroundColor: isMe ? colors.white : colors.coral }]}
-                disabled={uri ? false : true}
+                disabled={!uri}
             >
                 <Ionicons 
                     name={isPlaying ? "pause" : "play"} 

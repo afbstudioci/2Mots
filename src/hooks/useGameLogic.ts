@@ -1,268 +1,233 @@
-//src/hooks/useGameLogic.ts
+﻿//src/hooks/useGameLogic.ts
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { AppState, Dimensions } from 'react-native';
+import { AppState, AppStateStatus } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as Haptics from 'expo-haptics';
+import { RootStackParamList } from '../../App';
 import api from '../services/api';
-import { useIsFocused } from '@react-navigation/native';
-import { useFeedback } from './useFeedback';
-import { useAudio } from './useAudio';
-import { useAuth } from '../context/AuthContext';
+import { useAudioContext } from '../context/AudioContext';
 
-const { width } = Dimensions.get('window');
+const vib = (t: string) => {
+  if (t === 'light') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+  if (t === 'success') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+  if (t === 'error') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+  if (t === 'warn') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+};
 
-export const useGameLogic = (navigation: any) => {
-    const { user } = useAuth();
-    const isFocused = useIsFocused();
-    const { triggerSuccessVibration, triggerErrorVibration, triggerWarningVibration, triggerVibration } = useFeedback();
-    const { playSuccess, playLevelUp, playGameOver, stopGameOver, playBgm, stopBgm, playHint, playError, playDanger } = useAudio();
+export interface EnrichedWordPair {
+  _id: string;
+  word1: string;
+  word2: string;
+  clue?: string;
+  expectedType?: string;
+  difficulty?: number;
+  options: string[];
+}
 
-    const [wordPairs, setWordPairs] = useState<any[]>([]);
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const [timeLeft, setTimeLeft] = useState(30);
-    const [answer, setAnswer] = useState('');
-    const [isLoading, setIsLoading] = useState(true);
-    const [errorMessage, setErrorMessage] = useState('');
-    const [isChecking, setIsChecking] = useState(false);
-    const [isGameOver, setIsGameOver] = useState(false);
-    const [showLevelUpModal, setShowLevelUpModal] = useState(false);
+export const useGameLogic = () => {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { playSuccess, playError, playDanger, playLevelUp, stopBgm, playBgm, playHint } = useAudioContext();
 
-    // Stats de session (Initialisées avec les données locales de l'utilisateur)
-    const [userLevel, setUserLevel] = useState(user?.level || 1);
-    const [currentXp, setCurrentXp] = useState(user?.xp || 0);
-    const [xpNeeded, setXpNeeded] = useState(3 + ((user?.level || 1) * 2));
-    const [timeWon, setTimeWon] = useState(0);
-    const [successTrigger, setSuccessTrigger] = useState(0);
-    const [lastAccuracy, setLastAccuracy] = useState(0);
+  const [wordPairs, setWordPairs] = useState<EnrichedWordPair[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(30);
+  const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
+  const [correctChoice, setCorrectChoice] = useState<string | null>(null);
+  const [isCorrectState, setIsCorrectState] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isChecking, setIsChecking] = useState(false);
 
-    const sessionAnswersRef = useRef<any[]>([]);
-    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    const appState = useRef(AppState.currentState);
-    const backgroundTimeRef = useRef<number | null>(null);
-    const hasTriggeredGameOver = useRef(false);
+  const [eliminatedChoice, setEliminatedChoice] = useState<string | null>(null);
+  const [isHintUsed, setIsHintUsed] = useState(false);
+  const [showNoKevsModal, setShowNoKevsModal] = useState(false);
 
-    // Fetch des mots par lot (Batch)
-    const fetchWords = async (isInitial = false) => {
-        try {
-            const response = await api.get('/game/batch');
-            const fetchedWords = response.data.data;
-            const stats = response.data.userStats;
+  const [userLevel, setUserLevel] = useState(1);
+  const [currentXp, setCurrentXp] = useState(0);
+  const [xpNeeded, setXpNeeded] = useState(5);
+  const [userKevs, setUserKevs] = useState(0);
+  const [timeWon, setTimeWon] = useState(0);
+  const [successTrigger, setSuccessTrigger] = useState(0);
+  const [lastAccuracy, setLastAccuracy] = useState(100);
+  const [showLevelUpModal, setShowLevelUpModal] = useState(false);
 
-            if (fetchedWords && fetchedWords.length > 0) {
-                setWordPairs(prev => isInitial ? fetchedWords : [...prev, ...fetchedWords]);
-                
-                if (isInitial && stats) {
-                    setUserLevel(stats.level);
-                    setCurrentXp(stats.xp);
-                    setXpNeeded(stats.xpNeeded);
-                    setIsLoading(false);
-                    playBgm(); // Lancer la musique dès que c'est prêt
-                } else if (isInitial) {
-                    setIsLoading(false);
-                    playBgm();
-                }
-            }
-        } catch (error) {
-            if (isInitial) { setErrorMessage('Erreur de connexion.'); setIsLoading(false); }
+  const timerRef = useRef<any>(null);
+  const sessionAnswersRef = useRef<any[]>([]);
+  const hasTriggeredGameOver = useRef(false);
+  const backgroundTimeRef = useRef<number | null>(null);
+  const appState = useRef<AppStateStatus>(AppState.currentState);
+
+  const fetchBatch = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const res = await api.get('/game/batch');
+      const d = res.data.data;
+      const s = res.data.userStats;
+      if (d?.length > 0) {
+        setWordPairs(d);
+        setCurrentIndex(0);
+        if (s) {
+          setUserLevel(s.level);
+          setCurrentXp(s.xp);
+          setXpNeeded(s.xpNeeded);
+          setUserKevs(s.kevs || 0);
         }
-    };
+      } else {
+        setErrorMessage('Aucune énigme disponible.');
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Erreur chargement.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-    useEffect(() => { fetchWords(true); }, []);
+  useEffect(() => { fetchBatch(); }, [fetchBatch]);
 
-    // Gestion de la fin de partie
-    const triggerGameOver = useCallback(() => {
-        if (hasTriggeredGameOver.current) return;
-        hasTriggeredGameOver.current = true;
-        
-        setIsGameOver(true);
-        stopBgm(); // Arrêter la musique de fond
-        triggerWarningVibration(); 
-        
-        // On vérifie s'il y a eu au moins une bonne réponse dans la session
-        const hasScore = sessionAnswersRef.current.some(a => a.isCorrect);
-        // On ne joue pas le son ici pour éviter les coupures lors de la transition
-        // playGameOver(hasScore); 
-        
-        const currentPair = wordPairs[currentIndex];
-        if (currentPair) {
-            sessionAnswersRef.current.push({
-                wordPairId: currentPair._id,
-                answer: answer.trim() || "Temps écoulé",
-                timeSpent: 30,
-                isCorrect: false,
-                accuracy: 0
-            });
+  const triggerGameOver = useCallback(() => {
+    if (hasTriggeredGameOver.current) return;
+    hasTriggeredGameOver.current = true;
+    stopBgm();
+    vib('warn');
+
+    const pair = wordPairs[currentIndex];
+    if (pair) {
+      sessionAnswersRef.current.push({
+        wordPairId: pair._id,
+        answer: selectedChoice || 'Temps écoulé',
+        timeSpent: 30,
+        isCorrect: false,
+        accuracy: 0,
+      });
+    }
+
+    api.post('/game/validate', { answers: sessionAnswersRef.current }).then((res) => {
+      const r = res.data.data;
+      navigation.replace('GameOver', {
+        score: r.totalScore,
+        details: sessionAnswersRef.current.map((a) => ({ word: a.answer || 'Passé', accuracy: a.accuracy || 0, label: a.isCorrect ? 'SUCCÈS' : 'ÉCHEC' })),
+        corrections: r.corrections || [],
+        hasScore: sessionAnswersRef.current.some((a) => a.isCorrect),
+      });
+    }).catch(() => navigation.replace('Home'));
+  }, [navigation, wordPairs, currentIndex, selectedChoice, stopBgm]);
+
+  useEffect(() => {
+    if (isLoading || hasTriggeredGameOver.current) return;
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current!);
+          triggerGameOver();
+          return 0;
         }
+        if (prev === 6) playDanger();
+        return prev - 1;
+      });
+    }, 1000);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [isLoading, triggerGameOver, playDanger]);
 
-        api.post('/game/validate', { answers: sessionAnswersRef.current })
-            .then(res => {
-                const result = res.data.data;
-                const formattedDetails = sessionAnswersRef.current.map(ans => ({
-                    word: ans.answer || "Passé", 
-                    accuracy: ans.accuracy || 0, 
-                    label: ans.isCorrect ? "SUCCÈS" : "ÉCHEC"
-                }));
-                navigation.replace('GameOver', { 
-                    score: result.totalScore, 
-                    details: formattedDetails,
-                    corrections: result.corrections || [],
-                    hasScore: hasScore
-                });
-            })
-            .catch(() => navigation.replace('Home'));
-    }, [navigation, wordPairs, currentIndex, answer]);
-
-    // Gestion du focus pour la musique et synchronisation du temps
-    useEffect(() => {
-        const unsubscribeFocus = navigation.addListener('focus', () => {
-            if (!hasTriggeredGameOver.current && !isLoading) {
-                playBgm();
-                
-                // Si on revient d'un écran (ex: Shop) et que le temps s'est écoulé
-                if (backgroundTimeRef.current) {
-                    const elapsed = Math.floor((Date.now() - backgroundTimeRef.current) / 1000);
-                    setTimeLeft(prev => {
-                        const newTime = Math.max(0, prev - elapsed);
-                        if (newTime <= 0 && !hasTriggeredGameOver.current) {
-                            // On laisse l'UI se mettre à jour puis on trigger
-                            setTimeout(() => triggerGameOver(), 100);
-                        }
-                        return newTime;
-                    });
-                    backgroundTimeRef.current = null;
-                }
-            }
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => {
+      if (appState.current.match(/inactive|background/) && next === 'active' && backgroundTimeRef.current) {
+        const elapsed = Math.floor((Date.now() - backgroundTimeRef.current) / 1000);
+        backgroundTimeRef.current = null;
+        setTimeLeft((prev) => {
+          const updated = prev - elapsed;
+          if (updated <= 0 && !hasTriggeredGameOver.current) {
+            setTimeout(() => triggerGameOver(), 50);
+            return 0;
+          }
+          return Math.max(0, updated);
         });
+      }
+      if (next.match(/inactive|background/)) backgroundTimeRef.current = Date.now();
+      appState.current = next;
+    });
+    return () => sub.remove();
+  }, [triggerGameOver]);
 
-        const unsubscribeBlur = navigation.addListener('blur', () => {
-            if (!hasTriggeredGameOver.current) {
-                stopBgm();
-                // On marque le temps de départ pour la synchro au retour
-                backgroundTimeRef.current = Date.now();
-            }
-        });
+  useEffect(() => {
+    const uF = navigation.addListener('focus', () => { if (!hasTriggeredGameOver.current && !isLoading) playBgm(); });
+    const uB = navigation.addListener('blur', () => { if (!hasTriggeredGameOver.current) { stopBgm(); backgroundTimeRef.current = Date.now(); } });
+    return () => { uF(); uB(); };
+  }, [navigation, isLoading, playBgm, stopBgm]);
 
-        return () => {
-            unsubscribeFocus();
-            unsubscribeBlur();
-        };
-    }, [navigation, isLoading, triggerGameOver]);
+  const handleUseHint = () => {
+    if (isHintUsed || isChecking || hasTriggeredGameOver.current) return;
+    if (userKevs < 5) {
+      vib('warn');
+      setShowNoKevsModal(true);
+      return;
+    }
+    const pair = wordPairs[currentIndex];
+    if (!pair?.options || pair.options.length < 3) return;
 
-    // Gestion de l'AppState (Background/Foreground)
-    useEffect(() => {
-        const subscription = AppState.addEventListener('change', nextAppState => {
-            if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-                if (backgroundTimeRef.current) {
-                    const elapsed = Math.floor((Date.now() - backgroundTimeRef.current) / 1000);
-                    setTimeLeft(prev => {
-                        const newTime = Math.max(0, prev - elapsed);
-                        if (newTime <= 0 && !hasTriggeredGameOver.current) {
-                            setTimeout(() => triggerGameOver(), 100);
-                        }
-                        return newTime;
-                    });
-                    backgroundTimeRef.current = null;
-                }
-            }
-            if (nextAppState.match(/inactive|background/)) {
-                backgroundTimeRef.current = Date.now();
-            }
-            appState.current = nextAppState;
-        });
+    setUserKevs((prev) => Math.max(0, prev - 5));
+    api.post('/game/use-hint').catch(() => {});
+    const falseOpts = pair.options.slice(1);
+    setEliminatedChoice(falseOpts[Math.floor(Math.random() * falseOpts.length)]);
+    setIsHintUsed(true);
+    playHint();
+    vib('light');
+  };
 
-        return () => subscription.remove();
-    }, [triggerGameOver]);
+  const selectChoice = async (choice: string, onSuccessTransition: () => void) => {
+    if (isChecking || selectedChoice !== null || hasTriggeredGameOver.current) return;
+    setSelectedChoice(choice);
+    setIsChecking(true);
+    vib('light');
 
+    const pair = wordPairs[currentIndex];
+    if (!pair) return;
 
-    // Timer et Anti-triche
-    useEffect(() => {
-        // Le temps ne s'arrête jamais, même si !isFocused
-        if (isLoading || hasTriggeredGameOver.current || timeLeft <= 0) {
-            if (timeLeft <= 0 && !hasTriggeredGameOver.current && !isLoading) triggerGameOver();
-            return;
-        }
+    try {
+      const res = await api.post('/game/check', { wordPairId: pair._id, answer: choice, timeSpent: Math.max(1, 30 - timeLeft) });
+      const r = res.data.data;
+      const isCorrect = Boolean(r.isCorrect);
+      setIsCorrectState(isCorrect);
+      setCorrectChoice(r.correctAnswer || choice);
 
-        // Alerte sonore pour le Panic Mode (5 dernières secondes)
-        if (timeLeft <= 5 && timeLeft > 0) {
-            playDanger();
-        }
+      sessionAnswersRef.current.push({ wordPairId: pair._id, answer: choice, isCorrect, accuracy: isCorrect ? (r.accuracy || 100) : 0 });
 
-        timerRef.current = setInterval(() => {
-            setTimeLeft(prev => {
-                if (prev <= 1) {
-                    clearInterval(timerRef.current!);
-                    triggerGameOver();
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-        return () => { if (timerRef.current) clearInterval(timerRef.current); };
-    }, [isLoading, currentIndex, triggerGameOver, timeLeft, isFocused]);
+      if (isCorrect) {
+        setLastAccuracy(r.accuracy || 100);
+        setSuccessTrigger((prev) => prev + 1);
+        vib('success');
+        if (r.newLevel > userLevel) { playLevelUp(); setShowLevelUpModal(true); } else { playSuccess(); }
+        const gained = r.timeWon || 8;
+        setTimeWon(gained);
+        setTimeLeft((prev) => Math.min(30, prev + gained));
+        setUserLevel(r.newLevel);
+        setCurrentXp(r.currentXp);
+        setXpNeeded(r.xpNeeded);
+        if (r.totalKevs !== undefined) setUserKevs(r.totalKevs);
+      } else {
+        vib('error');
+        playError();
+      }
 
-    // Soumission de la réponse
-    const submitAnswer = async (inputAreaRef: any): Promise<{ isCorrect: boolean, isLevelUp: boolean }> => {
-        if (!answer.trim() || isChecking || hasTriggeredGameOver.current) return { isCorrect: false, isLevelUp: false };
-        setIsChecking(true);
-        triggerVibration(); 
-        
-        let isLevelUp = false;
-        const currentPair = wordPairs[currentIndex];
-        try {
-            const response = await api.post('/game/check', {
-                wordPairId: currentPair._id,
-                answer: answer.trim(),
-                timeSpent: 30 - timeLeft
-            });
-            const result = response.data.data;
+      setTimeout(() => {
+        setSelectedChoice(null); setCorrectChoice(null); setIsCorrectState(null);
+        setEliminatedChoice(null); setIsHintUsed(false); setIsChecking(false);
+        onSuccessTransition();
+      }, isCorrect ? 450 : 750);
+    } catch {
+      setSelectedChoice(null); setCorrectChoice(null); setIsCorrectState(null);
+      setEliminatedChoice(null); setIsHintUsed(false); setIsChecking(false);
+    }
+  };
 
-            if (result.isCorrect) {
-                setLastAccuracy(result.accuracy);
-                setSuccessTrigger(prev => prev + 1);
-                triggerSuccessVibration();
-                
-                // Si on passe au niveau supérieur, on joue le son LevelUp et on affiche la modale, sinon le son Succès normal
-                if (result.newLevel > userLevel) {
-                    playLevelUp();
-                    setShowLevelUpModal(true);
-                } else {
-                    playSuccess();
-                }
+  useEffect(() => {
+    return () => { stopBgm(); if (timerRef.current) clearInterval(timerRef.current); };
+  }, [stopBgm]);
 
-                setTimeWon(result.timeWon);
-                setTimeLeft(prev => Math.min(30, prev + result.timeWon));
-                setUserLevel(result.newLevel);
-                setCurrentXp(result.currentXp);
-                setXpNeeded(result.xpNeeded);
-
-                sessionAnswersRef.current.push({
-                    wordPairId: currentPair._id, answer: answer.trim(), isCorrect: true, accuracy: result.accuracy
-                });
-                return { isCorrect: true, isLevelUp: result.newLevel > userLevel }; 
-            } else {
-                triggerErrorVibration();
-                playError(); // Son d'erreur
-                inputAreaRef.current?.triggerShake();
-                setIsChecking(false);
-                return { isCorrect: false, isLevelUp: false };
-            }
-        } catch (error) { 
-            setIsChecking(false); 
-            return { isCorrect: false, isLevelUp: false };
-        }
-    };
-
-    // Nettoyage à la destruction du hook (quand on quitte le GameScreen)
-    useEffect(() => {
-        return () => {
-            stopBgm();
-            if (timerRef.current) clearInterval(timerRef.current);
-        };
-    }, []);
-
-    return {
-        wordPairs, currentIndex, setCurrentIndex, timeLeft, setTimeLeft,
-        answer, setAnswer, isLoading, errorMessage, isChecking, setIsChecking,
-        userLevel, currentXp, xpNeeded, timeWon, setTimeWon, successTrigger, lastAccuracy,
-        submitAnswer, hasTriggeredGameOver, playHint, stopGameOver,
-        showLevelUpModal, setShowLevelUpModal
-    };
+  return {
+    wordPairs, currentIndex, setCurrentIndex, timeLeft, setTimeLeft, selectedChoice, correctChoice,
+    isCorrectState, isLoading, errorMessage, isChecking, eliminatedChoice, isHintUsed, handleUseHint,
+    showNoKevsModal, setShowNoKevsModal, userLevel, currentXp, xpNeeded, userKevs, timeWon, setTimeWon,
+    successTrigger, lastAccuracy, selectChoice, showLevelUpModal, setShowLevelUpModal,
+  };
 };

@@ -1,4 +1,4 @@
-//src/context/AuthContext.tsx
+﻿//src/context/AuthContext.tsx
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { DeviceEventEmitter } from 'react-native';
 import api from '../services/api';
@@ -24,15 +24,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let isMounted = true;
 
     async function loadStorageData() {
-      const storageToken = await getToken();
-      const storageUser = await getUser();
-
-      if (storageToken && storageUser && isMounted) {
-        setUser(storageUser);
-        refreshProfileSilently();
+      try {
+        const [storageToken, storageUser] = await Promise.all([getToken(), getUser()]);
+        if (storageToken && storageUser && isMounted) {
+          setUser(storageUser);
+          refreshProfileSilently();
+        }
+      } catch (e) {
+        console.warn('[AUTH] Erreur lecture initiale:', e);
+      } finally {
+        if (isMounted) setLoading(false);
       }
-
-      if (isMounted) setLoading(false);
     }
 
     loadStorageData();
@@ -53,15 +55,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshProfileSilently = async () => {
     try {
       const response = await api.get('/auth/me');
-      const freshUser = response.data.data.user;
-
-      const currentToken = await getToken();
-      if (currentToken) {
+      const freshUser = response.data?.data?.user;
+      if (freshUser) {
         await saveUser(freshUser);
         setUser(freshUser);
       }
     } catch (error) {
-      console.info('Session validee mais profil non rafraichi en arriere-plan');
+      // Si le serveur est temporairement injoignable, on conserve la session locale
     }
   };
 
@@ -87,7 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await saveUser(newUserData);
       setUser(newUserData);
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Erreur lors de l\'inscription');
+      throw new Error(error.response?.data?.message || "Erreur lors de l'inscription");
     }
   };
 
@@ -95,7 +95,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await refreshProfileSilently();
   };
 
-  // NOUVELLE FONCTION : Mise à jour du profil avec gestion FormData
   const updateProfile = async (formData: any) => {
     try {
       const response = await api.put('/auth/me', formData, {
@@ -116,9 +115,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await clearTokens();
       setUser(null);
-      api.post('/auth/logout').catch(() => { });
+      api.post('/auth/logout').catch(() => {});
     } catch (e) {
-      console.error('Erreur lors de la deconnexion', e);
+      console.warn('[AUTH] Erreur déconnexion:', e);
     }
   };
 

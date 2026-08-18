@@ -1,67 +1,77 @@
-//src/services/authStorage.ts
-import * as SecureStore from 'expo-secure-store';
+﻿//src/services/authStorage.ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const ACCESS_TOKEN_KEY = 'auth_token';
-const REFRESH_TOKEN_KEY = 'refresh_token';
-const USER_KEY = 'user_data';
+const ACCESS_TOKEN_KEY = '@twomots_token';
+const REFRESH_TOKEN_KEY = '@twomots_refresh_token';
+const USER_KEY = '@twomots_user';
 
-const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
-
-const getItemWithRetry = async (key: string, maxRetries = 3): Promise<string | null> => {
-  let attempt = 0;
-  while (attempt < maxRetries) {
-    try {
-      return await SecureStore.getItemAsync(key);
-    } catch (error) {
-      attempt++;
-      if (attempt >= maxRetries) {
-        return null;
-      }
-      await sleep(100 * Math.pow(2, attempt - 1));
-    }
-  }
-  return null;
-};
+let inMemoryToken: string | null = null;
+let inMemoryRefreshToken: string | null = null;
+let inMemoryUser: any = null;
 
 export const saveTokens = async (accessToken: string, refreshToken: string) => {
   try {
-    await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, accessToken);
-    await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
+    inMemoryToken = accessToken;
+    inMemoryRefreshToken = refreshToken;
+    await AsyncStorage.multiSet([
+      [ACCESS_TOKEN_KEY, accessToken],
+      [REFRESH_TOKEN_KEY, refreshToken],
+    ]);
   } catch (error) {
-    console.warn("Erreur d'ecriture des tokens", error);
+    console.warn("[AUTH] Erreur sauvegarde tokens", error);
   }
 };
 
 export const saveUser = async (user: any) => {
   try {
+    inMemoryUser = user;
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
   } catch (error) {
-    console.warn("Erreur d'ecriture des donnees utilisateur", error);
+    console.warn("[AUTH] Erreur sauvegarde utilisateur", error);
   }
 };
 
-export const getToken = () => getItemWithRetry(ACCESS_TOKEN_KEY);
-export const getRefreshToken = () => getItemWithRetry(REFRESH_TOKEN_KEY);
+export const getToken = async (): Promise<string | null> => {
+  if (inMemoryToken) return inMemoryToken;
+  try {
+    const token = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
+    inMemoryToken = token;
+    return token;
+  } catch (error) {
+    return null;
+  }
+};
 
-export const getUser = async () => {
+export const getRefreshToken = async (): Promise<string | null> => {
+  if (inMemoryRefreshToken) return inMemoryRefreshToken;
+  try {
+    const rToken = await AsyncStorage.getItem(REFRESH_TOKEN_KEY);
+    inMemoryRefreshToken = rToken;
+    return rToken;
+  } catch (error) {
+    return null;
+  }
+};
+
+export const getUser = async (): Promise<any> => {
+  if (inMemoryUser) return inMemoryUser;
   try {
     const userData = await AsyncStorage.getItem(USER_KEY);
-    return userData ? JSON.parse(userData) : null;
+    const parsed = userData ? JSON.parse(userData) : null;
+    inMemoryUser = parsed;
+    return parsed;
   } catch (error) {
-    // Tentative de fallback sur SecureStore au cas où
-    const oldData = await getItemWithRetry(USER_KEY);
-    return oldData ? JSON.parse(oldData) : null;
+    return null;
   }
 };
 
 export const clearTokens = async () => {
   try {
-    await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
-    await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
-    await AsyncStorage.removeItem(USER_KEY);
-    await SecureStore.deleteItemAsync(USER_KEY); // Nettoyage de l'ancien
+    inMemoryToken = null;
+    inMemoryRefreshToken = null;
+    inMemoryUser = null;
+    await AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_KEY]);
   } catch (error) {
-    console.warn("Erreur lors du nettoyage du stockage", error);
+    console.warn("[AUTH] Erreur suppression session", error);
   }
 };

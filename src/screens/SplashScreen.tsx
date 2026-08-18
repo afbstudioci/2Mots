@@ -1,119 +1,82 @@
-//src/screens/SplashScreen.tsx
+﻿//src/screens/SplashScreen.tsx
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import { typography, colors, spacing } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
 import { useData } from '../context/DataContext';
-import Svg, { Path } from 'react-native-svg';
+import { Ionicons } from '@expo/vector-icons';
 
 interface SplashScreenProps {
   onFinish?: () => void;
 }
 
-// On convertit le composant Path du SVG pour qu'il accepte les animations natives
-const AnimatedPath = Animated.createAnimatedComponent(Path);
-
 export default function SplashScreen({ onFinish }: SplashScreenProps) {
   const { themeColors } = useTheme();
   const { refreshAll } = useData();
   const [progress, setProgress] = useState(0);
-  
-  const drawAnim = useRef(new Animated.Value(300)).current; 
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
 
   useEffect(() => {
-    // 1. Fondu global du conteneur (très rapide)
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 400,
-      useNativeDriver: true,
-    }).start();
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
 
-    // 1b. Lancement du pré-chargement global
-    refreshAll();
+    try {
+      refreshAll();
+    } catch (e) {}
 
-    // 2. L'Effet Serpentin : Tracage de l'icone SVG
-    Animated.timing(drawAnim, {
-      toValue: 0, // On reduit le decalage du trait jusqu'a 0 (dessin complet)
-      duration: 1500,
-      easing: Easing.inOut(Easing.ease),
-      // react-native-svg necessite false pour animer les proprietes internes comme strokeDashoffset
-      useNativeDriver: false, 
-    }).start(() => {
-      // 3. Une fois le dessin fini, on declenche le battement de coeur (Pulse)
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(scaleAnim, {
-            toValue: 1.06,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scaleAnim, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true,
-          })
-        ])
-      ).start();
-    });
-
-    // 4. Gestion du progres de la barre (2.5s strictes)
-    const duration = 2500;
-    const intervalTime = 25;
-    const steps = duration / intervalTime;
-    let currentStep = 0;
-
-    const interval = setInterval(() => {
-      currentStep++;
-      const nextProgress = (currentStep / steps) * 100;
-      
-      if (nextProgress >= 100) {
-        setProgress(100);
-        clearInterval(interval);
-        if (onFinish) {
-          setTimeout(onFinish, 200); 
-        }
-      } else {
-        setProgress(nextProgress);
+    // Progression garantie et appel systématique de onFinish
+    const timer = setTimeout(() => {
+      setProgress(100);
+      if (onFinish) {
+        onFinish();
       }
-    }, intervalTime);
+    }, 1000);
 
-    return () => clearInterval(interval);
-  }, []);
+    const progressInterval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 90) {
+          clearInterval(progressInterval);
+          return 90;
+        }
+        return prev + 15;
+      });
+    }, 100);
+
+    return () => {
+      clearTimeout(timer);
+      clearInterval(progressInterval);
+    };
+  }, [fadeAnim, onFinish, refreshAll, scaleAnim]);
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
-        
+      <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
         <View style={styles.centerBlock}>
-          
-          {/* L'icone SVG dessinee a la volee */}
-          <Animated.View style={{ transform: [{ scale: scaleAnim }], alignItems: 'center' }}>
-            <Svg width="140" height="70" viewBox="0 0 100 50">
-              <AnimatedPath
-                // Le trace mathematique parfait de l'infini
-                d="M 50 25 C 65 0, 95 0, 95 25 C 95 50, 65 50, 50 25 C 35 0, 5 0, 5 25 C 5 50, 35 50, 50 25 Z"
-                fill="none"
-                stroke={colors.coral}
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeDasharray="300" // Longueur du trait
-                strokeDashoffset={drawAnim} // C'est cette valeur qui s'anime
-              />
-            </Svg>
-          </Animated.View>
-
+          <View style={styles.iconCircle}>
+            <Ionicons name="infinite" size={54} color={colors.coral} />
+          </View>
           <Text style={styles.logoText}>2Mots</Text>
           <Text style={styles.signatureText}>@By_Kevy</Text>
         </View>
-        
+
         <View style={styles.bottomBlock}>
           <View style={[styles.progressBarBackground, { backgroundColor: themeColors.overlayLight }]}>
-            <View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: themeColors.text }]} />
+            <View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: colors.coral }]} />
           </View>
         </View>
-
       </Animated.View>
     </View>
   );
@@ -137,18 +100,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  iconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 127, 80, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
   logoText: {
     ...typography.titleHuge,
     color: colors.coral,
-    fontSize: 54,
+    fontSize: 50,
     fontWeight: '900',
-    letterSpacing: -2,
-    marginTop: spacing.sm,
+    letterSpacing: -1.5,
+    marginTop: spacing.xs,
   },
   signatureText: {
     fontFamily: 'Poppins_500Medium',
     color: colors.coral,
-    fontSize: 14,
+    fontSize: 13,
     letterSpacing: 2,
     marginTop: spacing.xs,
     textTransform: 'uppercase',
@@ -167,5 +139,5 @@ const styles = StyleSheet.create({
   progressBarFill: {
     height: '100%',
     borderRadius: 10,
-  }
+  },
 });

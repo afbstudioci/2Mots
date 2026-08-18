@@ -1,59 +1,42 @@
-//src/hooks/useAudioRecording.ts
-import { useState, useRef, useEffect } from 'react';
-import { Audio } from 'expo-av';
+﻿//src/hooks/useAudioRecording.ts
+import { useState } from 'react';
+import { useAudioRecorder, useAudioRecorderState, RecordingPresets, requestRecordingPermissionsAsync } from 'expo-audio';
 
 export const useAudioRecording = () => {
     const [isRecording, setIsRecording] = useState(false);
-    const [recordingTime, setRecordingTime] = useState(0);
-    const recordingRef = useRef<Audio.Recording | null>(null);
-    const timerRef = useRef<any>(null);
-
-    const cleanup = async () => {
-        if (recordingRef.current) {
-            try {
-                const status = await recordingRef.current.getStatusAsync();
-                if (status.isRecording) await recordingRef.current.stopAndUnloadAsync();
-            } catch (e) {}
-            recordingRef.current = null;
-        }
-        setIsRecording(false);
-        setRecordingTime(0);
-        if (timerRef.current) clearInterval(timerRef.current);
-    };
+    const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+    const state = useAudioRecorderState(recorder, 500);
 
     const start = async () => {
         try {
-            await cleanup();
-            const perm = await Audio.requestPermissionsAsync();
-            if (perm.status !== 'granted') return;
-
-            await Audio.setAudioModeAsync({
-                allowsRecordingIOS: true,
-                playsInSilentModeIOS: true,
-                staysActiveInBackground: false,
-                shouldDuckAndroid: true,
-                playThroughEarpieceAndroid: false,
-            });
-            const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-            recordingRef.current = recording;
-            
+            const { granted } = await requestRecordingPermissionsAsync();
+            if (!granted) {
+                console.warn('[AUDIO] Permission micro refusée');
+                return;
+            }
+            await recorder.prepareToRecordAsync();
+            recorder.record();
             setIsRecording(true);
-            timerRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000);
         } catch (err) {
             console.error('[AUDIO] Failed to start recording', err);
         }
     };
 
     const stop = async (cancel = false) => {
-        if (!recordingRef.current) return null;
-        const uri = recordingRef.current.getURI();
-        await cleanup();
-        return cancel ? null : uri;
+        try {
+            await recorder.stop();
+            setIsRecording(false);
+            return cancel ? null : recorder.uri;
+        } catch (e) {
+            setIsRecording(false);
+            return null;
+        }
     };
 
-    useEffect(() => {
-        return () => { cleanup(); };
-    }, []);
-
-    return { isRecording, recordingTime, start, stop };
+    return { 
+        isRecording: state.isRecording || isRecording, 
+        recordingTime: Math.round(state.durationMillis / 1000), 
+        start, 
+        stop 
+    };
 };

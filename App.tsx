@@ -1,4 +1,4 @@
-//App.tsx
+﻿//App.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer, DefaultTheme, DarkTheme as NavDarkTheme } from '@react-navigation/native';
@@ -15,7 +15,6 @@ import { SocketProvider } from './src/context/SocketContext';
 import SplashScreen from './src/screens/SplashScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
-import HomeScreen from './src/screens/HomeScreen';
 import GameScreen from './src/screens/GameScreen';
 import GameOverScreen from './src/screens/GameOverScreen';
 import LeaderboardScreen from './src/screens/LeaderboardScreen';
@@ -35,7 +34,7 @@ export type RootStackParamList = {
   Splash: undefined;
   Login: undefined;
   Register: undefined;
-  Home: undefined; // Maintenant le nom du MainTabNavigator
+  Home: undefined;
   Game: undefined;
   GameOver: { 
     score: number; 
@@ -49,7 +48,7 @@ export type RootStackParamList = {
   Shop: undefined;
   Missions: undefined;
   Friends: undefined;
-  Chat: { friendId: string, friendName: string, friendAvatar?: string };
+  Chat: { friendId: string; friendName: string; friendAvatar?: string };
   Contact: undefined;
   Rules: undefined;
   Privacy: undefined;
@@ -61,7 +60,7 @@ const AppNavigator = () => {
   const { user, loading } = useAuth();
   const { themeColors } = useTheme();
   const [isSplashDone, setIsSplashDone] = useState(false);
-  const pushRegistered = React.useRef(false);
+  const pushRegistered = useRef(false);
 
   useEffect(() => {
     if (user && !pushRegistered.current) {
@@ -77,23 +76,23 @@ const AppNavigator = () => {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        // Fond opaque sur TOUTES les screens
         contentStyle: { backgroundColor: themeColors.background },
-        // Animation douce
-        animation: 'fade',
-        animationDuration: 150,
-        freezeOnBlur: true,
+        animation: 'slide_from_right',
+        orientation: 'portrait',
       }}
     >
       {loading || !isSplashDone ? (
-        <Stack.Screen name="Splash">
+        <Stack.Screen 
+          name="Splash" 
+          options={{ animation: 'fade' }}
+        >
           {(props) => <SplashScreen {...props} onFinish={() => setIsSplashDone(true)} />}
         </Stack.Screen>
       ) : user ? (
         <Stack.Group>
-          <Stack.Screen name="Home" component={MainTabNavigator} />
-          <Stack.Screen name="Game" component={GameScreen} options={{ freezeOnBlur: false }} />
-          <Stack.Screen name="GameOver" component={GameOverScreen} />
+          <Stack.Screen name="Home" component={MainTabNavigator} options={{ animation: 'fade' }} />
+          <Stack.Screen name="Game" component={GameScreen} options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="GameOver" component={GameOverScreen} options={{ animation: 'fade' }} />
           <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="Friends" component={FriendsScreen} />
@@ -109,16 +108,12 @@ const AppNavigator = () => {
           <Stack.Screen 
             name="Login" 
             component={LoginScreen} 
-            options={{
-              headerShown: false,
-            }}
+            options={{ animation: 'fade' }}
           />
           <Stack.Screen 
             name="Register" 
             component={RegisterScreen} 
-            options={{
-              headerShown: false,
-            }}
+            options={{ animation: 'slide_from_right' }}
           />
         </Stack.Group>
       )}
@@ -137,6 +132,7 @@ const AppContent = () => {
       card: themeColors.card,
       text: themeColors.text,
       border: themeColors.border,
+      primary: themeColors.primary,
     },
   };
 
@@ -158,7 +154,7 @@ const AppContent = () => {
     <SafeAreaProvider style={{ flex: 1, backgroundColor: themeColors.background }}>
       <GestureHandlerRootView style={{ flex: 1, backgroundColor: themeColors.background }}>
         <StatusBar 
-          style={isDark ? "light" : "dark"} 
+          style={isDark ? 'light' : 'dark'} 
           backgroundColor="transparent"
           translucent={true}
         />
