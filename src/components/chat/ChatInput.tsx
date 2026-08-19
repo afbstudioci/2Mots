@@ -7,7 +7,6 @@ import {
   StyleSheet,
   Animated,
   Text,
-  Keyboard,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -39,34 +38,6 @@ export default function ChatInput({
   const { themeColors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const [text, setText] = useState('');
-  const bottomMargin = useRef(new Animated.Value(Math.max(insets.bottom + 8, 14))).current;
-
-  useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const showSub = Keyboard.addListener(showEvent, () => {
-      Animated.timing(bottomMargin, {
-        toValue: 12,
-        duration: 220,
-        useNativeDriver: false,
-      }).start();
-    });
-
-    const hideSub = Keyboard.addListener(hideEvent, () => {
-      Animated.timing(bottomMargin, {
-        toValue: Math.max(insets.bottom + 8, 14),
-        duration: 220,
-        useNativeDriver: false,
-      }).start();
-    });
-
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, [insets.bottom]);
-
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   const formatTime = (s: number) => {
@@ -110,13 +81,13 @@ export default function ChatInput({
   const barBg = customBackgroundColor || themeColors.surface;
 
   return (
-    <Animated.View
+    <View
       style={[
         styles.floatingContainer,
         {
           backgroundColor: barBg,
           borderColor: isDark ? themeColors.overlayLight : 'rgba(0,0,0,0.06)',
-          marginBottom: bottomMargin,
+          marginBottom: Platform.OS === 'ios' ? 8 : Math.max(insets.bottom, 10),
         },
         shadows.medium(isDark),
       ]}
@@ -168,7 +139,7 @@ export default function ChatInput({
           )}
         </View>
       )}
-    </Animated.View>
+    </View>
   );
 }
 

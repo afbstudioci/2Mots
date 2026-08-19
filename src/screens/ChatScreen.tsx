@@ -74,34 +74,38 @@ export default function ChatScreen() {
   }, [friendId]);
 
   const handleToggleBlock = () => {
+    setShowSettings(false);
     const willBlock = !isBlocked;
-    setAlertConfig({
-      visible: true,
-      title: willBlock ? 'Bloquer l utilisateur ?' : 'Debloquer l utilisateur ?',
-      message: willBlock ? `${friendName} ne pourra plus vous ecrire.` : `Vous pourrez de nouveau echanger avec ${friendName}.`,
-      onConfirm: async () => {
-        setIsBlocked(willBlock);
-        await AsyncStorage.setItem(`@twomots_blocked_${friendId}`, JSON.stringify(willBlock));
-        setAlertConfig((prev) => ({ ...prev, visible: false }));
-        setShowSettings(false);
-      },
-    });
+    setTimeout(() => {
+      setAlertConfig({
+        visible: true,
+        title: willBlock ? 'Bloquer cet utilisateur ?' : 'Debloquer cet utilisateur ?',
+        message: willBlock ? `${friendName} ne pourra plus vous ecrire.` : `Vous pourrez de nouveau echanger avec ${friendName}.`,
+        onConfirm: async () => {
+          setIsBlocked(willBlock);
+          await AsyncStorage.setItem(`@twomots_blocked_${friendId}`, JSON.stringify(willBlock));
+          setAlertConfig((prev) => ({ ...prev, visible: false }));
+        },
+      });
+    }, 150);
   };
 
   const handleClearHistory = () => {
-    setAlertConfig({
-      visible: true,
-      title: 'Effacer l historique ?',
-      message: 'Tous les messages seront supprimes de cette conversation.',
-      onConfirm: async () => {
-        try {
+    setShowSettings(false);
+    setTimeout(() => {
+      setAlertConfig({
+        visible: true,
+        title: 'Effacer l historique ?',
+        message: 'Tous les messages seront supprimes de cette conversation.',
+        onConfirm: async () => {
           clearHistoryLocal();
-          await api.delete(`/chat/history/${friendId}`);
-        } catch {}
-        setAlertConfig((prev) => ({ ...prev, visible: false }));
-        setShowSettings(false);
-      },
-    });
+          try {
+            await api.delete(`/chat/history/${friendId}`);
+          } catch {}
+          setAlertConfig((prev) => ({ ...prev, visible: false }));
+        },
+      });
+    }, 150);
   };
 
   const handleStopRecording = async (cancel = false) => {
@@ -119,7 +123,7 @@ export default function ChatScreen() {
   return (
     <ScreenWrapper>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={[styles.container, { backgroundColor: currentTheme.bg }]}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >

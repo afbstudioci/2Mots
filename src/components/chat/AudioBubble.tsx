@@ -1,10 +1,10 @@
 ﻿//src/components/chat/AudioBubble.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, shadows } from '../../theme/theme';
 import { useTheme } from '../../context/ThemeContext';
-import { createAudioPlayer, AudioPlayer } from 'expo-audio';
+import { useAudioPlayer } from 'expo-audio';
 
 interface AudioBubbleProps {
   uri: string;
@@ -12,92 +12,65 @@ interface AudioBubbleProps {
   duration?: number;
 }
 
-export default function AudioBubble({ uri, isMe, duration }: AudioBubbleProps) {
+export default function AudioBubble({ uri, isMe, duration = 0 }: AudioBubbleProps) {
   const { themeColors } = useTheme();
+  const player = useAudioPlayer(uri ? { uri } : null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [position, setPosition] = useState(0);
-  const [totalDuration, setTotalDuration] = useState(duration ? duration * 1000 : 0);
-  const playerRef = useRef<AudioPlayer | null>(null);
-  const intervalRef = useRef<any>(null);
+  const [currentPos, setCurrentPos] = useState(0);
 
   useEffect(() => {
-    return () => {
-      if (playerRef.current) {
-        try {
-          playerRef.current.pause();
-          playerRef.current.release();
-        } catch {}
-      }
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, []);
+    if (!player) return;
 
-  const playPause = async () => {
-    if (!uri) return;
-    try {
-      if (!playerRef.current) {
-        const player = createAudioPlayer({ uri });
-        playerRef.current = player;
-        player.play();
+    const interval = setInterval(() => {
+      if (player.playing) {
         setIsPlaying(true);
-
-        intervalRef.current = setInterval(() => {
-          if (playerRef.current) {
-            const currentSec = (playerRef.current as any).currentTime || 0;
-            const durSec = (playerRef.current as any).duration || (duration || 0);
-            setPosition(currentSec * 1000);
-            if (durSec > 0) setTotalDuration(durSec * 1000);
-
-            if (durSec > 0 && currentSec >= durSec) {
-              setIsPlaying(false);
-              setPosition(0);
-              clearInterval(intervalRef.current);
-            }
-          }
-        }, 200);
+        setCurrentPos(player.currentTime || 0);
       } else {
-        if (isPlaying) {
-          playerRef.current.pause();
-          setIsPlaying(false);
-          if (intervalRef.current) clearInterval(intervalRef.current);
-        } else {
-          playerRef.current.play();
-          setIsPlaying(true);
-          intervalRef.current = setInterval(() => {
-            if (playerRef.current) {
-              const currentSec = (playerRef.current as any).currentTime || 0;
-              const durSec = (playerRef.current as any).duration || (duration || 0);
-              setPosition(currentSec * 1000);
-              if (durSec > 0) setTotalDuration(durSec * 1000);
-
-              if (durSec > 0 && currentSec >= durSec) {
-                setIsPlaying(false);
-                setPosition(0);
-                clearInterval(intervalRef.current);
-              }
-            }
-          }, 200);
+        setIsPlaying(false);
+        if (player.duration && player.currentTime >= player.duration - 0.2) {
+          setCurrentPos(0);
         }
       }
-    } catch {
-      setIsPlaying(false);
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    }
+    }, 200);
+
+    return () => clearInterval(interval);
+  }, [player]);
+
+  const togglePlay = () => {
+    if (!player || !uri) return;
+    try {
+      if (isPlaying) {
+        player.pause();
+        setIsPlaying(false);
+      } else {
+        if (player.duration && player.currentTime >= player.duration - 0.2) {
+          player.seekTo(0);
+        }
+        player.play();
+        setIsPlaying(true);
+      }
+    } catch {}
   };
 
-  const formatTime = (millis: number) => {
-    const totalSeconds = Math.max(0, Math.floor(millis / 1000));
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = Math.floor(totalSeconds % 60);
-    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  const formatTime = (seconds: number) => {
+    const s = Math.max(0, Math.floor(seconds));
+    const mins = Math.floor(s / 60);
+    const secs = s % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
-  const progress = totalDuration > 0 ? position / totalDuration : 0;
+  const totalDuration = (player && player.duration > 0) ? player.duration : (duration || 1);
+  const progress = totalDuration > 0 ? Math.min(1, currentPos / totalDuration) : 0;
 
   return (
-    <View style={[styles.container, { backgroundColor: isMe ? 'rgba(255,255,255,0.15)' : themeColors.overlayLight }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: isMe ? 'rgba(255,255,255,0.15)' : themeColors.overlayLight },
+      ]}
+    >
       <TouchableOpacity
-        onPress={playPause}
+        onPress={togglePlay}
         style={[styles.playBtn, { backgroundColor: isMe ? colors.white : colors.coral }]}
         disabled={!uri}
         activeOpacity={0.8}
@@ -115,7 +88,7 @@ export default function AudioBubble({ uri, isMe, duration }: AudioBubbleProps) {
             style={[
               styles.progress,
               {
-                width: `${Math.min(progress * 100, 100)}%`,
+                width: `${Math.max(0, Math.min(progress * 100, 100))}%`,
                 backgroundColor: isMe ? colors.white : colors.coral,
               },
             ]}
@@ -123,7 +96,7 @@ export default function AudioBubble({ uri, isMe, duration }: AudioBubbleProps) {
         </View>
         <View style={styles.metaRow}>
           <Text style={[styles.timer, { color: isMe ? colors.white : themeColors.textSecondary }]}>
-            {formatTime(position)} / {formatTime(totalDuration)}
+            {formatTime(currentPos)} / {formatTime(totalDuration)}
           </Text>
         </View>
       </View>

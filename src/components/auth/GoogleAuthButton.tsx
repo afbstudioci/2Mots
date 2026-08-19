@@ -1,49 +1,77 @@
 ﻿//src/components/auth/GoogleAuthButton.tsx
 import React, { useState } from 'react';
-import {
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { colors, borderRadius, spacing } from '../../theme/theme';
 import { useTheme } from '../../context/ThemeContext';
-import { signInWithGoogle } from '../../services/googleAuth';
 import { useAuth } from '../../context/AuthContext';
+import { signInWithGoogle } from '../../services/googleAuth';
+import { borderRadius, shadows } from '../../theme/theme';
 
 interface GoogleAuthButtonProps {
-  onSuccess: () => void;
-  onError: (msg: string) => void;
+  onSuccess?: () => void;
+  onError?: (err: string) => void;
   title?: string;
+  mode?: 'login' | 'register';
 }
+
+const GoogleIcon = () => (
+  <Svg width={20} height={20} viewBox="0 0 24 24">
+    <Path
+      fill="#4285F4"
+      d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
+    />
+    <Path
+      fill="#34A853"
+      d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
+    />
+    <Path
+      fill="#FBBC05"
+      d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.04 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
+    />
+    <Path
+      fill="#EA4335"
+      d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+    />
+  </Svg>
+);
 
 export default function GoogleAuthButton({
   onSuccess,
   onError,
   title = 'Continuer avec Google',
+  mode = 'login',
 }: GoogleAuthButtonProps) {
   const { themeColors, isDark } = useTheme();
   const { loginWithGoogle } = useAuth();
   const [loading, setLoading] = useState(false);
 
-  const handleGooglePress = async () => {
+  const handlePress = async () => {
     if (loading) return;
     setLoading(true);
 
     try {
-      const googleRes = await signInWithGoogle();
-      if ((googleRes as any)?.cancelled) {
+      const result: any = await signInWithGoogle();
+
+      if (!result || result.cancelled) {
         setLoading(false);
         return;
       }
 
-      await loginWithGoogle(googleRes);
-      onSuccess();
+      if (result.email) {
+        await loginWithGoogle({
+          email: result.email,
+          name: result.name,
+          profilePicture: result.profilePicture,
+          idToken: result.idToken,
+          mode,
+        });
+
+        if (onSuccess) onSuccess();
+      }
     } catch (err: any) {
-      console.warn('[GOOGLE_SIGNIN] Erreur :', err);
-      onError(err.message || 'Échec de la connexion Google');
+      if (onError) {
+        onError(err.message || 'Connexion Google interrompue.');
+      }
     } finally {
       setLoading(false);
     }
@@ -54,36 +82,19 @@ export default function GoogleAuthButton({
       style={[
         styles.button,
         {
-          backgroundColor: isDark ? themeColors.card : '#FFFFFF',
+          backgroundColor: isDark ? themeColors.surface : '#FFFFFF',
           borderColor: isDark ? themeColors.border : '#E2E8F0',
         },
       ]}
-      onPress={handleGooglePress}
-      disabled={loading}
+      onPress={handlePress}
       activeOpacity={0.85}
+      disabled={loading}
     >
       {loading ? (
-        <ActivityIndicator color={colors.coral} size="small" />
+        <ActivityIndicator size="small" color={themeColors.text} />
       ) : (
         <View style={styles.content}>
-          <Svg width={20} height={20} viewBox="0 0 24 24" style={styles.icon}>
-            <Path
-              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-              fill="#4285F4"
-            />
-            <Path
-              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-              fill="#34A853"
-            />
-            <Path
-              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-              fill="#FBBC05"
-            />
-            <Path
-              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-              fill="#EA4335"
-            />
-          </Svg>
+          <GoogleIcon />
           <Text style={[styles.text, { color: themeColors.text }]}>{title}</Text>
         </View>
       )}
@@ -93,23 +104,24 @@ export default function GoogleAuthButton({
 
 const styles = StyleSheet.create({
   button: {
-    height: 54,
+    height: 52,
     borderRadius: borderRadius.xl,
-    borderWidth: 1.5,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: spacing.md,
+    borderWidth: 1.5,
+    marginVertical: 10,
+    width: '100%',
+    ...shadows.soft(false),
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  icon: {
-    marginRight: 12,
+    justifyContent: 'center',
   },
   text: {
+    fontSize: 14,
     fontFamily: 'Poppins_600SemiBold',
-    fontSize: 15,
+    marginLeft: 12,
     letterSpacing: 0.2,
   },
 });

@@ -192,7 +192,7 @@ const RegisterScreen = ({ navigation }: any) => {
               </TouchableOpacity>
 
                             <GoogleAuthButton
-                title="S'inscrire avec Google"
+                title="S'inscrire avec Google" mode="register"
                 onSuccess={() => navigation.reset({ index: 0, routes: [{ name: 'Home' }] })}
                 onError={(err) => setAlert({ visible: true, title: 'Google Sign-In', message: err, type: 'error' })}
               />
