@@ -1,26 +1,52 @@
-{
+﻿{
   "project_info": {
-    "project_number": "501992801615",
-    "project_id": "mots-3aaa6",
-    "storage_bucket": "mots-3aaa6.firebasestorage.app"
+    "project_number": "459645633641",
+    "project_id": "mots-84091",
+    "storage_bucket": "mots-84091.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:501992801615:android:75ba2f60a667463503313a",
+        "mobilesdk_app_id": "1:459645633641:android:a2697a8c5de09bd5e58ef8",
         "android_client_info": {
           "package_name": "com.afbstudio.twomots"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "459645633641-bg7ohobrjuc5oj7jre47g3ve8o3s4lb4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.afbstudio.twomots",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "459645633641-f67jcitrjl5894dpd1plqjqcutqprgi9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.afbstudio.twomots",
+            "certificate_hash": "a8e649c8b81e264f2faef645c11b2f5277afb0df"
+          }
+        },
+        {
+          "client_id": "459645633641-rtomnk2i40i29dhpcuvvho4ufeq4vvjk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyCeanTOwJBWiGV9mopBr71x2wEsu-RHnsQ"
+          "current_key": "AIzaSyAc5yV9rlzRCi6g1SWQ3DUi_hWst9LEOdo"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "459645633641-rtomnk2i40i29dhpcuvvho4ufeq4vvjk.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

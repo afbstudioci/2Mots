@@ -8,6 +8,7 @@ interface AuthContextData {
   user: any;
   loading: boolean;
   login: (credentials: any) => Promise<void>;
+  loginWithGoogle: (googleData: any) => Promise<void>;
   register: (userData: any) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -60,9 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await saveUser(freshUser);
         setUser(freshUser);
       }
-    } catch (error) {
-      // Si le serveur est temporairement injoignable, on conserve la session locale
-    }
+    } catch {}
   };
 
   const login = async (credentials: any) => {
@@ -75,6 +74,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(userData);
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Erreur de connexion');
+    }
+  };
+
+  const loginWithGoogle = async (googleData: any) => {
+    try {
+      const response = await api.post('/auth/google', googleData);
+      const { user: userData, accessToken, refreshToken } = response.data.data;
+
+      await saveTokens(accessToken, refreshToken);
+      await saveUser(userData);
+      setUser(userData);
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Erreur lors de la connexion Google');
     }
   };
 
@@ -122,7 +134,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshProfile, updateProfile }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        loginWithGoogle,
+        register,
+        logout,
+        refreshProfile,
+        updateProfile,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

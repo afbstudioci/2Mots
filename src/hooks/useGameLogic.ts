@@ -1,29 +1,35 @@
 ﻿//src/hooks/useGameLogic.ts
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import api from '../services/api';
 import { RootStackParamList } from '../../App';
 import { useAudioContext } from '../context/AudioContext';
+import { getLocalGameBatch } from '../services/offlineVault';
+import { queueOfflineSession } from '../services/syncService';
+import * as Haptics from 'expo-haptics';
 
-const vib = (type: 'light' | 'success' | 'warn' | 'error') => {
+const vib = (t: 'light' | 'success' | 'warn' | 'error') => {
   try {
-    if (type === 'light') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    else if (type === 'success') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    else if (type === 'warn') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    else if (type === 'error') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-  } catch (e) {}
+    if (t === 'light') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    else if (t === 'success') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    else if (t === 'warn') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    else if (t === 'error') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+  } catch {}
 };
+
+const normalizeStr = (s: string) =>
+  (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
 export interface EnrichedWordPair {
   _id: string;
   word1: string;
   word2: string;
-  clue?: string;
+  clue: string;
   expectedType?: string;
   difficulty?: number;
+  exactMatch?: string[];
   options: string[];
 }
 
@@ -63,7 +69,7 @@ export const useGameLogic = () => {
   const fetchBatch = useCallback(async () => {
     try {
       setIsLoading(true);
-      const res = await api.get('/game/batch');
+      const res = await api.get('/game/batch', { timeout: 3500 });
       const d = res.data.data;
       const s = res.data.userStats;
       if (d?.length > 0) {
@@ -76,16 +82,20 @@ export const useGameLogic = () => {
           setUserKevs(s.kevs || 0);
         }
       } else {
-        setErrorMessage('Aucune énigme disponible.');
+        throw new Error('Batch vide');
       }
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Erreur chargement.');
+    } catch {
+      const localBatch = getLocalGameBatch(10);
+      setWordPairs(localBatch as any);
+      setCurrentIndex(0);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchBatch(); }, [fetchBatch]);
+  useEffect(() => {
+    fetchBatch();
+  }, [fetchBatch]);
 
   const triggerGameOver = useCallback(() => {
     if (hasTriggeredGameOver.current) return;
@@ -104,15 +114,50 @@ export const useGameLogic = () => {
       });
     }
 
-    api.post('/game/validate', { answers: sessionAnswersRef.current }).then((res) => {
-      const r = res.data.data;
-      navigation.replace('GameOver', {
-        score: r.totalScore,
-        details: sessionAnswersRef.current.map((a) => ({ word: a.answer || 'Passé', accuracy: a.accuracy || 0, label: a.isCorrect ? 'SUCCÈS' : 'ÉCHEC' })),
-        corrections: r.corrections || [],
-        hasScore: sessionAnswersRef.current.some((a) => a.isCorrect),
+    const answers = sessionAnswersRef.current;
+    const correctCount = answers.filter((a) => a.isCorrect).length;
+    const localScore = correctCount * 100;
+
+    queueOfflineSession({
+      score: localScore,
+      durationMs: answers.reduce((acc, a) => acc + (a.timeSpent || 0) * 1000, 0),
+      rounds: answers.map((a) => ({
+        wordPairId: a.wordPairId,
+        word1: '',
+        word2: '',
+        answer: a.answer,
+        isCorrect: Boolean(a.isCorrect),
+        timeSpentMs: (a.timeSpent || 0) * 1000,
+      })),
+    }).catch(() => {});
+
+    api
+      .post('/game/validate', { answers }, { timeout: 3000 })
+      .then((res) => {
+        const r = res.data.data;
+        navigation.replace('GameOver', {
+          score: r.totalScore,
+          details: answers.map((a) => ({
+            word: a.answer || 'Passé',
+            accuracy: a.accuracy || 0,
+            label: a.isCorrect ? 'SUCCÈS' : 'ÉCHEC',
+          })),
+          corrections: r.corrections || [],
+          hasScore: answers.some((a) => a.isCorrect),
+        });
+      })
+      .catch(() => {
+        navigation.replace('GameOver', {
+          score: localScore,
+          details: answers.map((a) => ({
+            word: a.answer || 'Passé',
+            accuracy: a.accuracy || 0,
+            label: a.isCorrect ? 'SUCCÈS' : 'ÉCHEC',
+          })),
+          corrections: [],
+          hasScore: correctCount > 0,
+        });
       });
-    }).catch(() => navigation.replace('Home'));
   }, [navigation, wordPairs, currentIndex, selectedChoice, stopBgm]);
 
   useEffect(() => {
@@ -128,7 +173,9 @@ export const useGameLogic = () => {
         return prev - 1;
       });
     }, 1000);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
   }, [isLoading, triggerGameOver, playDanger, showLevelUpModal]);
 
   useEffect(() => {
@@ -152,9 +199,19 @@ export const useGameLogic = () => {
   }, [triggerGameOver]);
 
   useEffect(() => {
-    const uF = navigation.addListener('focus', () => { if (!hasTriggeredGameOver.current && !isLoading) playBgm(); });
-    const uB = navigation.addListener('blur', () => { if (!hasTriggeredGameOver.current) { stopBgm(); backgroundTimeRef.current = Date.now(); } });
-    return () => { uF(); uB(); };
+    const uF = navigation.addListener('focus', () => {
+      if (!hasTriggeredGameOver.current && !isLoading) playBgm();
+    });
+    const uB = navigation.addListener('blur', () => {
+      if (!hasTriggeredGameOver.current) {
+        stopBgm();
+        backgroundTimeRef.current = Date.now();
+      }
+    });
+    return () => {
+      uF();
+      uB();
+    };
   }, [navigation, isLoading, playBgm, stopBgm]);
 
   const handleUseHint = () => {
@@ -168,75 +225,135 @@ export const useGameLogic = () => {
     if (!pair?.options || pair.options.length < 3) return;
 
     setUserKevs((prev) => Math.max(0, prev - 5));
-    api.post('/game/use-hint').catch(() => {});
-    const falseOpts = pair.options.slice(1);
-    setEliminatedChoice(falseOpts[Math.floor(Math.random() * falseOpts.length)]);
+    api.post('/game/use-hint', {}, { timeout: 2000 }).catch(() => {});
+
+    // Éliminer un mauvais choix
+    const exact = pair.exactMatch ? pair.exactMatch[0] : pair.options[0];
+    const wrongOptions = pair.options.filter((o) => normalizeStr(o) !== normalizeStr(exact));
+    const toEliminate = wrongOptions[Math.floor(Math.random() * wrongOptions.length)];
+
+    setEliminatedChoice(toEliminate);
     setIsHintUsed(true);
     playHint();
     vib('light');
   };
 
-  const selectChoice = async (choice: string, onSuccessTransition: () => void) => {
+  // VALIDATION INSTANTANÉE (0 MS) & FLUIDITÉ ABSOLUE
+  const selectChoice = (choice: string, onSuccessTransition: () => void) => {
     if (isChecking || selectedChoice !== null || hasTriggeredGameOver.current) return;
-    setSelectedChoice(choice);
-    setIsChecking(true);
-    vib('light');
 
     const pair = wordPairs[currentIndex];
     if (!pair) return;
 
-    try {
-      const res = await api.post('/game/check', { wordPairId: pair._id, answer: choice, timeSpent: Math.max(1, 30 - timeLeft) });
-      const r = res.data.data;
-      const isCorrect = Boolean(r.isCorrect);
-      setIsCorrectState(isCorrect);
-      setCorrectChoice(r.correctAnswer || choice);
+    setSelectedChoice(choice);
+    setIsChecking(true);
 
-      sessionAnswersRef.current.push({ wordPairId: pair._id, answer: choice, isCorrect, accuracy: isCorrect ? (r.accuracy || 100) : 0 });
+    const timeSpent = Math.max(1, 30 - timeLeft);
 
-      if (isCorrect) {
-        setLastAccuracy(r.accuracy || 100);
-        setSuccessTrigger((prev) => prev + 1);
-        vib('success');
-        if (r.newLevel > userLevel) { 
-          playLevelUp(); 
-          setShowLevelUpModal(true); 
-        } else { 
-          playSuccess(); 
-        }
-        const gained = r.timeWon || 8;
-        setTimeWon(gained);
-        setTimeLeft((prev) => Math.min(30, prev + gained));
-        setUserLevel(r.newLevel);
-        setCurrentXp(r.currentXp);
-        setXpNeeded(r.xpNeeded);
-        if (r.totalKevs !== undefined) setUserKevs(r.totalKevs);
-      } else {
-        vib('error');
-        playError();
-      }
+    // Détermination locale instantanée de la solution exacte
+    let isCorrect = false;
+    let officialSolution = pair.options[0];
 
-      setTimeout(() => {
-        setSelectedChoice(null); setCorrectChoice(null); setIsCorrectState(null);
-        setEliminatedChoice(null); setIsHintUsed(false); setIsChecking(false);
-        if (!showLevelUpModal) {
-          onSuccessTransition();
-        }
-      }, isCorrect ? 450 : 750);
-    } catch {
-      setSelectedChoice(null); setCorrectChoice(null); setIsCorrectState(null);
-      setEliminatedChoice(null); setIsHintUsed(false); setIsChecking(false);
+    if (pair.exactMatch && Array.isArray(pair.exactMatch) && pair.exactMatch.length > 0) {
+      officialSolution = pair.exactMatch[0];
+      isCorrect = pair.exactMatch.some((m) => normalizeStr(m) === normalizeStr(choice));
+    } else {
+      isCorrect = normalizeStr(pair.options[0]) === normalizeStr(choice);
     }
+
+    setIsCorrectState(isCorrect);
+    setCorrectChoice(officialSolution);
+
+    sessionAnswersRef.current.push({
+      wordPairId: pair._id,
+      answer: choice,
+      isCorrect,
+      timeSpent,
+      accuracy: isCorrect ? 100 : 0,
+    });
+
+    if (isCorrect) {
+      setLastAccuracy(100);
+      setSuccessTrigger((prev) => prev + 1);
+      vib('success');
+      playSuccess();
+
+      const gained = 8;
+      setTimeWon(gained);
+      setTimeLeft((prev) => Math.min(30, prev + gained));
+
+      setCurrentXp((prev) => {
+        const next = prev + 1;
+        if (next >= xpNeeded) {
+          setUserLevel((lvl) => lvl + 1);
+          setXpNeeded((req) => req + 2);
+          playLevelUp();
+          setShowLevelUpModal(true);
+          return 0;
+        }
+        return next;
+      });
+
+      // Synchronisation réseau silencieuse en arrière-plan sans bloquer l'UI
+      if (!pair._id.startsWith('off_')) {
+        api.post('/game/check', { wordPairId: pair._id, answer: choice, timeSpent }, { timeout: 3000 }).catch(() => {});
+      }
+    } else {
+      vib('error');
+      playError();
+      if (!pair._id.startsWith('off_')) {
+        api.post('/game/check', { wordPairId: pair._id, answer: choice, timeSpent }, { timeout: 3000 }).catch(() => {});
+      }
+    }
+
+    // Transition ultra-réactive
+    setTimeout(() => {
+      setSelectedChoice(null);
+      setCorrectChoice(null);
+      setIsCorrectState(null);
+      setEliminatedChoice(null);
+      setIsHintUsed(false);
+      setIsChecking(false);
+      if (!showLevelUpModal) {
+        onSuccessTransition();
+      }
+    }, isCorrect ? 380 : 650);
   };
 
   useEffect(() => {
-    return () => { stopBgm(); if (timerRef.current) clearInterval(timerRef.current); };
+    return () => {
+      stopBgm();
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
   }, [stopBgm]);
 
   return {
-    wordPairs, currentIndex, setCurrentIndex, timeLeft, setTimeLeft, selectedChoice, correctChoice,
-    isCorrectState, isLoading, errorMessage, isChecking, eliminatedChoice, isHintUsed, handleUseHint,
-    showNoKevsModal, setShowNoKevsModal, userLevel, currentXp, xpNeeded, userKevs, timeWon, setTimeWon,
-    successTrigger, lastAccuracy, selectChoice, showLevelUpModal, setShowLevelUpModal,
+    wordPairs,
+    currentIndex,
+    setCurrentIndex,
+    timeLeft,
+    setTimeLeft,
+    selectedChoice,
+    correctChoice,
+    isCorrectState,
+    isLoading,
+    errorMessage,
+    isChecking,
+    eliminatedChoice,
+    isHintUsed,
+    handleUseHint,
+    showNoKevsModal,
+    setShowNoKevsModal,
+    userLevel,
+    currentXp,
+    xpNeeded,
+    userKevs,
+    timeWon,
+    setTimeWon,
+    successTrigger,
+    lastAccuracy,
+    selectChoice,
+    showLevelUpModal,
+    setShowLevelUpModal,
   };
 };

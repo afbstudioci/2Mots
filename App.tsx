@@ -29,6 +29,7 @@ import RulesScreen from './src/screens/RulesScreen';
 import PrivacyScreen from './src/screens/PrivacyScreen';
 import MainTabNavigator from './src/components/navigation/MainTabNavigator';
 import { registerForPushNotificationsAsync } from './src/services/notificationService';
+import { useAppStartup } from './src/hooks/useAppStartup';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -102,6 +103,7 @@ const AppNavigator = () => {
 
 const AppContent = () => {
   const { isDark, themeColors } = useTheme();
+  useAppStartup();
 
   const navigationTheme = {
     ...(isDark ? NavDarkTheme : DefaultTheme),

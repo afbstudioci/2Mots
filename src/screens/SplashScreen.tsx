@@ -1,7 +1,8 @@
 ﻿//src/screens/SplashScreen.tsx
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Image } from 'react-native';
-import { typography, colors, spacing } from '../theme/theme';
+import { View, Text, StyleSheet, Animated } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
+import { colors, spacing } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
@@ -14,7 +15,7 @@ export default function SplashScreen({ navigation }: any) {
   const hasNavigated = useRef(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.92)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
 
   useEffect(() => {
     Animated.parallel([
@@ -65,13 +66,19 @@ export default function SplashScreen({ navigation }: any) {
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
         <View style={styles.centerBlock}>
-          <Image
-            source={require('../../assets/icon.png')}
-            style={styles.logoImage}
-            resizeMode="contain"
-          />
-          <Text style={styles.logoText}>2Mots</Text>
-          <Text style={styles.signatureText}>@By_Kevy</Text>
+          {/* Tracé SVG élégant du symbole Infini */}
+          <Svg width={130} height={65} viewBox="0 0 100 50">
+            <Path
+              d="M 50 25 C 65 0, 95 0, 95 25 C 95 50, 65 50, 50 25 C 35 0, 5 0, 5 25 C 5 50, 35 50, 50 25 Z"
+              fill="none"
+              stroke={colors.coral}
+              strokeWidth="6"
+              strokeLinecap="round"
+            />
+          </Svg>
+
+          {/* Signature By_ KEVY agrandie et mise en valeur */}
+          <Text style={styles.signatureText}>By_ KEVY</Text>
         </View>
 
         <View style={styles.bottomBlock}>
@@ -95,33 +102,19 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: '20%',
+    paddingVertical: '22%',
   },
   centerBlock: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  logoImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 22,
-    marginBottom: spacing.xs,
-  },
-  logoText: {
-    ...typography.titleHuge,
-    color: colors.coral,
-    fontSize: 48,
-    fontWeight: '900',
-    letterSpacing: -1.5,
-    marginTop: spacing.xs,
-  },
   signatureText: {
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: 'Poppins_700Bold',
     color: colors.coral,
-    fontSize: 13,
-    letterSpacing: 2,
-    marginTop: spacing.xs,
+    fontSize: 20,
+    letterSpacing: 4,
+    marginTop: spacing.lg,
     textTransform: 'uppercase',
   },
   bottomBlock: {
@@ -130,7 +123,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   progressBarBackground: {
-    width: 100,
+    width: 110,
     height: 4,
     borderRadius: 10,
     overflow: 'hidden',

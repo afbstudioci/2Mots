@@ -19,6 +19,7 @@ import AuthInput from '../components/auth/AuthInput';
 import ServerWakeUpLoader from '../components/auth/ServerWakeUpLoader';
 import PasswordValidator from '../components/auth/PasswordValidator';
 import ReferralModal from '../components/auth/ReferralModal';
+import GoogleAuthButton from '../components/auth/GoogleAuthButton';
 import { borderRadius, colors, spacing } from '../theme/theme';
 import { useKeyboard } from '../hooks/useKeyboard';
 
@@ -189,6 +190,12 @@ const RegisterScreen = ({ navigation }: any) => {
                   <Ionicons name="checkmark" size={22} color="#FFF" style={{ marginLeft: spacing.sm }} />
                 </LinearGradient>
               </TouchableOpacity>
+
+                            <GoogleAuthButton
+                title="S'inscrire avec Google"
+                onSuccess={() => navigation.reset({ index: 0, routes: [{ name: 'Home' }] })}
+                onError={(err) => setAlert({ visible: true, title: 'Google Sign-In', message: err, type: 'error' })}
+              />
 
               <TouchableOpacity
                 onPress={() => navigation.navigate('Login')}

@@ -57,26 +57,42 @@ export default function GameScreen({ navigation }: any) {
     };
   }, []);
 
-  const slideWordsAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const startNextWordAnimation = () => {
-    Animated.timing(slideWordsAnim, {
-      toValue: -width,
-      duration: 180,
-      useNativeDriver: true,
-    }).start(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 0.94,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
       setCurrentIndex((prev) => {
         if (prev + 1 < wordPairs.length) {
           return prev + 1;
         }
         return 0;
       });
-      slideWordsAnim.setValue(width);
-      Animated.timing(slideWordsAnim, {
-        toValue: 0,
-        duration: 220,
-        useNativeDriver: true,
-      }).start();
+
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          friction: 7,
+          tension: 60,
+          useNativeDriver: true,
+        }),
+      ]).start();
     });
   };
 
@@ -123,7 +139,6 @@ export default function GameScreen({ navigation }: any) {
 
   return (
     <ScreenWrapper style={{ backgroundColor: themeColors.background }}>
-      {/* Orbes d'arriere-plan */}
       <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
         <Animated.View
           style={[
@@ -157,11 +172,9 @@ export default function GameScreen({ navigation }: any) {
         />
       </View>
 
-      {/* En-tete avec Niveau, XP et Solde de Kevs */}
       <GameHeader level={userLevel} currentXp={currentXp} xpNeeded={xpNeeded} kevs={userKevs} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Chronometre */}
         <GameTimer
           timeLeft={timeLeft}
           maxTime={30}
@@ -169,15 +182,19 @@ export default function GameScreen({ navigation }: any) {
           onTimeGainAnimationEnd={() => setTimeWon(0)}
         />
 
-        {/* Zone des 2 Mots */}
         <View style={styles.playAreaWrapper}>
           <SuccessRipple trigger={successTrigger} accuracy={lastAccuracy} />
-          <Animated.View style={{ width: '100%', transform: [{ translateX: slideWordsAnim }] }}>
+          <Animated.View
+            style={{
+              width: '100%',
+              opacity: fadeAnim,
+              transform: [{ scale: scaleAnim }],
+            }}
+          >
             <GamePlayArea currentPair={currentPair} />
           </Animated.View>
         </View>
 
-        {/* Zone des 3 Choix Multiples & Indice 50/50 Payant */}
         <GameChoicesArea
           options={currentPair?.options || []}
           selectedChoice={selectedChoice}
@@ -193,7 +210,6 @@ export default function GameScreen({ navigation }: any) {
         />
       </ScrollView>
 
-      {/* Alerte Passage de Niveau avec Reset Chrono */}
       <CustomAlert
         visible={showLevelUpModal}
         title="FELICITATIONS !"
@@ -207,7 +223,6 @@ export default function GameScreen({ navigation }: any) {
         buttonText="Continuer"
       />
 
-      {/* Alerte Kevs Insuffisants pour le 50/50 */}
       <CustomAlert
         visible={showNoKevsModal}
         title="KEVS INSUFFISANTS"

@@ -1,10 +1,9 @@
-//src/services/notificationService.ts
+﻿//src/services/notificationService.ts
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import api from './api';
 
-// Configurer le comportement des notifications quand l'app est au premier plan
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -16,38 +15,46 @@ Notifications.setNotificationHandler({
 });
 
 export const registerForPushNotificationsAsync = async () => {
-  let token;
+  let token: string | undefined;
 
   if (Device.isDevice) {
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
-    
+
     if (existingStatus !== 'granted') {
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
     }
-    
+
     if (finalStatus !== 'granted') {
-      console.log('Permission push refusée');
+      console.warn('[PUSH] Permission refusée');
       return;
     }
-    
-    token = (await Notifications.getDevicePushTokenAsync()).data;
-    console.log('Native FCM Token:', token);
 
-    // Envoyer le token au backend
     try {
-        await api.post('/chat/fcm-token', { token });
-    } catch (e) {
-        console.log("Erreur envoi token au serveur", e);
+      const pushTokenData = await Notifications.getDevicePushTokenAsync();
+      token = pushTokenData.data;
+    } catch {
+      try {
+        const expoToken = await Notifications.getExpoPushTokenAsync();
+        token = expoToken.data;
+      } catch (e) {
+        console.warn('[PUSH] Impossible d obtenir un token:', e);
+      }
     }
-  } else {
-    console.log('Must use physical device for Push Notifications');
+
+    if (token) {
+      try {
+        await api.post('/auth/fcm-token', { fcmToken: token });
+      } catch (e) {
+        console.warn('[PUSH] Erreur envoi token au serveur:', e);
+      }
+    }
   }
 
   if (Platform.OS === 'android') {
-    Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
+    await Notifications.setNotificationChannelAsync('default', {
+      name: 'Notifications 2Mots',
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#FF7F50',
