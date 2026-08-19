@@ -1,5 +1,5 @@
 ﻿//src/screens/MessagesScreen.tsx
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,67 +10,69 @@ import {
   RefreshControl,
   Animated,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { useTheme } from '../context/ThemeContext';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
-import { colors, spacing, typography, shadows } from '../theme/theme';
-import api from '../services/api';
-import { useData } from '../context/DataContext';
-import { prefetchChat } from '../hooks/useChat';
 import Skeleton from '../components/common/Skeleton';
+import { useTheme } from '../context/ThemeContext';
+import { useData } from '../context/DataContext';
+import { colors, spacing, shadows, typography } from '../theme/theme';
+import api from '../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function MessagesScreen() {
-  const { themeColors } = useTheme();
+  const { themeColors, isDark } = useTheme();
+  const { friendRequests } = useData();
   const navigation = useNavigation<any>();
-  const { updateUnreadCount } = useData();
+
   const [conversations, setConversations] = useState<any[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const pendingFriendsCount = (friendRequests || []).length;
 
   const fetchConversations = async () => {
     try {
-      if (conversations.length === 0) setIsLoading(true);
+      const response = await api.get('/chat/conversations');
+      setConversations(response.data.data.conversations || []);
 
-      const [res, rawFavs] = await Promise.all([
-        api.get('/chat/conversations'),
-        AsyncStorage.getItem('@twomots_favorite_chats'),
-      ]);
-
-      const favList: string[] = rawFavs ? JSON.parse(rawFavs) : [];
-      setFavorites(favList);
-
-      const data = res.data.data || [];
-      // Trier : les favoris / épinglés en tête de liste
-      const sorted = [...data].sort((a, b) => {
-        const aFav = favList.includes(a.friend._id);
-        const bFav = favList.includes(b.friend._id);
-        if (aFav && !bFav) return -1;
-        if (!aFav && bFav) return 1;
-        return 0;
-      });
-
-      setConversations(sorted);
-
-      data.forEach((conv: any) => {
-        prefetchChat(conv.friend._id);
-      });
-    } catch (e) {
-      console.error('[MESSAGES] Erreur de récupération:', e);
+      const favKeys = await AsyncStorage.getAllKeys();
+      const favFriendIds = favKeys
+        .filter((k) => k.startsWith('@twomots_favorite_'))
+        .map((k) => k.replace('@twomots_favorite_', ''));
+      setFavorites(favFriendIds);
+    } catch {
+      setConversations([]);
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
     fetchConversations();
-    const unsub = navigation.addListener('focus', () => {
+    const unsubscribe = navigation.addListener('focus', () => {
       fetchConversations();
-      updateUnreadCount();
     });
-    return unsub;
+    return unsubscribe;
   }, [navigation]);
+
+  const onRefresh = () => {
+    setIsRefreshing(true);
+    fetchConversations();
+  };
+
+  const sortedConversations = [...conversations].sort((a, b) => {
+    const isAFav = favorites.includes(a.friend?._id);
+    const isBFav = favorites.includes(b.friend?._id);
+    if (isAFav && !isBFav) return -1;
+    if (!isAFav && isBFav) return 1;
+
+    const timeA = a.lastMessage ? new Date(a.lastMessage.createdAt).getTime() : 0;
+    const timeB = b.lastMessage ? new Date(b.lastMessage.createdAt).getTime() : 0;
+    return timeB - timeA;
+  });
 
   return (
     <ScreenWrapper>
@@ -79,52 +81,52 @@ export default function MessagesScreen() {
         <TouchableOpacity
           onPress={() => navigation.navigate('Friends')}
           style={[styles.communityBtn, { backgroundColor: colors.coral + '15' }]}
+          activeOpacity={0.8}
         >
-          <Ionicons name="people" size={20} color={colors.coral} />
+          <Ionicons name="people" size={18} color={colors.coral} />
           <Text style={styles.communityBtnText}>AMIS</Text>
+          {pendingFriendsCount > 0 && (
+            <View style={styles.friendsBadge}>
+              <Text style={styles.friendsBadgeText}>
+                {pendingFriendsCount > 9 ? '9+' : pendingFriendsCount}
+              </Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
-      {isLoading && conversations.length === 0 ? (
-        <View style={styles.listContent}>
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <ConversationSkeleton key={i} />
-          ))}
-        </View>
+      {isLoading ? (
+        <FlatList
+          data={[1, 2, 3, 4, 5]}
+          keyExtractor={(item) => item.toString()}
+          renderItem={() => <ConversationSkeleton />}
+          contentContainerStyle={styles.listContent}
+        />
       ) : (
         <FlatList
-          data={conversations}
-          keyExtractor={(item) => item.friend._id}
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl
-              refreshing={isLoading}
-              onRefresh={fetchConversations}
-              tintColor={colors.coral}
-            />
-          }
+          data={sortedConversations}
+          keyExtractor={(item) => item.friend?._id || Math.random().toString()}
           renderItem={({ item }) => (
             <ConversationCard
               item={item}
-              isFavorite={favorites.includes(item.friend._id)}
-              onPress={() => {
+              isFavorite={favorites.includes(item.friend?._id)}
+              onPress={() =>
                 navigation.navigate('Chat', {
-                  friendId: item.friend._id,
-                  friendName: item.friend.login,
-                  friendAvatar: item.friend.avatar,
-                });
-              }}
+                  friendId: item.friend?._id,
+                  friendName: item.friend?.login,
+                  friendAvatar: item.friend?.avatar,
+                })
+              }
             />
           )}
-          ListEmptyComponent={() =>
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.coral} />
+          }
+          ListEmptyComponent={
             !isLoading ? (
               <View style={styles.empty}>
-                <View
-                  style={[
-                    styles.emptyIconContainer,
-                    { backgroundColor: themeColors.card },
-                  ]}
-                >
+                <View style={[styles.emptyIconContainer, { backgroundColor: themeColors.card }]}>
                   <Ionicons name="chatbubbles-outline" size={54} color={colors.coral} />
                 </View>
                 <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
@@ -196,16 +198,8 @@ const ConversationCard = ({ item, isFavorite, onPress }: any) => {
       style={[
         styles.card,
         {
-          backgroundColor: isUnread
-            ? isDark
-              ? '#2A1F1F'
-              : '#FFF5F5'
-            : themeColors.card,
-          borderColor: isUnread
-            ? colors.coral
-            : isDark
-            ? themeColors.overlayLight
-            : '#E5E5E5',
+          backgroundColor: isUnread ? (isDark ? '#2A1F1F' : '#FFF5F5') : themeColors.card,
+          borderColor: isUnread ? colors.coral : isDark ? themeColors.overlayLight : '#E5E5E5',
           borderWidth: isUnread ? 2 : 1,
         },
         shadows.medium(isDark),
@@ -218,13 +212,11 @@ const ConversationCard = ({ item, isFavorite, onPress }: any) => {
             { borderColor: isUnread ? colors.coral : 'transparent', opacity: blinkAnim },
           ]}
         >
-          {item.friend.avatar ? (
+          {item.friend?.avatar ? (
             <Image source={{ uri: item.friend.avatar }} style={styles.avatar} />
           ) : (
             <View style={[styles.avatarPlaceholder, { backgroundColor: colors.coral + '20' }]}>
-              <Text style={styles.avatarInitial}>
-                {item.friend.login.charAt(0).toUpperCase()}
-              </Text>
+              <Text style={styles.avatarInitial}>{item.friend?.login?.charAt(0).toUpperCase()}</Text>
             </View>
           )}
         </Animated.View>
@@ -240,30 +232,20 @@ const ConversationCard = ({ item, isFavorite, onPress }: any) => {
       <View style={styles.content}>
         <View style={styles.row}>
           <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-            {isFavorite && (
-              <Ionicons
-                name="star"
-                size={14}
-                color={colors.coral}
-                style={{ marginRight: 6 }}
-              />
-            )}
+            {isFavorite && <Ionicons name="star" size={14} color={colors.coral} style={{ marginRight: 6 }} />}
             <Text style={[styles.name, { color: themeColors.text }]} numberOfLines={1}>
-              {item.friend.login}
+              {item.friend?.login}
             </Text>
           </View>
           <Text style={[styles.time, { color: isUnread ? colors.coral : themeColors.textSecondary }]}>
             {lastMsg
-              ? new Date(lastMsg.createdAt).toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })
+              ? new Date(lastMsg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
               : ''}
           </Text>
         </View>
         <View style={styles.row}>
           <View style={styles.previewContainer}>
-            {lastMsg && lastMsg.sender !== item.friend._id && (
+            {lastMsg && lastMsg.sender !== item.friend?._id && (
               <Ionicons
                 name={lastMsg.isRead ? 'checkmark-done' : 'checkmark'}
                 size={15}
@@ -309,12 +291,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
+    position: 'relative',
   },
   communityBtnText: {
     marginLeft: 6,
     fontSize: 11,
     fontFamily: 'Poppins_700Bold',
     color: colors.coral,
+  },
+  friendsBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.coral,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: '#FFF',
+  },
+  friendsBadgeText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontFamily: 'Poppins_900Black',
   },
   listContent: { paddingHorizontal: spacing.md, paddingBottom: 120, paddingTop: spacing.sm },
   card: {

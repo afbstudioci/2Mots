@@ -23,7 +23,6 @@ interface ChatSettingsModalProps {
   onToggleFavorite: () => void;
   isBlocked: boolean;
   onToggleBlock: () => void;
-  onClearHistory: () => void;
   onSearch: () => void;
   onThemeChange: (themeId: string) => void;
 }
@@ -38,14 +37,13 @@ export default function ChatSettingsModal({
   onToggleFavorite,
   isBlocked,
   onToggleBlock,
-  onClearHistory,
   onSearch,
   onThemeChange,
 }: ChatSettingsModalProps) {
-  const { themeColors } = useTheme();
+  const { themeColors, isDark } = useTheme();
 
   const themes = [
-    { id: 'default', color: colors.nightBlue, name: 'Défaut' },
+    { id: 'default', color: isDark ? colors.nightBlue : '#FFFFFF', name: 'Défaut' },
     { id: 'sunset', color: '#FF7E5F', name: 'Coucher de soleil' },
     { id: 'forest', color: '#134E5E', name: 'Forêt' },
     { id: 'ocean', color: '#00D2FF', name: 'Océan' },
@@ -113,9 +111,7 @@ export default function ChatSettingsModal({
                 icon={isFavorite ? 'star' : 'star-outline'}
                 label={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
                 color={isFavorite ? colors.coral : themeColors.text}
-                onPress={() => {
-                  onToggleFavorite();
-                }}
+                onPress={onToggleFavorite}
               />
               <OptionItem
                 icon="search-outline"
@@ -149,15 +145,9 @@ export default function ChatSettingsModal({
               </ScrollView>
             </View>
 
-            {/* ZONE DE DANGER */}
+            {/* SÉCURITÉ */}
             <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: colors.error }]}>ZONE DE DANGER</Text>
-              <OptionItem
-                icon="trash-outline"
-                label="Effacer l'historique"
-                color={colors.error}
-                onPress={onClearHistory}
-              />
+              <Text style={[styles.sectionTitle, { color: colors.error }]}>GESTION DU CONTACT</Text>
               <OptionItem
                 icon="ban-outline"
                 label={isBlocked ? "Débloquer l'utilisateur" : "Bloquer l'utilisateur"}

@@ -16,23 +16,15 @@ import { useAuth } from '../context/AuthContext';
 import { useChat } from '../hooks/useChat';
 import { useAudioRecording } from '../hooks/useAudioRecording';
 import { colors, spacing } from '../theme/theme';
-import api from '../services/api';
-
-const THEMES_MAP: Record<string, { bg: string; bar: string }> = {
-  default: { bg: '#1A202C', bar: '#222B38' },
-  sunset: { bg: '#2D1B22', bar: '#3A242C' },
-  forest: { bg: '#112224', bar: '#172E31' },
-  ocean: { bg: '#0F2438', bar: '#14314A' },
-};
 
 export default function ChatScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation();
   const { friendId, friendName, friendAvatar } = route.params;
 
-  const { themeColors } = useTheme();
+  const { themeColors, isDark } = useTheme();
   const { user } = useAuth();
-  const { messages, isTyping, send, edit, remove, removeForMe, clearHistoryLocal, handleTyping } = useChat(friendId);
+  const { messages, isTyping, send, edit, remove, removeForMe, handleTyping } = useChat(friendId);
   const { isRecording, recordingTime, start, stop } = useAudioRecording();
 
   const [showSettings, setShowSettings] = useState(false);
@@ -52,6 +44,8 @@ export default function ChatScreen() {
     title: string;
     message: string;
     type?: 'success' | 'error' | 'info';
+    buttonText?: string;
+    confirmText?: string;
     onConfirm?: () => void;
   }>({ visible: false, title: '', message: '' });
 
@@ -79,29 +73,13 @@ export default function ChatScreen() {
     setTimeout(() => {
       setAlertConfig({
         visible: true,
-        title: willBlock ? 'Bloquer cet utilisateur ?' : 'Debloquer cet utilisateur ?',
-        message: willBlock ? `${friendName} ne pourra plus vous ecrire.` : `Vous pourrez de nouveau echanger avec ${friendName}.`,
+        title: willBlock ? 'Bloquer cet utilisateur ?' : 'Débloquer cet utilisateur ?',
+        message: willBlock ? `${friendName} ne pourra plus vous écrire.` : `Vous pourrez de nouveau échanger avec ${friendName}.`,
+        buttonText: 'Annuler',
+        confirmText: 'Confirmer',
         onConfirm: async () => {
           setIsBlocked(willBlock);
           await AsyncStorage.setItem(`@twomots_blocked_${friendId}`, JSON.stringify(willBlock));
-          setAlertConfig((prev) => ({ ...prev, visible: false }));
-        },
-      });
-    }, 150);
-  };
-
-  const handleClearHistory = () => {
-    setShowSettings(false);
-    setTimeout(() => {
-      setAlertConfig({
-        visible: true,
-        title: 'Effacer l historique ?',
-        message: 'Tous les messages seront supprimes de cette conversation.',
-        onConfirm: async () => {
-          clearHistoryLocal();
-          try {
-            await api.delete(`/chat/history/${friendId}`);
-          } catch {}
           setAlertConfig((prev) => ({ ...prev, visible: false }));
         },
       });
@@ -113,6 +91,13 @@ export default function ChatScreen() {
     if (uri && !cancel && !isBlocked) send('', 'audio', { mediaUrl: uri });
   };
 
+  const THEMES_MAP: Record<string, { bg: string; bar: string }> = {
+    default: { bg: themeColors.background, bar: themeColors.surface },
+    sunset: { bg: isDark ? '#2D1B22' : '#FFF0EB', bar: isDark ? '#3A242C' : '#FFE4DC' },
+    forest: { bg: isDark ? '#112224' : '#EBF5F0', bar: isDark ? '#172E31' : '#DDEEE6' },
+    ocean: { bg: isDark ? '#0F2438' : '#EBF4FF', bar: isDark ? '#14314A' : '#DCEBFE' },
+  };
+
   const currentTheme = THEMES_MAP[chatTheme] || { bg: themeColors.background, bar: themeColors.surface };
   const filteredMessages = searchQuery.trim()
     ? messages.filter((m) => m.text?.toLowerCase().includes(searchQuery.toLowerCase().trim()))
@@ -121,10 +106,10 @@ export default function ChatScreen() {
   const isMyMsg = (selectedMessage?.sender?._id || selectedMessage?.sender)?.toString() === (user?._id || user?.id)?.toString();
 
   return (
-    <ScreenWrapper>
+    <ScreenWrapper style={{ backgroundColor: currentTheme.bg }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={[styles.container, { backgroundColor: currentTheme.bg }]}
+        style={styles.container}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         <ChatHeader
@@ -165,9 +150,11 @@ export default function ChatScreen() {
         {isBlocked ? (
           <View style={[styles.blockedContainer, { backgroundColor: themeColors.surface }]}>
             <Ionicons name="ban-outline" size={18} color={colors.error} style={{ marginRight: 8 }} />
-            <Text style={[styles.blockedText, { color: themeColors.textSecondary }]}>Utilisateur bloque.</Text>
+            <Text style={[styles.blockedText, { color: themeColors.textSecondary }]}>
+              Utilisateur bloqué.
+            </Text>
             <TouchableOpacity onPress={handleToggleBlock} style={styles.unblockLink}>
-              <Text style={{ color: colors.coral, fontFamily: 'Poppins_700Bold', fontSize: 13 }}>Debloquer</Text>
+              <Text style={{ color: colors.coral, fontFamily: 'Poppins_700Bold', fontSize: 13 }}>Débloquer</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -210,7 +197,6 @@ export default function ChatScreen() {
           }}
           isBlocked={isBlocked}
           onToggleBlock={handleToggleBlock}
-          onClearHistory={handleClearHistory}
           onSearch={() => setIsSearching(true)}
           onThemeChange={(themeId) => { setChatTheme(themeId); AsyncStorage.setItem(`@twomots_theme_${friendId}`, themeId); }}
         />
@@ -222,6 +208,8 @@ export default function ChatScreen() {
           title={alertConfig.title}
           message={alertConfig.message}
           type={alertConfig.type}
+          buttonText={alertConfig.buttonText}
+          confirmText={alertConfig.confirmText}
           onClose={() => setAlertConfig((prev) => ({ ...prev, visible: false }))}
           onConfirm={alertConfig.onConfirm}
         />

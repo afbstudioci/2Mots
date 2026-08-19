@@ -30,6 +30,8 @@ export default function ShopScreen() {
     title: string;
     message: string;
     type?: 'success' | 'error' | 'info';
+    buttonText?: string;
+    confirmText?: string;
     onConfirm?: () => void;
   }>({ visible: false, title: '', message: '' });
 
@@ -51,24 +53,24 @@ export default function ShopScreen() {
           id: 'vip_monthly',
           title: 'Pass VIP 2Mots',
           priceEur: '2,99 €',
-          perks: ['Zero pub', '15 Kevs/jour', 'Badge dore', 'Entrainement illimite'],
+          perks: ['Zéro pub', '15 Kevs/jour', 'Badge doré', 'Entraînement illimité'],
         },
         kevsPacks: [
-          { id: 'kevs_150', title: 'Poignee', amount: 150, bonus: 0, priceEur: '0,99 €', icon: 'diamond-outline' },
+          { id: 'kevs_150', title: 'Poignée', amount: 150, bonus: 0, priceEur: '0,99 €', icon: 'diamond-outline' },
           { id: 'kevs_700', title: 'Bourse', amount: 600, bonus: 100, priceEur: '2,99 €', tag: 'POPULAIRE', icon: 'diamond' },
           { id: 'kevs_3000', title: 'Coffre', amount: 2500, bonus: 500, priceEur: '9,99 €', tag: 'MEILLEURE VALEUR', icon: 'trophy' },
         ],
         streaks: [
-          { id: 'streak_shield_3', title: 'Pack 3 Boucliers de Flamme', desc: 'Protege votre serie quotidienne.', priceKevs: 200, icon: 'flame' },
+          { id: 'streak_shield_3', title: 'Pack 3 Boucliers de Flamme', desc: 'Protège votre série quotidienne.', priceKevs: 200, icon: 'flame' },
         ],
         boosters: [
-          { id: 'time_freeze_3', title: '3x Time-Freeze (+5s)', desc: 'Gele le chrono pendant 5s.', priceKevs: 45, icon: 'hourglass-outline' },
-          { id: 'super_clue_3', title: '3x Super-Indice', desc: 'Elimine 2 mauvais choix.', priceKevs: 75, icon: 'bulb-outline' },
-          { id: 'second_chance_2', title: '2x Seconde Chance', desc: 'Permet de continuer apres Game Over.', priceKevs: 100, icon: 'refresh-circle-outline' },
+          { id: 'time_freeze_3', title: '3x Time-Freeze (+5s)', desc: 'Gèle le chrono pendant 5s.', priceKevs: 45, icon: 'hourglass-outline' },
+          { id: 'super_clue_3', title: '3x Super-Indice', desc: 'Élimine 2 mauvais choix.', priceKevs: 75, icon: 'bulb-outline' },
+          { id: 'second_chance_2', title: '2x Seconde Chance', desc: 'Permet de continuer après Game Over.', priceKevs: 100, icon: 'refresh-circle-outline' },
         ],
         cosmetics: [
-          { id: 'theme_cyberpunk', title: 'Theme Neon Cyberpunk', desc: 'Ambiance futuriste aux neons vibrants.', priceKevs: 300, icon: 'color-palette-outline' },
-          { id: 'frame_golden_crown', title: 'Cadre Couronne Doree', desc: 'Une aura etincelante pour votre avatar.', priceKevs: 250, icon: 'sparkles-outline' },
+          { id: 'theme_cyberpunk', title: 'Thème Néon Cyberpunk', desc: 'Ambiance futuriste aux néons vibrants.', priceKevs: 300, icon: 'color-palette-outline' },
+          { id: 'frame_golden_crown', title: 'Cadre Couronne Dorée', desc: 'Une aura étincelante pour votre avatar.', priceKevs: 250, icon: 'sparkles-outline' },
         ],
       });
       setUserKevs(user?.kevs || 0);
@@ -88,14 +90,17 @@ export default function ShopScreen() {
         title: 'KEVS INSUFFISANTS',
         message: `Il vous manque ${item.priceKevs - userKevs} Kevs pour obtenir cet article.`,
         type: 'info',
+        buttonText: 'Fermer',
       });
       return;
     }
 
     setAlertConfig({
       visible: true,
-      title: 'CONFIRMER L ACHAT',
+      title: "CONFIRMER L'ACHAT",
       message: `Voulez-vous acheter "${item.title}" pour ${item.priceKevs} Kevs ?`,
+      buttonText: 'Annuler',
+      confirmText: 'Confirmer',
       onConfirm: async () => {
         try {
           const res = await api.post('/shop/buy-with-kevs', { itemId: item.id, category });
@@ -103,9 +108,9 @@ export default function ShopScreen() {
           setUserKevs(d.userKevs);
           if (user) user.kevs = d.userKevs;
           if (d.streakFreezes !== undefined) setStreakFreezes(d.streakFreezes);
-          setAlertConfig({ visible: true, title: 'FELICITATIONS !', message: `Vous avez obtenu : ${item.title}`, type: 'success' });
+          setAlertConfig({ visible: true, title: 'FÉLICITATIONS !', message: `Vous avez obtenu : ${item.title}`, type: 'success', buttonText: 'Super !' });
         } catch (err: any) {
-          setAlertConfig({ visible: true, title: 'ERREUR', message: err.response?.data?.message || 'Achat impossible.', type: 'error' });
+          setAlertConfig({ visible: true, title: 'ERREUR', message: err.response?.data?.message || 'Achat impossible.', type: 'error', buttonText: 'Fermer' });
         }
       },
     });
@@ -114,8 +119,10 @@ export default function ShopScreen() {
   const handleInAppPurchase = (pack: any) => {
     setAlertConfig({
       visible: true,
-      title: 'ACHAT SECURISE',
+      title: 'ACHAT SÉCURISÉ',
       message: `Confirmer la commande de "${pack.title}" (${pack.priceEur}) ?`,
+      buttonText: 'Annuler',
+      confirmText: 'Confirmer',
       onConfirm: async () => {
         try {
           const res = await api.post('/shop/verify-purchase', { packId: pack.id });
@@ -123,9 +130,9 @@ export default function ShopScreen() {
           setUserKevs(d.userKevs);
           if (user) user.kevs = d.userKevs;
           if (d.isVip) setIsVip(true);
-          setAlertConfig({ visible: true, title: 'ACHAT CONFIRME !', message: 'Avantages ajoutes a votre compte.', type: 'success' });
+          setAlertConfig({ visible: true, title: 'ACHAT CONFIRMÉ !', message: 'Avantages ajoutés à votre compte.', type: 'success', buttonText: 'Parfait !' });
         } catch {
-          setAlertConfig({ visible: true, title: 'ERREUR', message: 'Service de paiement indisponible.', type: 'error' });
+          setAlertConfig({ visible: true, title: 'ERREUR', message: 'Service de paiement indisponible.', type: 'error', buttonText: 'Fermer' });
         }
       },
     });
@@ -165,7 +172,7 @@ export default function ShopScreen() {
 
         <View style={styles.sectionHeadingRow}>
           <Ionicons name="flame" size={16} color={colors.coral} style={{ marginRight: 6 }} />
-          <Text style={[styles.sectionHeading, { color: themeColors.textSecondary }]}>BOUCLIERS DE SERIE</Text>
+          <Text style={[styles.sectionHeading, { color: themeColors.textSecondary }]}>BOUCLIERS DE SÉRIE</Text>
         </View>
         {catalog?.streaks?.map((st: any) => (
           <ShopRowItem
@@ -197,7 +204,7 @@ export default function ShopScreen() {
 
         <View style={styles.sectionHeadingRow}>
           <Ionicons name="sparkles" size={16} color="#A066FF" style={{ marginRight: 6 }} />
-          <Text style={[styles.sectionHeading, { color: themeColors.textSecondary }]}>COSMETIQUES DE PRESTIGE</Text>
+          <Text style={[styles.sectionHeading, { color: themeColors.textSecondary }]}>COSMÉTIQUES DE PRESTIGE</Text>
         </View>
         {catalog?.cosmetics?.map((c: any) => (
           <ShopRowItem
@@ -218,6 +225,8 @@ export default function ShopScreen() {
           title={alertConfig.title}
           message={alertConfig.message}
           type={alertConfig.type}
+          buttonText={alertConfig.buttonText}
+          confirmText={alertConfig.confirmText}
           onClose={() => setAlertConfig((prev) => ({ ...prev, visible: false }))}
           onConfirm={alertConfig.onConfirm}
         />

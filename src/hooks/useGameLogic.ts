@@ -2,23 +2,21 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import api from '../services/api';
-import { RootStackParamList } from '../../App';
-import { useAudioContext } from '../context/AudioContext';
 import { useAuth } from '../context/AuthContext';
+import { useAudio } from './useAudio';
+import api from '../services/api';
 import { getLocalGameBatch, shuffleArray } from '../services/offlineVault';
 import { queueOfflineSession } from '../services/syncService';
 import { EnrichedWordPair, GameAnswer } from '../types/gameTypes';
 import * as Haptics from 'expo-haptics';
 
-const normalizeStr = (s: string) =>
-  (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+const normalizeStr = (str: string) =>
+  (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
 export const useGameLogic = () => {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { playSuccess, playError, playDanger, playLevelUp, stopBgm, playBgm, playHint } = useAudioContext();
+  const navigation = useNavigation<any>();
   const { user } = useAuth();
+  const { playSuccess, playError, playLevelUp, playHint, playDanger, stopBgm } = useAudio();
 
   const [wordPairs, setWordPairs] = useState<EnrichedWordPair[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
@@ -42,6 +40,7 @@ export const useGameLogic = () => {
 
   const timerRef = useRef<any>(null);
   const sessionAnswersRef = useRef<GameAnswer[]>([]);
+  const playedWordIdsRef = useRef<string[]>([]);
   const hasTriggeredGameOver = useRef<boolean>(false);
   const backgroundTimeRef = useRef<number | null>(null);
   const appState = useRef<AppStateStatus>(AppState.currentState);
@@ -53,7 +52,9 @@ export const useGameLogic = () => {
       const d = res.data.data;
       const s = res.data.userStats;
       if (d?.length > 0) {
-        setWordPairs(d.map((p: any) => ({ ...p, options: shuffleArray(p.options || []) })));
+        const filtered = d.filter((p: any) => !playedWordIdsRef.current.includes(p._id));
+        const finalPool = filtered.length > 0 ? filtered : d;
+        setWordPairs(finalPool.map((p: any) => ({ ...p, options: shuffleArray(p.options || []) })));
         setCurrentIndex(0);
         if (s) {
           setUserLevel(s.level);
@@ -65,12 +66,13 @@ export const useGameLogic = () => {
         throw new Error('Batch vide');
       }
     } catch {
-      setWordPairs(getLocalGameBatch(10) as any);
+      const local = getLocalGameBatch(10, userLevel, playedWordIdsRef.current);
+      setWordPairs(local as any);
       setCurrentIndex(0);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [userLevel]);
 
   useEffect(() => {
     fetchBatch();
@@ -131,7 +133,9 @@ export const useGameLogic = () => {
   }, [navigation, wordPairs, currentIndex, selectedChoice, stopBgm]);
 
   useEffect(() => {
-    if (isLoading || hasTriggeredGameOver.current || showLevelUpModal) return;
+    if (isLoading || hasTriggeredGameOver.current) return;
+    if (showLevelUpModal) return;
+
     timerRef.current = setInterval(() => {
       setTimeLeft((prev: number) => {
         if (prev <= 1) {
@@ -143,7 +147,10 @@ export const useGameLogic = () => {
         return prev - 1;
       });
     }, 1000);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
   }, [isLoading, triggerGameOver, playDanger, showLevelUpModal]);
 
   useEffect(() => {
@@ -200,6 +207,7 @@ export const useGameLogic = () => {
     setCorrectChoice(officialSolution);
 
     sessionAnswersRef.current.push({ wordPairId: pair._id, answer: choice, isCorrect, timeSpent, accuracy: isCorrect ? 100 : 0 });
+    playedWordIdsRef.current.push(pair._id);
 
     if (isCorrect) {
       setLastAccuracy(100);
@@ -239,7 +247,7 @@ export const useGameLogic = () => {
       setIsHintUsed(false);
       setIsChecking(false);
       if (!showLevelUpModal) onSuccessTransition();
-    }, isCorrect ? 350 : 600);
+    }, isCorrect ? 350 : 500);
   };
 
   useEffect(() => {

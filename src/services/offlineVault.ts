@@ -4,26 +4,26 @@ export interface OfflineWordPair {
   word1: string;
   word2: string;
   clue: string;
-  expectedType: 'nom' | 'verbe' | 'adjectif' | 'expression';
+  expectedType: 'verbe' | 'nom' | 'adjectif';
   difficulty: number;
   exactMatch: string[];
-  distractors: [string, string];
+  distractors: string[];
   options?: string[];
 }
 
 export const OFFLINE_WORD_PAIRS: OfflineWordPair[] = [
   // Tier 1 : Facile (1-3)
-  { _id: 'off_1', word1: 'Soleil', word2: 'Pluie', clue: 'Phenomene lumineux colore dans le ciel', expectedType: 'nom', difficulty: 1, exactMatch: ['arc-en-ciel', 'arc en ciel'], distractors: ['orage', 'nuage'] },
-  { _id: 'off_2', word1: 'Chaud', word2: 'Froid', clue: 'Appareil qui regule l ambiance de la piece', expectedType: 'nom', difficulty: 1, exactMatch: ['climatiseur', 'climatisation'], distractors: ['radiateur', 'ventilateur'] },
-  { _id: 'off_3', word1: 'Pain', word2: 'Beurre', clue: 'Encas classique du petit-dejeuner', expectedType: 'nom', difficulty: 1, exactMatch: ['tartine', 'toast'], distractors: ['croissant', 'biscotte'] },
-  { _id: 'off_4', word1: 'Nuit', word2: 'Ciel', clue: 'Corps celestes qui scintillent dans l espace', expectedType: 'nom', difficulty: 1, exactMatch: ['etoiles', 'etoile'], distractors: ['nuages', 'planetes'] },
+  { _id: 'off_1', word1: 'Soleil', word2: 'Pluie', clue: 'Spectre colore qui apparait dans le ciel', expectedType: 'nom', difficulty: 1, exactMatch: ['arc-en-ciel'], distractors: ['orage', 'nuage'] },
+  { _id: 'off_2', word1: 'Chaleur', word2: 'Eau', clue: 'Porter un liquide a 100 degres', expectedType: 'verbe', difficulty: 1, exactMatch: ['bouillir'], distractors: ['geler', 'fondre'] },
+  { _id: 'off_3', word1: 'Voiture', word2: 'Volant', clue: 'Action de diriger un vehicule sur la route', expectedType: 'verbe', difficulty: 1, exactMatch: ['conduire'], distractors: ['rouler', 'freiner'] },
+  { _id: 'off_4', word1: 'Nuit', word2: 'Ciel', clue: 'Astres brillants visibles dans l obscurite', expectedType: 'nom', difficulty: 1, exactMatch: ['etoiles', 'etoile'], distractors: ['nuages', 'planetes'] },
   { _id: 'off_5', word1: 'Eau', word2: 'Savon', clue: 'Action essentielle pour rester propre', expectedType: 'verbe', difficulty: 1, exactMatch: ['laver', 'nettoyer'], distractors: ['mouiller', 'frotter'] },
   { _id: 'off_6', word1: 'Crayon', word2: 'Feuille', clue: 'Creer une illustration avec des formes', expectedType: 'verbe', difficulty: 1, exactMatch: ['dessiner'], distractors: ['ecrire', 'colorier'] },
   { _id: 'off_7', word1: 'Oiseau', word2: 'Arbre', clue: 'Abri naturel pour couver les oeufs', expectedType: 'nom', difficulty: 1, exactMatch: ['nid'], distractors: ['cage', 'branche'] },
   { _id: 'off_8', word1: 'Glace', word2: 'Chaleur', clue: 'Passer de l etat solide a l etat liquide', expectedType: 'verbe', difficulty: 2, exactMatch: ['fondre'], distractors: ['couler', 'evaporer'] },
   { _id: 'off_9', word1: 'Cle', word2: 'Serrure', clue: 'Action pour debloquer un acces', expectedType: 'verbe', difficulty: 1, exactMatch: ['ouvrir'], distractors: ['fermer', 'tourner'] },
   { _id: 'off_10', word1: 'Miel', word2: 'Fleur', clue: 'Insecte travailleur qui produit le nectar', expectedType: 'nom', difficulty: 1, exactMatch: ['abeille'], distractors: ['guepe', 'papillon'] },
-  { _id: 'off_11', word1: 'Livre', word2: 'Yeux', clue: 'Déchiffrer des phrases et des histoires', expectedType: 'verbe', difficulty: 1, exactMatch: ['lire'], distractors: ['regarder', 'apprendre'] },
+  { _id: 'off_11', word1: 'Livre', word2: 'Yeux', clue: 'Dechiffrer des phrases et des histoires', expectedType: 'verbe', difficulty: 1, exactMatch: ['lire'], distractors: ['regarder', 'apprendre'] },
   { _id: 'off_12', word1: 'Mer', word2: 'Vent', clue: 'Mouvement d eau qui deferle sur la plage', expectedType: 'nom', difficulty: 2, exactMatch: ['vague', 'houle'], distractors: ['maree', 'courant'] },
   { _id: 'off_13', word1: 'Feu', word2: 'Bois', clue: 'Substance grise residuelle apres combustion', expectedType: 'nom', difficulty: 2, exactMatch: ['cendre', 'braise'], distractors: ['fumee', 'charbon'] },
   { _id: 'off_14', word1: 'Neige', word2: 'Montagne', clue: 'Glisser a toute vitesse sur la pente', expectedType: 'verbe', difficulty: 1, exactMatch: ['skier'], distractors: ['marcher', 'grimper'] },
@@ -68,8 +68,26 @@ export const shuffleArray = <T>(array: T[]): T[] => {
   return arr;
 };
 
-export const getLocalGameBatch = (count = 10): OfflineWordPair[] => {
-  const shuffled = shuffleArray(OFFLINE_WORD_PAIRS).slice(0, count);
+export const getLocalGameBatch = (count = 10, userLevel = 1, excludeIds: string[] = []): OfflineWordPair[] => {
+  let minDiff = 1;
+  let maxDiff = 3;
+  if (userLevel >= 8) {
+    minDiff = 6;
+    maxDiff = 10;
+  } else if (userLevel >= 4) {
+    minDiff = 3;
+    maxDiff = 7;
+  }
+
+  let available = OFFLINE_WORD_PAIRS.filter((p) => !excludeIds.includes(p._id));
+  if (available.length < count) {
+    available = [...OFFLINE_WORD_PAIRS];
+  }
+
+  const matched = available.filter((p) => p.difficulty >= minDiff && p.difficulty <= maxDiff);
+  const pool = matched.length >= count ? matched : available;
+
+  const shuffled = shuffleArray(pool).slice(0, count);
   return shuffled.map((p) => {
     const correct = p.exactMatch[0];
     const opts = shuffleArray([correct, p.distractors[0], p.distractors[1]]);
