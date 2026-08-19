@@ -15,26 +15,20 @@ export const useAppStartup = () => {
   const hasWokenUp = useRef(false);
 
   const pingServer = async () => {
+    if (!user) return;
     if (isPinging.current) return;
     isPinging.current = true;
 
     try {
-      // Ping silencieux ultra-léger avec timeout court de 6s
       await api.get('/auth/me', { timeout: 6000 });
       hasWokenUp.current = true;
-
-      // Dès que le serveur répond, synchroniser les sessions hors-ligne en attente
       syncPendingSessions().catch(() => {});
-
-      if (user) {
-        refreshAll().catch(() => {});
-      }
+      refreshAll().catch(() => {});
     } catch {
-      // Si le serveur est endormi, retenter silencieusement dans 7s sans bloquer l'UI
-      if (!hasWokenUp.current) {
+      if (!hasWokenUp.current && user) {
         setTimeout(() => {
           isPinging.current = false;
-          pingServer();
+          if (user) pingServer();
         }, 7000);
         return;
       }
@@ -44,10 +38,12 @@ export const useAppStartup = () => {
   };
 
   useEffect(() => {
-    pingServer();
+    if (user) {
+      pingServer();
+    }
 
     const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
-      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active' && user) {
         pingServer();
       }
       appState.current = nextAppState;

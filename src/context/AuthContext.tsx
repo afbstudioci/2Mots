@@ -127,9 +127,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await clearTokens();
       setUser(null);
-      api.post('/auth/logout').catch(() => {});
+      api.post('/auth/logout', {}, { timeout: 1500 }).catch(() => {});
     } catch (e) {
       console.warn('[AUTH] Erreur déconnexion:', e);
+      setUser(null);
     }
   };
 

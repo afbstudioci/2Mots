@@ -15,6 +15,7 @@ import { SocketProvider } from './src/context/SocketContext';
 import SplashScreen from './src/screens/SplashScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
+import MenuScreen from './src/screens/MenuScreen';
 import GameScreen from './src/screens/GameScreen';
 import GameOverScreen from './src/screens/GameOverScreen';
 import LeaderboardScreen from './src/screens/LeaderboardScreen';
@@ -32,10 +33,10 @@ import { registerForPushNotificationsAsync } from './src/services/notificationSe
 import { useAppStartup } from './src/hooks/useAppStartup';
 
 export type RootStackParamList = {
-  Splash: undefined;
   Login: undefined;
   Register: undefined;
   Home: undefined;
+  Menu: undefined;
   Game: undefined;
   GameOver: { 
     score: number; 
@@ -58,45 +59,56 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AppNavigator = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const { themeColors } = useTheme();
   const pushRegistered = useRef(false);
 
   useEffect(() => {
     if (user && !pushRegistered.current) {
       pushRegistered.current = true;
-      registerForPushNotificationsAsync();
+      registerForPushNotificationsAsync().catch(() => {});
     }
     if (!user) {
       pushRegistered.current = false;
     }
   }, [user]);
 
+  if (loading) {
+    return <SplashScreen onFinish={() => {}} />;
+  }
+
   return (
     <Stack.Navigator
-      initialRouteName="Splash"
       screenOptions={{
         headerShown: false,
+        animation: 'fade',
+        animationDuration: 180,
         contentStyle: { backgroundColor: themeColors.background },
-        animation: 'slide_from_right',
         orientation: 'portrait',
       }}
     >
-      <Stack.Screen name="Splash" component={SplashScreen} options={{ animation: 'fade' }} />
-      <Stack.Screen name="Login" component={LoginScreen} options={{ animation: 'fade' }} />
-      <Stack.Screen name="Register" component={RegisterScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="Home" component={MainTabNavigator} options={{ animation: 'fade' }} />
-      <Stack.Screen name="Game" component={GameScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="GameOver" component={GameOverScreen} options={{ animation: 'fade' }} />
-      <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
-      <Stack.Screen name="Profile" component={ProfileScreen} />
-      <Stack.Screen name="Friends" component={FriendsScreen} />
-      <Stack.Screen name="Chat" component={ChatScreen} />
-      <Stack.Screen name="Settings" component={SettingsScreen} />
-      <Stack.Screen name="Shop" component={ShopScreen} />
-      <Stack.Screen name="Contact" component={ContactScreen} />
-      <Stack.Screen name="Rules" component={RulesScreen} />
-      <Stack.Screen name="Privacy" component={PrivacyScreen} />
+      {!user ? (
+        <Stack.Group>
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+        </Stack.Group>
+      ) : (
+        <Stack.Group>
+          <Stack.Screen name="Home" component={MainTabNavigator} />
+          <Stack.Screen name="Menu" component={MenuScreen} />
+          <Stack.Screen name="Game" component={GameScreen} />
+          <Stack.Screen name="GameOver" component={GameOverScreen} />
+          <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
+          <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen name="Friends" component={FriendsScreen} />
+          <Stack.Screen name="Chat" component={ChatScreen} />
+          <Stack.Screen name="Settings" component={SettingsScreen} />
+          <Stack.Screen name="Shop" component={ShopScreen} />
+          <Stack.Screen name="Contact" component={ContactScreen} />
+          <Stack.Screen name="Rules" component={RulesScreen} />
+          <Stack.Screen name="Privacy" component={PrivacyScreen} />
+        </Stack.Group>
+      )}
     </Stack.Navigator>
   );
 };
@@ -110,9 +122,9 @@ const AppContent = () => {
     colors: {
       ...(isDark ? NavDarkTheme.colors : DefaultTheme.colors),
       background: themeColors.background,
-      card: themeColors.card,
+      card: themeColors.background,
       text: themeColors.text,
-      border: themeColors.border,
+      border: 'transparent',
       primary: themeColors.primary,
     },
   };

@@ -100,7 +100,7 @@ const RegisterScreen = ({ navigation }: any) => {
         password,
         referralCode: code?.trim() || undefined,
       });
-      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+      // Inscription réactive gérée par AuthContext
     } catch (err: any) {
       setAlert({
         visible: true,
@@ -193,7 +193,7 @@ const RegisterScreen = ({ navigation }: any) => {
 
                             <GoogleAuthButton
                 title="S'inscrire avec Google" mode="register"
-                onSuccess={() => navigation.reset({ index: 0, routes: [{ name: 'Home' }] })}
+                onSuccess={() => {}}
                 onError={(err) => setAlert({ visible: true, title: 'Google Sign-In', message: err, type: 'error' })}
               />
 

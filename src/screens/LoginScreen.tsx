@@ -65,7 +65,7 @@ const LoginScreen = ({ navigation }: any) => {
     setLoading(true);
     try {
       await login({ login: identifier.trim(), password });
-      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+      // Connexion réactive gérée par AuthContext
     } catch (err: any) {
       setAlert({
         visible: true,
@@ -143,7 +143,7 @@ const LoginScreen = ({ navigation }: any) => {
 
                             <GoogleAuthButton
                 title="Se connecter avec Google"
-                onSuccess={() => navigation.reset({ index: 0, routes: [{ name: 'Home' }] })}
+                onSuccess={() => {}}
                 onError={(err) => setAlert({ visible: true, title: 'Google Sign-In', message: err, type: 'error' })}
               />
 

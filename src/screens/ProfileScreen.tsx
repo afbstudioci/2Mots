@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import EditProfileModal from '../components/profile/EditProfileModal';
 import { spacing, borderRadius, typography, colors } from '../theme/theme';
@@ -14,22 +15,36 @@ export default function ProfileScreen() {
   const { user, refreshProfile } = useAuth();
   const navigation = useNavigation();
 
+  const [currentUser, setCurrentUser] = useState<any>(user);
   const [refreshing, setRefreshing] = useState(false);
   const [isEditModalVisible, setEditModalVisible] = useState(false);
 
+  const fetchFreshProfile = async () => {
+    try {
+      const res = await api.get('/auth/me');
+      if (res.data?.data?.user) {
+        setCurrentUser(res.data.data.user);
+      }
+    } catch {}
+  };
+
   useEffect(() => {
+    fetchFreshProfile();
     refreshProfile();
   }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await refreshProfile();
+    await Promise.all([refreshProfile(), fetchFreshProfile()]);
     setRefreshing(false);
   };
 
-  const pseudo = user?.login || 'Joueur';
+  const displayUser = currentUser || user;
+  const pseudo = displayUser?.login || 'Joueur';
   const initial = pseudo.charAt(0).toUpperCase();
-  const userRank = user?.rank ? `#${user.rank}` : '#1';
+  const userRank = displayUser?.rank ? `#${displayUser.rank}` : '-';
+  const isVip = Boolean(displayUser?.isVip);
+  const hasGoldenCrown = displayUser?.equippedFrame === 'frame_golden_crown' || isVip;
 
   return (
     <ScreenWrapper>
@@ -51,21 +66,42 @@ export default function ProfileScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.coral} />
         }
       >
-        <View style={[styles.avatarContainer, { backgroundColor: themeColors.surface, borderColor: themeColors.overlayMedium }]}>
-          {user?.avatar ? (
-            <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
+        <View
+          style={[
+            styles.avatarContainer,
+            {
+              backgroundColor: themeColors.surface,
+              borderColor: hasGoldenCrown ? '#FBBF24' : themeColors.overlayMedium,
+              borderWidth: hasGoldenCrown ? 3 : 2,
+            },
+          ]}
+        >
+          {displayUser?.avatar ? (
+            <Image source={{ uri: displayUser.avatar }} style={styles.avatarImage} />
           ) : (
-            <Text style={[styles.avatarText, { color: colors.coral }]}>
+            <Text style={[styles.avatarText, { color: hasGoldenCrown ? '#FBBF24' : colors.coral }]}>
               {initial}
             </Text>
           )}
+
+          {hasGoldenCrown && (
+            <View style={styles.crownBadge}>
+              <Ionicons name="sparkles" size={14} color="#FFF" />
+            </View>
+          )}
         </View>
 
-        <Text style={[styles.username, { color: themeColors.text }]}>
-          {pseudo}
-        </Text>
+        <View style={styles.nameRow}>
+          <Text style={[styles.username, { color: themeColors.text }]}>{pseudo}</Text>
+          {isVip && (
+            <View style={styles.vipBadge}>
+              <Text style={styles.vipBadgeText}>VIP</Text>
+            </View>
+          )}
+        </View>
+
         <Text style={[styles.email, { color: themeColors.textSecondary }]}>
-          {user?.email || 'email@exemple.com'}
+          {displayUser?.email || 'email@exemple.com'}
         </Text>
 
         <TouchableOpacity
@@ -78,21 +114,19 @@ export default function ProfileScreen() {
 
         <View style={styles.statsContainer}>
           <View style={[styles.statCard, { backgroundColor: themeColors.card }]}>
-            <Text style={[styles.statValue, { color: colors.coral }]}>
-              {userRank}
-            </Text>
+            <Text style={[styles.statValue, { color: colors.coral }]}>{userRank}</Text>
             <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>RANG</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: themeColors.card }]}>
-            <Text style={[styles.statValue, { color: colors.coral }]}>{user?.level || 1}</Text>
+            <Text style={[styles.statValue, { color: colors.coral }]}>{displayUser?.level || 1}</Text>
             <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>NIVEAU</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: themeColors.card }]}>
-            <Text style={[styles.statValue, { color: colors.coral }]}>{user?.bestScore || 0}</Text>
+            <Text style={[styles.statValue, { color: colors.coral }]}>{displayUser?.bestScore || 0}</Text>
             <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>RECORD</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: themeColors.card }]}>
-            <Text style={[styles.statValue, { color: colors.coral }]}>{user?.kevs || 0}</Text>
+            <Text style={[styles.statValue, { color: colors.coral }]}>{displayUser?.kevs || 0}</Text>
             <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>KEVS</Text>
           </View>
         </View>
@@ -100,7 +134,10 @@ export default function ProfileScreen() {
 
       <EditProfileModal
         visible={isEditModalVisible}
-        onClose={() => setEditModalVisible(false)}
+        onClose={() => {
+          setEditModalVisible(false);
+          fetchFreshProfile();
+        }}
       />
     </ScreenWrapper>
   );
@@ -130,12 +167,42 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.md,
-    borderWidth: 2,
-    overflow: 'hidden',
+    overflow: 'visible',
+    position: 'relative',
   },
-  avatarImage: { width: '100%', height: '100%' },
+  avatarImage: { width: '100%', height: '100%', borderRadius: 60 },
   avatarText: { ...typography.titleHuge, fontSize: 48 },
-  username: { ...typography.titleLarge, fontSize: 24, marginBottom: 4 },
+  crownBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -4,
+    backgroundColor: '#F59E0B',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFF',
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  username: { ...typography.titleLarge, fontSize: 24 },
+  vipBadge: {
+    backgroundColor: '#F59E0B',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginLeft: 8,
+  },
+  vipBadgeText: {
+    fontFamily: 'Poppins_900Black',
+    fontSize: 10,
+    color: '#FFF',
+  },
   email: { ...typography.bodyMedium, marginBottom: spacing.xl },
   editProfileButton: {
     flexDirection: 'row',

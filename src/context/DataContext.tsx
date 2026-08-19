@@ -1,3 +1,4 @@
+﻿//src/context/DataContext.tsx
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import api from '../services/api';
 import { useSocket } from '../hooks/useSocket';
@@ -23,7 +24,6 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-// Composant interne pour gérer les sockets sans créer de cycle de dépendance
 const DataSocketHandler = ({ updateUnreadCount }: { updateUnreadCount: () => void }) => {
   const { user } = useAuth();
   const { subscribe } = useSocket();
@@ -31,7 +31,6 @@ const DataSocketHandler = ({ updateUnreadCount }: { updateUnreadCount: () => voi
   useEffect(() => {
     if (!user) return;
 
-    // Mise à jour temps réel du compteur
     const unsubMsg = subscribe('receive_message', () => {
       updateUnreadCount();
     });
@@ -50,6 +49,7 @@ const DataSocketHandler = ({ updateUnreadCount }: { updateUnreadCount: () => voi
 };
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [shopItems, setShopItems] = useState<any[]>([]);
   const [missions, setMissions] = useState<any[]>([]);
   const [friends, setFriends] = useState<any[]>([]);
@@ -61,60 +61,62 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [unreadChatCount, setUnreadChatCount] = useState(0);
 
   const updateUnreadCount = useCallback(async () => {
+    if (!user) { setUnreadChatCount(0); return; }
     try {
       const response = await api.get('/chat/unread-count');
-      setUnreadChatCount(response.data.data.unreadCount || 0);
-    } catch (error) {
-      console.log('Error fetching unread count:', error);
-    }
-  }, []);
+      setUnreadChatCount(response.data?.data?.unreadCount || 0);
+    } catch {}
+  }, [user]);
 
   const updateShop = useCallback(async () => {
     try {
-      const response = await api.get('/shop');
-      setShopItems(response.data.data || []);
-    } catch (error) {
-      console.log('Error fetching shop:', error);
-    }
+      const response = await api.get('/shop/catalog');
+      setShopItems(response.data?.data?.catalog?.kevsPacks || []);
+    } catch {}
   }, []);
 
   const updateMissions = useCallback(async () => {
+    if (!user) { setMissions([]); return; }
     try {
       const response = await api.get('/missions');
-      setMissions(response.data.data || []);
-    } catch (error) {
-      console.log('Error fetching missions:', error);
-    }
-  }, []);
+      setMissions(response.data?.data || []);
+    } catch {}
+  }, [user]);
 
   const updateFriends = useCallback(async () => {
+    if (!user) { setFriends([]); return; }
     try {
       const response = await api.get('/friends');
-      setFriends(response.data.data || []);
-    } catch (error) {
-      console.log('Error fetching friends:', error);
-    }
-  }, []);
+      setFriends(response.data?.data || []);
+    } catch {}
+  }, [user]);
 
   const updateFriendRequests = useCallback(async () => {
+    if (!user) { setFriendRequests([]); return; }
     try {
       const response = await api.get('/friends/requests');
-      setFriendRequests(response.data.data || []);
-    } catch (error) {
-      console.log('Error fetching friend requests:', error);
-    }
-  }, []);
+      setFriendRequests(response.data?.data || []);
+    } catch {}
+  }, [user]);
 
   const updateLeaderboard = useCallback(async () => {
+    if (!user) { setLeaderboard([]); return; }
     try {
       const response = await api.get('/leaderboard');
-      setLeaderboard(response.data.data || []);
-    } catch (error) {
-      console.log('Error fetching leaderboard:', error);
-    }
-  }, []);
+      setLeaderboard(response.data?.data || []);
+    } catch {}
+  }, [user]);
 
   const refreshAll = useCallback(async () => {
+    if (!user) {
+      setShopItems([]);
+      setMissions([]);
+      setFriends([]);
+      setFriendRequests([]);
+      setLeaderboard([]);
+      setUnreadChatCount(0);
+      return;
+    }
     setIsLoading(true);
     try {
       await Promise.all([
@@ -129,7 +131,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  }, [updateShop, updateMissions, updateFriends, updateLeaderboard, updateUnreadCount]);
+  }, [user, updateShop, updateMissions, updateFriends, updateFriendRequests, updateLeaderboard, updateUnreadCount]);
+
+  useEffect(() => {
+    if (user) {
+      refreshAll();
+    } else {
+      setShopItems([]);
+      setMissions([]);
+      setFriends([]);
+      setFriendRequests([]);
+      setLeaderboard([]);
+      setUnreadChatCount(0);
+    }
+  }, [user]);
 
   return (
     <DataContext.Provider

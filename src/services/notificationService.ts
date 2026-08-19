@@ -3,6 +3,7 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import api from './api';
+import { getToken } from './authStorage';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -27,7 +28,6 @@ export const registerForPushNotificationsAsync = async () => {
     }
 
     if (finalStatus !== 'granted') {
-      console.warn('[PUSH] Permission refusée');
       return;
     }
 
@@ -38,17 +38,14 @@ export const registerForPushNotificationsAsync = async () => {
       try {
         const expoToken = await Notifications.getExpoPushTokenAsync();
         token = expoToken.data;
-      } catch (e) {
-        console.warn('[PUSH] Impossible d obtenir un token:', e);
-      }
+      } catch {}
     }
 
-    if (token) {
+    const authToken = await getToken();
+    if (token && authToken) {
       try {
         await api.post('/auth/fcm-token', { fcmToken: token });
-      } catch (e) {
-        console.warn('[PUSH] Erreur envoi token au serveur:', e);
-      }
+      } catch {}
     }
   }
 

@@ -1,70 +1,76 @@
 ﻿//src/screens/HomeScreen.tsx
-import React, { useRef, useEffect, useCallback, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Pressable, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, Animated, Image } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { colors, borderRadius, shadows, spacing } from '../theme/theme';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { colors, spacing, borderRadius, shadows } from '../theme/theme';
 import { RootStackParamList } from '../../App';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-
-import FullScreenMenu from '../components/navigation/FullScreenMenu';
 import ReferralCelebration from '../components/common/ReferralCelebration';
 
-type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
-const REFERRAL_KEY = '@twomots_referral_seen';
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
-const HomeScreen = ({ navigation }: { navigation: HomeScreenNavigationProp }) => {
-    const { user, refreshProfile } = useAuth();
+const REFERRAL_KEY = '@twomots_referral_reward_seen';
+
+const HomeScreen = () => {
+    const insets = useSafeAreaInsets();
+    const navigation = useNavigation<NavigationProp>();
+    const { user } = useAuth();
     const { themeColors } = useTheme();
     const [showCelebration, setShowCelebration] = useState(false);
-    
-    const scalePressAnim = useRef(new Animated.Value(1)).current;
+
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(20)).current;
     const breathAnim = useRef(new Animated.Value(1)).current;
+    const scalePressAnim = useRef(new Animated.Value(1)).current;
+
     const halo1Anim = useRef(new Animated.Value(0)).current;
     const halo2Anim = useRef(new Animated.Value(0)).current;
     const halo3Anim = useRef(new Animated.Value(0)).current;
-    const fadeAnim = useRef(new Animated.Value(0)).current;
-    const slideAnim = useRef(new Animated.Value(30)).current;
-
-    useFocusEffect(
-        useCallback(() => {
-            refreshProfile();
-        }, [refreshProfile])
-    );
 
     useEffect(() => {
         Animated.parallel([
-            Animated.timing(fadeAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
-            Animated.spring(slideAnim, { toValue: 0, tension: 40, friction: 7, useNativeDriver: true })
+            Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+            Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
         ]).start();
 
         Animated.loop(
             Animated.sequence([
-                Animated.timing(breathAnim, { toValue: 1.07, duration: 1100, useNativeDriver: true }),
-                Animated.timing(breathAnim, { toValue: 1, duration: 1100, useNativeDriver: true })
+                Animated.timing(breathAnim, { toValue: 1.05, duration: 1500, useNativeDriver: true }),
+                Animated.timing(breathAnim, { toValue: 1, duration: 1500, useNativeDriver: true }),
             ])
         ).start();
 
-        const startHalo = (anim: Animated.Value, delay: number) => {
-            anim.setValue(0);
-            Animated.loop(
+        const createHaloAnim = (anim: Animated.Value, delay: number) => {
+            return Animated.loop(
                 Animated.sequence([
                     Animated.delay(delay),
-                    Animated.timing(anim, { toValue: 1, duration: 2800, useNativeDriver: true })
+                    Animated.timing(anim, { toValue: 1, duration: 2400, useNativeDriver: true }),
+                    Animated.timing(anim, { toValue: 0, duration: 0, useNativeDriver: true }),
                 ])
-            ).start();
+            );
         };
 
-        startHalo(halo1Anim, 0);
-        startHalo(halo2Anim, 900);
-        startHalo(halo3Anim, 1800);
-    }, [breathAnim, fadeAnim, halo1Anim, halo2Anim, halo3Anim, slideAnim]);
+        const h1 = createHaloAnim(halo1Anim, 0);
+        const h2 = createHaloAnim(halo2Anim, 800);
+        const h3 = createHaloAnim(halo3Anim, 1600);
+
+        h1.start();
+        h2.start();
+        h3.start();
+
+        return () => {
+            h1.stop();
+            h2.stop();
+            h3.stop();
+        };
+    }, []);
 
     useEffect(() => {
         const checkCelebration = async () => {
@@ -88,8 +94,18 @@ const HomeScreen = ({ navigation }: { navigation: HomeScreenNavigationProp }) =>
 
     return (
         <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
-            {/* Menu Hamburger Plein Ecran */}
-            <FullScreenMenu />
+            {/* Hamburger Button vers Menu Screen natif */}
+            <Pressable
+                onPress={() => navigation.navigate('Menu')}
+                style={[styles.hamburgerButton, { top: insets.top + spacing.sm, backgroundColor: themeColors.overlay }]}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+                <View style={styles.hamburgerContainer}>
+                    <View style={[styles.hamburgerLine, { backgroundColor: themeColors.text }]} />
+                    <View style={[styles.hamburgerLine, { backgroundColor: themeColors.text, width: 16 }]} />
+                    <View style={[styles.hamburgerLine, { backgroundColor: themeColors.text }]} />
+                </View>
+            </Pressable>
 
             <View style={styles.container}>
                 <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
@@ -175,6 +191,18 @@ const HomeScreen = ({ navigation }: { navigation: HomeScreenNavigationProp }) =>
 const styles = StyleSheet.create({
     safeArea: { flex: 1 },
     container: { flex: 1, paddingHorizontal: spacing.lg, paddingBottom: 100, justifyContent: 'space-between' },
+    hamburgerButton: {
+        position: 'absolute',
+        right: spacing.lg,
+        width: 48,
+        height: 48,
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 100,
+        borderRadius: 24,
+    },
+    hamburgerContainer: { alignItems: 'flex-end', width: 24 },
+    hamburgerLine: { width: 24, height: 2.5, borderRadius: 2, marginVertical: 3 },
     header: { marginTop: spacing.xl, width: '100%' },
     userRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs },
     avatarPressable: { marginRight: spacing.sm },

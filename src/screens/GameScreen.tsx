@@ -13,6 +13,7 @@ import SuccessRipple from '../components/game/SuccessRipple';
 import GameLoading from '../components/game/GameLoading';
 import GameEmpty from '../components/game/GameEmpty';
 import CustomAlert from '../components/common/CustomAlert';
+import GameOverLimitModal from '../components/game/GameOverLimitModal';
 import { useGameLogic } from '../hooks/useGameLogic';
 
 const { width } = Dimensions.get('window');
@@ -32,9 +33,14 @@ export default function GameScreen({ navigation }: any) {
     isLoading,
     errorMessage,
     isChecking,
-    eliminatedChoice,
+    eliminatedChoices,
     isHintUsed,
     handleUseHint,
+    handleUseTimeFreeze,
+    handleUseSuperClue,
+    isTimeFrozen,
+    timeFreezeCount,
+    superClueCount,
     showNoKevsModal,
     setShowNoKevsModal,
     userLevel,
@@ -47,7 +53,10 @@ export default function GameScreen({ navigation }: any) {
     lastAccuracy,
     selectChoice,
     showLevelUpModal,
-    setShowLevelUpModal,
+    handleCloseLevelUp,
+    errorLimitData,
+    setErrorLimitData,
+    triggerGameOver,
   } = useGameLogic();
 
   useEffect(() => {
@@ -62,36 +71,14 @@ export default function GameScreen({ navigation }: any) {
 
   const startNextWordAnimation = () => {
     Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 120,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 0.94,
-        duration: 120,
-        useNativeDriver: true,
-      }),
+      Animated.timing(fadeAnim, { toValue: 0, duration: 120, useNativeDriver: true }),
+      Animated.timing(scaleAnim, { toValue: 0.94, duration: 120, useNativeDriver: true }),
     ]).start(() => {
-      setCurrentIndex((prev) => {
-        if (prev + 1 < wordPairs.length) {
-          return prev + 1;
-        }
-        return 0;
-      });
+      setCurrentIndex((prev) => (prev + 1 < wordPairs.length ? prev + 1 : 0));
 
       Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 180,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          friction: 7,
-          tension: 60,
-          useNativeDriver: true,
-        }),
+        Animated.timing(fadeAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
+        Animated.spring(scaleAnim, { toValue: 1, friction: 7, tension: 60, useNativeDriver: true }),
       ]).start();
     });
   };
@@ -107,16 +94,12 @@ export default function GameScreen({ navigation }: any) {
   const panicAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.loop(
-      Animated.timing(orb1Anim, { toValue: 1, duration: 15000, useNativeDriver: true })
-    ).start();
-    Animated.loop(
-      Animated.timing(orb2Anim, { toValue: 1, duration: 20000, useNativeDriver: true })
-    ).start();
+    Animated.loop(Animated.timing(orb1Anim, { toValue: 1, duration: 15000, useNativeDriver: true })).start();
+    Animated.loop(Animated.timing(orb2Anim, { toValue: 1, duration: 20000, useNativeDriver: true })).start();
   }, [orb1Anim, orb2Anim]);
 
   useEffect(() => {
-    if (timeLeft <= 5 && timeLeft > 0 && !showLevelUpModal) {
+    if (timeLeft <= 5 && timeLeft > 0 && !showLevelUpModal && !errorLimitData?.visible) {
       Animated.loop(
         Animated.sequence([
           Animated.timing(panicAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
@@ -127,7 +110,7 @@ export default function GameScreen({ navigation }: any) {
       panicAnim.stopAnimation();
       panicAnim.setValue(0);
     }
-  }, [timeLeft, panicAnim, showLevelUpModal]);
+  }, [timeLeft, panicAnim, showLevelUpModal, errorLimitData?.visible]);
 
   if (isLoading) return <GameLoading />;
 
@@ -144,7 +127,7 @@ export default function GameScreen({ navigation }: any) {
           style={[
             styles.orb,
             {
-              backgroundColor: colors.coral,
+              backgroundColor: isTimeFrozen ? '#38BDF8' : colors.coral,
               top: -100,
               left: -50,
               transform: [
@@ -204,9 +187,14 @@ export default function GameScreen({ navigation }: any) {
           isChecking={isChecking}
           expectedType={currentPair?.expectedType}
           clue={currentPair?.clue}
-          eliminatedChoice={eliminatedChoice}
+          eliminatedChoices={eliminatedChoices}
           isHintUsed={isHintUsed}
           onHintPress={handleUseHint}
+          onTimeFreezePress={handleUseTimeFreeze}
+          onSuperCluePress={handleUseSuperClue}
+          isTimeFrozen={isTimeFrozen}
+          timeFreezeCount={timeFreezeCount}
+          superClueCount={superClueCount}
         />
       </ScrollView>
 
@@ -215,8 +203,7 @@ export default function GameScreen({ navigation }: any) {
         title="FELICITATIONS !"
         message={`Vous venez de franchir le niveau ${userLevel} ! Bravo pour vos performances.`}
         onClose={() => {
-          setShowLevelUpModal(false);
-          setTimeLeft(30);
+          handleCloseLevelUp();
           startNextWordAnimation();
         }}
         type="success"
@@ -226,10 +213,20 @@ export default function GameScreen({ navigation }: any) {
       <CustomAlert
         visible={showNoKevsModal}
         title="KEVS INSUFFISANTS"
-        message="Il vous faut au moins 5 Kevs pour utiliser le joker 50/50. Résolvez des énigmes ou accomplissez des missions pour en gagner !"
+        message="Vous n'avez pas assez de Kevs pour utiliser ce booster. Gagnez-en en résolvant des énigmes !"
         onClose={() => setShowNoKevsModal(false)}
         type="error"
         buttonText="Compris"
+      />
+
+      <GameOverLimitModal
+        visible={Boolean(errorLimitData?.visible)}
+        errorCount={errorLimitData?.count || 3}
+        onConfirm={() => {
+          const r = errorLimitData?.reason;
+          setErrorLimitData(null);
+          triggerGameOver(r);
+        }}
       />
     </ScreenWrapper>
   );
