@@ -1,4 +1,4 @@
-﻿//src/screens/ShopScreen.tsx
+//src/screens/ShopScreen.tsx
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,48 +13,20 @@ import KevIcon from '../components/common/KevIcon';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { colors, spacing, borderRadius } from '../theme/theme';
+import { ACCENT_MAP, DEFAULT_SHOP_CATALOG } from '../constants/shopCatalog';
 import * as Haptics from 'expo-haptics';
 import api from '../services/api';
-
-const ACCENT_MAP: Record<string, { title?: string; desc?: string }> = {
-  time_freeze_3: { title: '3x Time-Freeze (+5s)', desc: 'Gèle le chrono pendant 5 secondes.' },
-  super_clue_3: { title: '3x Super-Indice', desc: 'Élimine immédiatement 2 mauvais choix.' },
-  second_chance_2: { title: '2x Seconde Chance', desc: 'Permet de continuer une partie après un Game Over.' },
-  streak_shield_3: { title: 'Pack 3 Boucliers de Flamme', desc: "Protège votre série quotidienne en cas d'oubli." },
-  pack_mega_joker: { title: 'Méga Pack Joker (-30%)', desc: '5x Time-Freeze + 5x Super-Indice + 3x Seconde Chance.' },
-  pack_survival_master: { title: 'Pack Survie & Flammes', desc: '3x Seconde Chance + 3x Boucliers de Flamme.' },
-  kevs_150: { title: 'Poignée de Kevs' },
-  kevs_700: { title: 'Bourse de Réflexion' },
-  kevs_3000: { title: 'Coffre du Maître' },
-};
 
 export default function ShopScreen() {
   const { themeColors } = useTheme();
   const { user } = useAuth();
   const navigation = useNavigation<any>();
 
-  const [catalog, setCatalog] = useState<any>({
-    vip: {
-      id: 'vip_monthly',
-      title: 'Pass VIP 2Mots',
-      priceEur: '2,99 €',
-      perks: [
-        'Zéro publicité dans tout le jeu',
-        '15 Kevs offerts chaque jour',
-        'Double XP & Récompenses ×2 permanentes',
-        '1 Seconde Chance offerte à chaque partie'
-      ],
-    },
-    kevsPacks: [],
-    streaks: [],
-    boosters: [],
-    combos: [],
-  });
-
+  const [catalog, setCatalog] = useState<any>(DEFAULT_SHOP_CATALOG);
   const [userKevs, setUserKevs] = useState<number>(user?.kevs || 0);
   const [streakFreezes, setStreakFreezes] = useState<number>(user?.streakFreezes || 0);
   const [isVip, setIsVip] = useState<boolean>(Boolean(user?.isVip));
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [selectedDetailItem, setSelectedDetailItem] = useState<any>(null);
 
   const [alertConfig, setAlertConfig] = useState<{
@@ -70,27 +42,18 @@ export default function ShopScreen() {
   const sanitizeCatalog = (rawCatalog: any) => {
     const fixItem = (item: any) => {
       const mapped = ACCENT_MAP[item.id];
-      return {
-        ...item,
-        title: mapped?.title || item.title,
-        desc: mapped?.desc || item.desc,
-      };
+      return { ...item, title: mapped?.title || item.title, desc: mapped?.desc || item.desc };
     };
 
     return {
       vip: {
         ...rawCatalog.vip,
-        perks: [
-          'Zéro publicité dans tout le jeu',
-          '15 Kevs offerts chaque jour',
-          'Double XP & Récompenses ×2 permanentes',
-          '1 Seconde Chance offerte à chaque partie'
-        ],
+        perks: DEFAULT_SHOP_CATALOG.vip.perks,
       },
-      kevsPacks: (rawCatalog.kevsPacks || []).map(fixItem),
-      streaks: (rawCatalog.streaks || []).map(fixItem),
-      boosters: (rawCatalog.boosters || []).map(fixItem),
-      combos: (rawCatalog.combos || []).map(fixItem),
+      kevsPacks: (rawCatalog.kevsPacks?.length ? rawCatalog.kevsPacks : DEFAULT_SHOP_CATALOG.kevsPacks).map(fixItem),
+      streaks: (rawCatalog.streaks?.length ? rawCatalog.streaks : DEFAULT_SHOP_CATALOG.streaks).map(fixItem),
+      boosters: (rawCatalog.boosters?.length ? rawCatalog.boosters : DEFAULT_SHOP_CATALOG.boosters).map(fixItem),
+      combos: (rawCatalog.combos?.length ? rawCatalog.combos : DEFAULT_SHOP_CATALOG.combos).map(fixItem),
     };
   };
 
@@ -116,50 +79,24 @@ export default function ShopScreen() {
   const handleBuyWithKevs = (item: any, category?: string) => {
     const cat = category || item.category || 'boosters';
     if (userKevs < item.priceKevs) {
-      setAlertConfig({
-        visible: true,
-        title: 'KEVS INSUFFISANTS',
-        message: `Il vous manque ${item.priceKevs - userKevs} Kevs pour acheter "${item.title}".`,
-        type: 'error',
-        buttonText: 'Compris',
-      });
+      setAlertConfig({ visible: true, title: 'KEVS INSUFFISANTS', message: `Il vous manque ${item.priceKevs - userKevs} Kevs pour acheter "${item.title}".`, type: 'error', buttonText: 'Compris' });
       return;
     }
-
     setAlertConfig({
-      visible: true,
-      title: "CONFIRMER L'ACHAT",
-      message: `Acheter "${item.title}" pour ${item.priceKevs} Kevs ?`,
-      buttonText: 'Annuler',
-      confirmText: 'Acheter',
+      visible: true, title: "CONFIRMER L'ACHAT", message: `Acheter "${item.title}" pour ${item.priceKevs} Kevs ?`, buttonText: 'Annuler', confirmText: 'Acheter',
       onConfirm: async () => {
         try {
           const res = await api.post('/shop/buy-with-kevs', { itemId: item.id, category: cat });
           const d = res.data?.data;
           if (d) {
             setUserKevs(d.userKevs);
-            if (user) {
-              user.kevs = d.userKevs;
-              user.inventory = d.inventory;
-            }
+            if (user) { user.kevs = d.userKevs; user.inventory = d.inventory; }
             if (d.streakFreezes !== undefined) setStreakFreezes(d.streakFreezes);
           }
           try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
-          setAlertConfig({
-            visible: true,
-            title: 'ACHAT RÉUSSI !',
-            message: `${item.title} a été ajouté à votre inventaire.`,
-            type: 'success',
-            buttonText: 'Super !',
-          });
+          setAlertConfig({ visible: true, title: 'ACHAT RÉUSSI !', message: `${item.title} a été ajouté à votre inventaire.`, type: 'success', buttonText: 'Super !' });
         } catch (e: any) {
-          setAlertConfig({
-            visible: true,
-            title: 'ERREUR',
-            message: e.response?.data?.message || "Erreur lors de l'achat.",
-            type: 'error',
-            buttonText: 'Fermer',
-          });
+          setAlertConfig({ visible: true, title: 'ERREUR', message: e.response?.data?.message || "Erreur lors de l'achat.", type: 'error', buttonText: 'Fermer' });
         }
       },
     });
@@ -167,39 +104,20 @@ export default function ShopScreen() {
 
   const handleInAppPurchase = (pack: any) => {
     setAlertConfig({
-      visible: true,
-      title: 'COMMANDE SÉCURISÉE',
-      message: `Confirmer la commande de "${pack.title}" (${pack.priceEur}) ?`,
-      buttonText: 'Annuler',
-      confirmText: 'Confirmer',
+      visible: true, title: 'COMMANDE SÉCURISÉE', message: `Confirmer la commande de "${pack.title}" (${pack.priceEur}) ?`, buttonText: 'Annuler', confirmText: 'Confirmer',
       onConfirm: async () => {
         try {
           const res = await api.post('/shop/verify-purchase', { packId: pack.id });
           const d = res.data?.data;
           if (d) {
             setUserKevs(d.userKevs);
-            if (user) {
-              user.kevs = d.userKevs;
-              user.isVip = d.isVip;
-            }
+            if (user) { user.kevs = d.userKevs; user.isVip = d.isVip; }
             if (d.isVip) setIsVip(true);
           }
           try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
-          setAlertConfig({
-            visible: true,
-            title: 'ACHAT VALIDÉ !',
-            message: 'Vos avantages et Kevs ont été crédités sur votre compte.',
-            type: 'success',
-            buttonText: 'Parfait !',
-          });
+          setAlertConfig({ visible: true, title: 'ACHAT VALIDÉ !', message: 'Vos avantages et Kevs ont été crédités sur votre compte.', type: 'success', buttonText: 'Parfait !' });
         } catch {
-          setAlertConfig({
-            visible: true,
-            title: 'ERREUR',
-            message: 'Service de paiement indisponible.',
-            type: 'error',
-            buttonText: 'Fermer',
-          });
+          setAlertConfig({ visible: true, title: 'ERREUR', message: 'Service de paiement indisponible.', type: 'error', buttonText: 'Fermer' });
         }
       },
     });
@@ -241,7 +159,7 @@ export default function ShopScreen() {
         />
 
         <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>BOUCLIERS DE SÉRIE</Text>
-        {catalog.streaks.map((item: any) => (
+        {catalog.streaks?.map((item: any) => (
           <ShopRowItem
             key={item.id}
             title={item.title}
@@ -255,7 +173,7 @@ export default function ShopScreen() {
         ))}
 
         <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>JOKERS TACTIQUES</Text>
-        {catalog.boosters.map((item: any) => (
+        {catalog.boosters?.map((item: any) => (
           <ShopRowItem
             key={item.id}
             title={item.title}
@@ -292,11 +210,8 @@ export default function ShopScreen() {
         item={selectedDetailItem}
         onClose={() => setSelectedDetailItem(null)}
         onBuy={(item) => {
-          if (item.priceEur) {
-            handleInAppPurchase(item);
-          } else {
-            handleBuyWithKevs(item, item.category);
-          }
+          if (item.priceEur) handleInAppPurchase(item);
+          else handleBuyWithKevs(item, item.category);
         }}
       />
 

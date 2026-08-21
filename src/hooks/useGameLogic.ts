@@ -129,18 +129,18 @@ export const useGameLogic = () => {
         throw new Error('Batch initial vide');
       }
     } catch {
-      const local = getLocalGameBatch(15, userLevel, []);
+      const local = getLocalGameBatch(15, 1, []);
       setWordPairs(local as any);
     } finally {
       setIsLoading(false);
       timer.resetTimer(30);
     }
-  }, [userLevel]);
+  }, []);
 
   useEffect(() => {
     loadInitialBatch();
     boosters.syncInventory();
-  }, [loadInitialBatch, boosters.syncInventory]);
+  }, []);
 
   const selectChoice = (choice: string, onSuccessTransition: () => void) => {
     if (isChecking || selectedChoice !== null || timer.hasTriggeredGameOver) return;
