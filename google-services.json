@@ -1,4 +1,4 @@
-﻿{
+{
   "project_info": {
     "project_number": "459645633641",
     "project_id": "mots-84091",
@@ -27,6 +27,14 @@
           "android_info": {
             "package_name": "com.afbstudio.twomots",
             "certificate_hash": "a8e649c8b81e264f2faef645c11b2f5277afb0df"
+          }
+        },
+        {
+          "client_id": "459645633641-kp9f85nhudpkcuqg5fnc80northvdk4t.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.afbstudio.twomots",
+            "certificate_hash": "0a5b5970148d91518ab32035a35612058a4f5a3a"
           }
         },
         {
