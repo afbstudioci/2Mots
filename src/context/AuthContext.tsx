@@ -11,6 +11,7 @@ interface AuthContextData {
   loginWithGoogle: (googleData: any) => Promise<void>;
   register: (userData: any) => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateProfile: (formData: any) => Promise<void>;
 }
@@ -123,6 +124,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const deleteAccount = async () => {
+    try {
+      await api.delete('/auth/account');
+    } catch (e) {
+      console.warn('[AUTH] Erreur serveur suppression compte:', e);
+    } finally {
+      await clearTokens();
+      setUser(null);
+    }
+  };
+
   const logout = async () => {
     try {
       await clearTokens();
@@ -143,6 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithGoogle,
         register,
         logout,
+        deleteAccount,
         refreshProfile,
         updateProfile,
       }}

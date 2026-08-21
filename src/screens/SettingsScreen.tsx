@@ -9,7 +9,7 @@ import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import CustomAlert from '../components/common/CustomAlert';
-import { spacing, borderRadius, typography, colors } from '../theme/theme';
+import { spacing, borderRadius, typography, colors, shadows } from '../theme/theme';
 import { RootStackParamList } from '../../App';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Settings'>;
@@ -17,13 +17,16 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Settings'>;
 export default function SettingsScreen() {
   const { themeColors, isDark, toggleTheme } = useTheme();
   const { soundEnabled, hapticsEnabled, toggleSound, toggleHaptics } = useSettings();
-  const { logout } = useAuth();
+  const { logout, deleteAccount } = useAuth();
   const navigation = useNavigation<NavigationProp>();
 
   const [alertConfig, setAlertConfig] = useState<{
     visible: boolean;
     title: string;
     message: string;
+    type?: 'success' | 'error' | 'info';
+    buttonText?: string;
+    confirmText?: string;
     onConfirm?: () => void;
   }>({ visible: false, title: '', message: '' });
 
@@ -36,9 +39,26 @@ export default function SettingsScreen() {
       visible: true,
       title: 'SE DÉCONNECTER ?',
       message: 'Voulez-vous vraiment vous déconnecter de votre compte 2Mots ?',
+      buttonText: 'Annuler',
+      confirmText: 'Déconnexion',
       onConfirm: async () => {
         setAlertConfig((prev) => ({ ...prev, visible: false }));
         await logout();
+      },
+    });
+  };
+
+  const handleDeleteAccountPress = () => {
+    setAlertConfig({
+      visible: true,
+      title: 'ZONE DE DANGER',
+      message: 'Êtes-vous sûr de vouloir supprimer définitivement votre compte 2Mots ? Cette action est irréversible et effacera tous vos scores, pièces et données.',
+      type: 'error',
+      buttonText: 'Annuler',
+      confirmText: 'Oui, Supprimer',
+      onConfirm: async () => {
+        setAlertConfig((prev) => ({ ...prev, visible: false }));
+        await deleteAccount();
       },
     });
   };
@@ -97,6 +117,7 @@ export default function SettingsScreen() {
               borderColor: themeColors.cardBorder,
               borderWidth: themeColors.cardBorderWidth,
             },
+            shadows.soft(isDark),
           ]}
         >
           <SettingRow icon="volume-high" title="Effets sonores" isSwitch value={soundEnabled} onToggle={toggleSound} />
@@ -113,6 +134,7 @@ export default function SettingsScreen() {
               borderColor: themeColors.cardBorder,
               borderWidth: themeColors.cardBorderWidth,
             },
+            shadows.soft(isDark),
           ]}
         >
           <SettingRow icon="document-text" title="Règles du jeu" onPress={() => handleNavigation('Rules')} />
@@ -120,27 +142,37 @@ export default function SettingsScreen() {
           <SettingRow icon="help-buoy" title="Nous contacter" onPress={() => handleNavigation('Contact')} isLast />
         </View>
 
+        {/* BOUTON DÉCONNEXION */}
         <TouchableOpacity
-          style={styles.logoutButton}
+          style={[styles.actionBtn, styles.logoutBtn]}
           onPress={handleLogoutPress}
           activeOpacity={0.85}
         >
-          <Ionicons name="log-out-outline" size={20} color={colors.error} style={{ marginRight: 8 }} />
-          <Text style={styles.logoutText}>Se déconnecter</Text>
+          <Ionicons name="log-out-outline" size={20} color={colors.coral} style={{ marginRight: 8 }} />
+          <Text style={[styles.btnText, { color: colors.coral }]}>Se déconnecter</Text>
+        </TouchableOpacity>
+
+        {/* ZONE DE DANGER : SUPPRIMER MON COMPTE (Modèle Yély) */}
+        <TouchableOpacity
+          style={[styles.actionBtn, styles.deleteBtn]}
+          onPress={handleDeleteAccountPress}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="trash-outline" size={20} color={colors.error} style={{ marginRight: 8 }} />
+          <Text style={[styles.btnText, { color: colors.error }]}>Supprimer mon compte</Text>
         </TouchableOpacity>
       </ScrollView>
 
-      {alertConfig.visible && (
-        <CustomAlert
-          visible={alertConfig.visible}
-          title={alertConfig.title}
-          message={alertConfig.message}
-          buttonText="Annuler"
-          confirmText="Confirmer"
-          onClose={() => setAlertConfig((prev) => ({ ...prev, visible: false }))}
-          onConfirm={alertConfig.onConfirm}
-        />
-      )}
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        buttonText={alertConfig.buttonText}
+        confirmText={alertConfig.confirmText}
+        onClose={() => setAlertConfig((prev) => ({ ...prev, visible: false }))}
+        onConfirm={alertConfig.onConfirm}
+      />
     </ScreenWrapper>
   );
 }
@@ -202,21 +234,26 @@ const styles = StyleSheet.create({
   settingTitle: {
     ...typography.bodyMedium,
   },
-  logoutButton: {
+  actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 52,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    height: 50,
     borderRadius: borderRadius.xl,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.2)',
-    marginTop: spacing.md,
+    marginBottom: spacing.md,
+  },
+  logoutBtn: {
+    backgroundColor: 'rgba(255, 90, 95, 0.08)',
+    borderColor: 'rgba(255, 90, 95, 0.2)',
+  },
+  deleteBtn: {
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    borderColor: 'rgba(239, 68, 68, 0.25)',
     marginBottom: spacing.xxl,
   },
-  logoutText: {
-    color: colors.error,
+  btnText: {
     fontFamily: 'Poppins_700Bold',
-    fontSize: 15,
+    fontSize: 14.5,
   },
 });
