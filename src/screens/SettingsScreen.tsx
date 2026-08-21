@@ -55,7 +55,7 @@ export default function SettingsScreen() {
       message: 'Êtes-vous sûr de vouloir supprimer définitivement votre compte 2Mots ? Cette action est irréversible et effacera tous vos scores, pièces et données.',
       type: 'error',
       buttonText: 'Annuler',
-      confirmText: 'Oui, Supprimer',
+      confirmText: 'Supprimer',
       onConfirm: async () => {
         setAlertConfig((prev) => ({ ...prev, visible: false }));
         await deleteAccount();

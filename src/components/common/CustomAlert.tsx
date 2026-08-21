@@ -22,10 +22,10 @@ export default function CustomAlert({
   onClose,
   onConfirm,
   type = 'info',
-  buttonText = 'Fermer',
+  buttonText = 'Annuler',
   confirmText = 'Confirmer',
 }: CustomAlertProps) {
-  const { themeColors } = useTheme();
+  const { themeColors, isDark } = useTheme();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
 
@@ -46,12 +46,18 @@ export default function CustomAlert({
   const getIndicatorColor = () => {
     switch (type) {
       case 'success':
-        return colors.success;
+        return colors.mint;
       case 'error':
         return colors.error;
       default:
         return colors.coral;
     }
+  };
+
+  const getConfirmBgColor = () => {
+    if (type === 'error') return colors.error;
+    if (type === 'success') return colors.mint;
+    return colors.coral;
   };
 
   return (
@@ -72,19 +78,34 @@ export default function CustomAlert({
             {onConfirm ? (
               <>
                 <TouchableOpacity
-                  style={[styles.button, styles.cancelBtn]}
+                  style={[
+                    styles.button,
+                    { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0' },
+                  ]}
                   onPress={onClose}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.buttonText}>{buttonText}</Text>
+                  <Text
+                    style={[styles.buttonText, { color: themeColors.text }]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                  >
+                    {buttonText}
+                  </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.button, styles.confirmBtn]}
+                  style={[styles.button, { backgroundColor: getConfirmBgColor() }]}
                   onPress={onConfirm}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.buttonText}>{confirmText}</Text>
+                  <Text
+                    style={[styles.buttonText, { color: '#FFFFFF' }]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                  >
+                    {confirmText}
+                  </Text>
                 </TouchableOpacity>
               </>
             ) : (
@@ -96,7 +117,13 @@ export default function CustomAlert({
                 onPress={onClose}
                 activeOpacity={0.85}
               >
-                <Text style={styles.buttonText}>{buttonText}</Text>
+                <Text
+                  style={[styles.buttonText, { color: '#FFFFFF' }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
+                  {buttonText}
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -109,13 +136,14 @@ export default function CustomAlert({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.8)',
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.xl,
   },
   alertBox: {
     width: '100%',
+    maxWidth: 340,
     borderRadius: 24,
     padding: spacing.xl,
     alignItems: 'center',
@@ -125,45 +153,40 @@ const styles = StyleSheet.create({
     width: 44,
     height: 6,
     borderRadius: 3,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   title: {
     fontFamily: 'Poppins_700Bold',
-    fontSize: 20,
+    fontSize: 18,
     textAlign: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
     letterSpacing: 0.5,
   },
   message: {
     fontFamily: 'Poppins_500Medium',
-    fontSize: 14,
+    fontSize: 13.5,
     textAlign: 'center',
-    marginBottom: spacing.xl,
-    lineHeight: 22,
+    marginBottom: spacing.lg,
+    lineHeight: 20,
   },
   buttonRow: {
     flexDirection: 'row',
     width: '100%',
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   button: {
     flex: 1,
-    height: 48,
-    borderRadius: 16,
+    height: 46,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 8,
     ...shadows.soft(false),
-  },
-  cancelBtn: {
-    backgroundColor: '#E53E3E',
-  },
-  confirmBtn: {
-    backgroundColor: '#00C853',
   },
   buttonText: {
     fontFamily: 'Poppins_700Bold',
-    fontSize: 15,
-    color: '#FFFFFF',
+    fontSize: 13.5,
     letterSpacing: 0.5,
+    textAlign: 'center',
   },
 });
