@@ -6,7 +6,6 @@ import { useAuth } from '../context/AuthContext';
 import { useAudio } from './useAudio';
 import api from '../services/api';
 import { getLocalGameBatch, shuffleArray } from '../services/offlineVault';
-import { queueOfflineSession } from '../services/syncService';
 import { EnrichedWordPair, GameAnswer } from '../types/gameTypes';
 import * as Haptics from 'expo-haptics';
 
@@ -31,7 +30,7 @@ export const useGameLogic = () => {
   const [showNoKevsModal, setShowNoKevsModal] = useState<boolean>(false);
   const [userLevel, setUserLevel] = useState<number>(user?.level || 1);
   const [currentXp, setCurrentXp] = useState<number>(user?.xp || 0);
-  const [xpNeeded, setXpNeeded] = useState<number>(5);
+  const [xpNeeded, setXpNeeded] = useState<number>(3 + (user?.level || 1) * 2);
   const [userKevs, setUserKevs] = useState<number>(user?.kevs || 0);
   const [timeWon, setTimeWon] = useState<number>(0);
   const [successTrigger, setSuccessTrigger] = useState<number>(0);
@@ -62,6 +61,21 @@ export const useGameLogic = () => {
   const wordPairsRef = useRef<EnrichedWordPair[]>([]);
   wordPairsRef.current = wordPairs;
 
+  const syncInventory = useCallback(async () => {
+    try {
+      const res = await api.get('/shop/catalog', { timeout: 3000 });
+      const d = res.data?.data;
+      if (d) {
+        if (d.inventory?.boosters) {
+          setTimeFreezeCount(d.inventory.boosters.timeFreeze ?? 2);
+          setSuperClueCount(d.inventory.boosters.superClue ?? 2);
+          setSecondChanceCount(d.inventory.boosters.secondChance ?? 1);
+        }
+        if (d.userKevs !== undefined) setUserKevs(d.userKevs);
+      }
+    } catch {}
+  }, []);
+
   const loadBatch = useCallback(async (isSilent = false) => {
     try {
       if (!isSilent) setIsLoading(true);
@@ -73,10 +87,10 @@ export const useGameLogic = () => {
         const finalPool = filtered.length > 0 ? filtered : d;
         setWordPairs(finalPool.map((p: any) => ({ ...p, options: shuffleArray(p.options || []) })));
         if (!isSilent) setCurrentIndex(0);
-        if (s) {
-          setUserLevel(s.level);
-          setCurrentXp(s.xp);
-          setXpNeeded(s.xpNeeded);
+        if (s && !isSilent) {
+          setUserLevel(s.level || 1);
+          setCurrentXp(s.xp || 0);
+          setXpNeeded(s.xpNeeded || (3 + (s.level || 1) * 2));
           setUserKevs(s.kevs || 0);
         }
       } else {
@@ -98,70 +112,63 @@ export const useGameLogic = () => {
     if (isInitialLoad.current) {
       isInitialLoad.current = false;
       loadBatch(false);
+      syncInventory();
     }
-  }, [loadBatch]);
+  }, [loadBatch, syncInventory]);
+
+    const playedPairsHistoryRef = useRef<Map<string, any>>(new Map());
 
   const triggerGameOver = useCallback((reason?: string) => {
     if (hasTriggeredGameOver.current) return;
     hasTriggeredGameOver.current = true;
     stopBgm();
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    setErrorLimitData(null);
 
     try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); } catch {}
 
     const pair = currentPairRef.current;
-    if (pair && !sessionAnswersRef.current.some(a => a.wordPairId === pair._id)) {
-      sessionAnswersRef.current.push({
-        wordPairId: pair._id,
-        answer: reason || 'Temps ecoule',
-        timeSpent: 30,
-        isCorrect: false,
-        accuracy: 0,
-      });
+    if (pair) {
+      playedPairsHistoryRef.current.set(pair._id, pair);
+      if (!sessionAnswersRef.current.some(a => a.wordPairId === pair._id)) {
+        sessionAnswersRef.current.push({
+          wordPairId: pair._id,
+          answer: reason || 'Temps écoulé',
+          timeSpent: 30,
+          isCorrect: false,
+          accuracy: 0,
+        });
+      }
     }
 
     const answers = sessionAnswersRef.current;
     const correctCount = answers.filter((a) => a.isCorrect).length;
-    const localScore = correctCount * 100;
+    const accuracy = answers.length > 0 ? Math.round((correctCount / answers.length) * 100) : 0;
+    const wrongAnswers = answers.filter((a) => !a.isCorrect);
 
-    const allPairs = wordPairsRef.current;
-    const localCorrections = answers
-      .filter((a) => !a.isCorrect)
-      .map((a) => {
-        const found = allPairs.find((p) => p._id === a.wordPairId);
-        return {
-          word1: found?.word1 || '',
-          word2: found?.word2 || '',
-          expectedAnswer: (found?.exactMatch && found.exactMatch[0]) || 'Inconnu',
-          userAnswer: a.answer || 'Non repondu',
-        };
-      });
-
-    navigation.replace('GameOver', {
-      score: localScore,
-      details: answers.map((a: GameAnswer) => ({
-        word: a.answer || 'Passe',
-        accuracy: a.accuracy || 0,
-        label: a.isCorrect ? 'SUCCES' : 'ECHEC',
-      })),
-      corrections: localCorrections,
-      hasScore: correctCount > 0,
-      reason: reason || undefined,
+    const enigmasSummary = answers.map((item) => {
+      const p = playedPairsHistoryRef.current.get(item.wordPairId) || wordPairsRef.current.find((w) => w._id === item.wordPairId);
+      return {
+        word1: p?.word1 || '',
+        word2: p?.word2 || '',
+        userAnswer: item.answer || 'Temps écoulé',
+        expectedAnswer: p?.exactMatch?.[0] || p?.options?.[0] || 'Inconnu',
+        isCorrect: Boolean(item.isCorrect),
+      };
     });
 
-    api.post('/game/validate', { answers }, { timeout: 4000 }).catch(() => {});
-    queueOfflineSession({
-      score: localScore,
-      durationMs: answers.reduce((acc: number, a: GameAnswer) => acc + (a.timeSpent || 0) * 1000, 0),
-      rounds: answers.map((a: GameAnswer) => ({
-        wordPairId: a.wordPairId,
-        word1: '',
-        word2: '',
-        answer: a.answer,
-        isCorrect: Boolean(a.isCorrect),
-        timeSpentMs: (a.timeSpent || 0) * 1000,
-      })),
-    }).catch(() => {});
+    api.post('/game/end', { score: correctCount, answers }, { timeout: 3500 }).catch(() => {});
+
+    navigation.replace('GameOver', {
+      score: correctCount,
+      reason,
+      stats: {
+        accuracy,
+        correctCount,
+        errorCount: wrongAnswers.length,
+      },
+      enigmasSummary,
+    });
   }, [navigation, stopBgm]);
 
   useEffect(() => {
@@ -292,6 +299,40 @@ export const useGameLogic = () => {
     } catch {}
   };
 
+  const handleUseSecondChance = async (onTransition?: () => void) => {
+    if (secondChanceCount <= 0 && userKevs < 30) {
+      setShowNoKevsModal(true);
+      return;
+    }
+
+    try {
+      if (secondChanceCount > 0) setSecondChanceCount(prev => prev - 1);
+      else setUserKevs(prev => Math.max(0, prev - 30));
+
+      api.post('/shop/use-booster', { boosterType: 'secondChance' }).catch(() => {});
+      consecutiveErrorsRef.current = 0;
+      totalErrorsRef.current = 0;
+      setErrorLimitData(null);
+      hasTriggeredGameOver.current = false;
+
+      setSelectedChoice(null);
+      setCorrectChoice(null);
+      setIsCorrectState(null);
+      setIsChecking(false);
+      setEliminatedChoices([]);
+      setIsHintUsed(false);
+
+      timeLeftMsRef.current = 30000;
+      setTimeLeft(30);
+      lastTickTimeRef.current = Date.now();
+
+      playSuccess();
+      if (onTransition) {
+        onTransition();
+      }
+    } catch {}
+  };
+
   const selectChoice = (choice: string, onSuccessTransition: () => void) => {
     if (isChecking || selectedChoice !== null || hasTriggeredGameOver.current) return;
     const pair = currentPairRef.current;
@@ -307,7 +348,8 @@ export const useGameLogic = () => {
     setIsCorrectState(isCorrect);
     setCorrectChoice(officialSolution);
 
-    sessionAnswersRef.current.push({ wordPairId: pair._id, answer: choice, isCorrect, timeSpent, accuracy: isCorrect ? 100 : 0 });
+    playedPairsHistoryRef.current.set(pair._id, pair);
+sessionAnswersRef.current.push({ wordPairId: pair._id, answer: choice, isCorrect, timeSpent, accuracy: isCorrect ? 100 : 0 });
     playedWordIdsRef.current.push(pair._id);
 
     if (isCorrect) {
@@ -324,11 +366,18 @@ export const useGameLogic = () => {
 
       setCurrentXp((prev: number) => {
         const next = prev + 1;
-        if (next >= xpNeeded) {
-          setUserLevel((lvl: number) => lvl + 1);
-          setXpNeeded((req: number) => req + 2);
+        const needed = 3 + userLevel * 2;
+        if (next >= needed) {
+          const nextLvl = userLevel + 1;
+          setUserLevel(nextLvl);
+          setXpNeeded(3 + nextLvl * 2);
           setShowLevelUpModal(true);
           playLevelUp();
+          if (user) {
+            user.level = nextLvl;
+            user.xp = 0;
+            user.kevs = (user.kevs || 0) + 5;
+          }
           loadBatch(true);
           return 0;
         }
@@ -343,13 +392,13 @@ export const useGameLogic = () => {
       if (consecutiveErrorsRef.current >= 3) {
         setTimeout(() => {
           setErrorLimitData({ visible: true, count: 3, reason: '3 erreurs consecutives' });
-        }, 200);
+        }, 150);
         return;
       }
       if (totalErrorsRef.current >= 5) {
         setTimeout(() => {
           setErrorLimitData({ visible: true, count: 5, reason: '5 erreurs cumulees' });
-        }, 200);
+        }, 150);
         return;
       }
     }
@@ -382,7 +431,7 @@ export const useGameLogic = () => {
     wordPairs, currentIndex, setCurrentIndex, timeLeft, setTimeLeft,
     selectedChoice, correctChoice, isCorrectState, isLoading, errorMessage: null, isChecking,
     eliminatedChoices, isHintUsed, handleUseHint, handleUseTimeFreeze, handleUseSuperClue,
-    isTimeFrozen, timeFreezeCount, superClueCount, secondChanceCount,
+    handleUseSecondChance, isTimeFrozen, timeFreezeCount, superClueCount, secondChanceCount,
     showNoKevsModal, setShowNoKevsModal,
     userLevel, currentXp, xpNeeded, userKevs, timeWon, setTimeWon, successTrigger,
     lastAccuracy, selectChoice, showLevelUpModal, setShowLevelUpModal,

@@ -17,3 +17,4 @@ export interface GameAnswer {
   isCorrect: boolean;
   accuracy: number;
 }
+export type WordPair = EnrichedWordPair;

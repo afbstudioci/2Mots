@@ -20,7 +20,10 @@ import { colors, spacing } from '../theme/theme';
 export default function ChatScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation();
-  const { friendId, friendName, friendAvatar } = route.params;
+  const rawParams = route.params || {};
+  const friendId = rawParams.friendId || rawParams.friend?._id || rawParams.friend?.id || '';
+  const friendName = rawParams.friendName || rawParams.friend?.login || rawParams.friend?.name || 'Ami';
+  const friendAvatar = rawParams.friendAvatar || rawParams.friend?.avatar;
 
   const { themeColors, isDark } = useTheme();
   const { user } = useAuth();
@@ -50,6 +53,7 @@ export default function ChatScreen() {
   }>({ visible: false, title: '', message: '' });
 
   useEffect(() => {
+    if (!friendId) return;
     const loadPreferences = async () => {
       try {
         const [mutedRaw, favRaw, blockRaw, themeRaw] = await Promise.all([

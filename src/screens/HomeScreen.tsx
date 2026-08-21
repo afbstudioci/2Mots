@@ -1,4 +1,5 @@
-﻿//src/screens/HomeScreen.tsx
+﻿import KevIcon from '../components/common/KevIcon';
+//src/screens/HomeScreen.tsx
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated, Image } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -140,7 +141,7 @@ const HomeScreen = () => {
 
                         <View style={[styles.statCard, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1 }]}>
                             <View style={[styles.statIconContainer, { backgroundColor: 'rgba(129, 230, 217, 0.15)' }]}>
-                                <Ionicons name="diamond" size={20} color="#81E6D9" />
+                                <KevIcon size={20} />
                             </View>
                             <View>
                                 <Text style={[styles.statLabelText, { color: themeColors.textSecondary }]}>KEVS</Text>

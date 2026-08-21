@@ -4,26 +4,58 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } 
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
-import CustomAlert from '../components/common/CustomAlert';
 import VipCard from '../components/shop/VipCard';
 import KevsPacksGrid from '../components/shop/KevsPacksGrid';
 import ShopRowItem from '../components/shop/ShopRowItem';
+import ShopItemDetailModal from '../components/shop/ShopItemDetailModal';
+import CustomAlert from '../components/common/CustomAlert';
+import KevIcon from '../components/common/KevIcon';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { colors, spacing, borderRadius } from '../theme/theme';
-import api from '../services/api';
 import * as Haptics from 'expo-haptics';
+import api from '../services/api';
+
+const ACCENT_MAP: Record<string, { title?: string; desc?: string }> = {
+  time_freeze_3: { title: '3x Time-Freeze (+5s)', desc: 'Gèle le chrono pendant 5 secondes.' },
+  super_clue_3: { title: '3x Super-Indice', desc: 'Élimine immédiatement 2 mauvais choix.' },
+  second_chance_2: { title: '2x Seconde Chance', desc: 'Permet de continuer une partie après un Game Over.' },
+  streak_shield_3: { title: 'Pack 3 Boucliers de Flamme', desc: "Protège votre série quotidienne en cas d'oubli." },
+  pack_mega_joker: { title: 'Méga Pack Joker (-30%)', desc: '5x Time-Freeze + 5x Super-Indice + 3x Seconde Chance.' },
+  pack_survival_master: { title: 'Pack Survie & Flammes', desc: '3x Seconde Chance + 3x Boucliers de Flamme.' },
+  kevs_150: { title: 'Poignée de Kevs' },
+  kevs_700: { title: 'Bourse de Réflexion' },
+  kevs_3000: { title: 'Coffre du Maître' },
+};
 
 export default function ShopScreen() {
   const { themeColors } = useTheme();
-  const { user, refreshProfile } = useAuth();
+  const { user } = useAuth();
   const navigation = useNavigation<any>();
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [catalog, setCatalog] = useState<any>(null);
-  const [userKevs, setUserKevs] = useState(user?.kevs || 0);
-  const [streakFreezes, setStreakFreezes] = useState(user?.streakFreezes || 1);
-  const [isVip, setIsVip] = useState(Boolean(user?.isVip));
+  const [catalog, setCatalog] = useState<any>({
+    vip: {
+      id: 'vip_monthly',
+      title: 'Pass VIP 2Mots',
+      priceEur: '2,99 €',
+      perks: [
+        'Zéro publicité dans tout le jeu',
+        '15 Kevs offerts chaque jour',
+        'Double XP & Récompenses ×2 permanentes',
+        '1 Seconde Chance offerte à chaque partie'
+      ],
+    },
+    kevsPacks: [],
+    streaks: [],
+    boosters: [],
+    combos: [],
+  });
+
+  const [userKevs, setUserKevs] = useState<number>(user?.kevs || 0);
+  const [streakFreezes, setStreakFreezes] = useState<number>(user?.streakFreezes || 0);
+  const [isVip, setIsVip] = useState<boolean>(Boolean(user?.isVip));
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [selectedDetailItem, setSelectedDetailItem] = useState<any>(null);
 
   const [alertConfig, setAlertConfig] = useState<{
     visible: boolean;
@@ -35,46 +67,44 @@ export default function ShopScreen() {
     onConfirm?: () => void;
   }>({ visible: false, title: '', message: '' });
 
+  const sanitizeCatalog = (rawCatalog: any) => {
+    const fixItem = (item: any) => {
+      const mapped = ACCENT_MAP[item.id];
+      return {
+        ...item,
+        title: mapped?.title || item.title,
+        desc: mapped?.desc || item.desc,
+      };
+    };
+
+    return {
+      vip: {
+        ...rawCatalog.vip,
+        perks: [
+          'Zéro publicité dans tout le jeu',
+          '15 Kevs offerts chaque jour',
+          'Double XP & Récompenses ×2 permanentes',
+          '1 Seconde Chance offerte à chaque partie'
+        ],
+      },
+      kevsPacks: (rawCatalog.kevsPacks || []).map(fixItem),
+      streaks: (rawCatalog.streaks || []).map(fixItem),
+      boosters: (rawCatalog.boosters || []).map(fixItem),
+      combos: (rawCatalog.combos || []).map(fixItem),
+    };
+  };
+
   const fetchShop = async () => {
     try {
-      setIsLoading(true);
-      await refreshProfile();
       const res = await api.get('/shop/catalog');
-      const d = res.data.data;
+      const d = res.data?.data;
       if (d) {
-        setCatalog(d.catalog);
-        setUserKevs(d.userKevs ?? user?.kevs ?? 0);
-        setStreakFreezes(d.streakFreezes ?? user?.streakFreezes ?? 1);
-        setIsVip(Boolean(d.isVip ?? user?.isVip));
+        if (d.catalog) setCatalog(sanitizeCatalog(d.catalog));
+        if (d.userKevs !== undefined) setUserKevs(d.userKevs);
+        if (d.streakFreezes !== undefined) setStreakFreezes(d.streakFreezes);
+        if (d.isVip !== undefined) setIsVip(d.isVip);
       }
-    } catch {
-      setCatalog({
-        vip: {
-          id: 'vip_monthly',
-          title: 'Pass VIP 2Mots',
-          priceEur: '2,99 €',
-          perks: ['Zéro pub', '15 Kevs/jour', 'Badge doré', 'Entraînement illimité'],
-        },
-        kevsPacks: [
-          { id: 'kevs_150', title: 'Poignée', amount: 150, bonus: 0, priceEur: '0,99 €', icon: 'diamond-outline' },
-          { id: 'kevs_700', title: 'Bourse', amount: 600, bonus: 100, priceEur: '2,99 €', tag: 'POPULAIRE', icon: 'diamond' },
-          { id: 'kevs_3000', title: 'Coffre', amount: 2500, bonus: 500, priceEur: '9,99 €', tag: 'MEILLEURE VALEUR', icon: 'trophy' },
-        ],
-        streaks: [
-          { id: 'streak_shield_3', title: 'Pack 3 Boucliers de Flamme', desc: 'Protège votre série quotidienne.', priceKevs: 200, icon: 'flame' },
-        ],
-        boosters: [
-          { id: 'time_freeze_3', title: '3x Time-Freeze (+5s)', desc: 'Gèle le chrono pendant 5s.', priceKevs: 45, icon: 'hourglass-outline' },
-          { id: 'super_clue_3', title: '3x Super-Indice', desc: 'Élimine 2 mauvais choix.', priceKevs: 75, icon: 'bulb-outline' },
-          { id: 'second_chance_2', title: '2x Seconde Chance', desc: 'Permet de continuer après Game Over.', priceKevs: 100, icon: 'refresh-circle-outline' },
-        ],
-        cosmetics: [
-          { id: 'theme_cyberpunk', title: 'Thème Néon Cyberpunk', desc: 'Ambiance futuriste aux néons vibrants.', priceKevs: 300, icon: 'color-palette-outline' },
-          { id: 'frame_golden_crown', title: 'Cadre Couronne Dorée', desc: 'Une aura étincelante pour votre avatar.', priceKevs: 250, icon: 'sparkles-outline' },
-        ],
-      });
-      setUserKevs(user?.kevs || 0);
-    } finally {
+    } catch {} finally {
       setIsLoading(false);
     }
   };
@@ -83,14 +113,15 @@ export default function ShopScreen() {
     fetchShop();
   }, []);
 
-  const handleBuyWithKevs = (item: any, category: string) => {
+  const handleBuyWithKevs = (item: any, category?: string) => {
+    const cat = category || item.category || 'boosters';
     if (userKevs < item.priceKevs) {
       setAlertConfig({
         visible: true,
         title: 'KEVS INSUFFISANTS',
-        message: `Il vous manque ${item.priceKevs - userKevs} Kevs pour obtenir cet article.`,
-        type: 'info',
-        buttonText: 'Fermer',
+        message: `Il vous manque ${item.priceKevs - userKevs} Kevs pour acheter "${item.title}".`,
+        type: 'error',
+        buttonText: 'Compris',
       });
       return;
     }
@@ -98,19 +129,37 @@ export default function ShopScreen() {
     setAlertConfig({
       visible: true,
       title: "CONFIRMER L'ACHAT",
-      message: `Voulez-vous acheter "${item.title}" pour ${item.priceKevs} Kevs ?`,
+      message: `Acheter "${item.title}" pour ${item.priceKevs} Kevs ?`,
       buttonText: 'Annuler',
-      confirmText: 'Confirmer',
+      confirmText: 'Acheter',
       onConfirm: async () => {
         try {
-          const res = await api.post('/shop/buy-with-kevs', { itemId: item.id, category });
-          const d = res.data.data;
-          setUserKevs(d.userKevs);
-          if (user) user.kevs = d.userKevs;
-          if (d.streakFreezes !== undefined) setStreakFreezes(d.streakFreezes);
-          setAlertConfig({ visible: true, title: 'FÉLICITATIONS !', message: `Vous avez obtenu : ${item.title}`, type: 'success', buttonText: 'Super !' });
-        } catch (err: any) {
-          setAlertConfig({ visible: true, title: 'ERREUR', message: err.response?.data?.message || 'Achat impossible.', type: 'error', buttonText: 'Fermer' });
+          const res = await api.post('/shop/buy-with-kevs', { itemId: item.id, category: cat });
+          const d = res.data?.data;
+          if (d) {
+            setUserKevs(d.userKevs);
+            if (user) {
+              user.kevs = d.userKevs;
+              user.inventory = d.inventory;
+            }
+            if (d.streakFreezes !== undefined) setStreakFreezes(d.streakFreezes);
+          }
+          try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+          setAlertConfig({
+            visible: true,
+            title: 'ACHAT RÉUSSI !',
+            message: `${item.title} a été ajouté à votre inventaire.`,
+            type: 'success',
+            buttonText: 'Super !',
+          });
+        } catch (e: any) {
+          setAlertConfig({
+            visible: true,
+            title: 'ERREUR',
+            message: e.response?.data?.message || "Erreur lors de l'achat.",
+            type: 'error',
+            buttonText: 'Fermer',
+          });
         }
       },
     });
@@ -119,20 +168,38 @@ export default function ShopScreen() {
   const handleInAppPurchase = (pack: any) => {
     setAlertConfig({
       visible: true,
-      title: 'ACHAT SÉCURISÉ',
+      title: 'COMMANDE SÉCURISÉE',
       message: `Confirmer la commande de "${pack.title}" (${pack.priceEur}) ?`,
       buttonText: 'Annuler',
       confirmText: 'Confirmer',
       onConfirm: async () => {
         try {
           const res = await api.post('/shop/verify-purchase', { packId: pack.id });
-          const d = res.data.data;
-          setUserKevs(d.userKevs);
-          if (user) user.kevs = d.userKevs;
-          if (d.isVip) setIsVip(true);
-          setAlertConfig({ visible: true, title: 'ACHAT CONFIRMÉ !', message: 'Avantages ajoutés à votre compte.', type: 'success', buttonText: 'Parfait !' });
+          const d = res.data?.data;
+          if (d) {
+            setUserKevs(d.userKevs);
+            if (user) {
+              user.kevs = d.userKevs;
+              user.isVip = d.isVip;
+            }
+            if (d.isVip) setIsVip(true);
+          }
+          try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+          setAlertConfig({
+            visible: true,
+            title: 'ACHAT VALIDÉ !',
+            message: 'Vos avantages et Kevs ont été crédités sur votre compte.',
+            type: 'success',
+            buttonText: 'Parfait !',
+          });
         } catch {
-          setAlertConfig({ visible: true, title: 'ERREUR', message: 'Service de paiement indisponible.', type: 'error', buttonText: 'Fermer' });
+          setAlertConfig({
+            visible: true,
+            title: 'ERREUR',
+            message: 'Service de paiement indisponible.',
+            type: 'error',
+            buttonText: 'Fermer',
+          });
         }
       },
     });
@@ -146,13 +213,13 @@ export default function ShopScreen() {
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: themeColors.text }]}>BOUTIQUE</Text>
         <View style={styles.headerStats}>
-          <View style={[styles.statBadge, { backgroundColor: themeColors.surface }]}>
-            <Ionicons name="flame" size={16} color={colors.coral} />
-            <Text style={[styles.statText, { color: colors.coral }]}>{streakFreezes}</Text>
+          <View style={[styles.badge, { backgroundColor: themeColors.surface }]}>
+            <Ionicons name="flame" size={15} color={colors.coral} />
+            <Text style={[styles.badgeText, { color: themeColors.text }]}>{streakFreezes}</Text>
           </View>
-          <View style={[styles.statBadge, { backgroundColor: themeColors.surface, marginLeft: 8 }]}>
-            <Ionicons name="diamond" size={15} color={colors.mint} />
-            <Text style={[styles.statText, { color: colors.mint }]}>{userKevs}</Text>
+          <View style={[styles.badge, { backgroundColor: themeColors.surface }]}>
+            <KevIcon size={17} />
+            <Text style={[styles.badgeText, { color: themeColors.text }]}>{userKevs}</Text>
           </View>
         </View>
       </View>
@@ -162,87 +229,116 @@ export default function ShopScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={fetchShop} tintColor={colors.coral} />}
       >
-        {catalog?.vip && <VipCard vip={catalog.vip} isVip={isVip} onBuy={() => handleInAppPurchase(catalog.vip)} />}
+        <TouchableOpacity activeOpacity={0.9} onPress={() => setSelectedDetailItem(catalog.vip)}>
+          <VipCard vip={catalog.vip} isVip={isVip} onBuy={() => handleInAppPurchase(catalog.vip)} />
+        </TouchableOpacity>
 
-        <View style={styles.sectionHeadingRow}>
-          <Ionicons name="diamond" size={16} color={colors.coral} style={{ marginRight: 6 }} />
-          <Text style={[styles.sectionHeading, { color: themeColors.textSecondary }]}>PACKS DE KEVS</Text>
-        </View>
-        <KevsPacksGrid packs={catalog?.kevsPacks} onBuy={handleInAppPurchase} />
+        <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>PACKS DE KEVS</Text>
+        <KevsPacksGrid
+          packs={catalog.kevsPacks}
+          onPressPack={(pack) => setSelectedDetailItem(pack)}
+          onBuy={handleInAppPurchase}
+        />
 
-        <View style={styles.sectionHeadingRow}>
-          <Ionicons name="flame" size={16} color={colors.coral} style={{ marginRight: 6 }} />
-          <Text style={[styles.sectionHeading, { color: themeColors.textSecondary }]}>BOUCLIERS DE SÉRIE</Text>
-        </View>
-        {catalog?.streaks?.map((st: any) => (
+        <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>BOUCLIERS DE SÉRIE</Text>
+        {catalog.streaks.map((item: any) => (
           <ShopRowItem
-            key={st.id}
-            title={st.title}
-            desc={st.desc}
-            priceKevs={st.priceKevs}
-            icon={st.icon}
-            accentColor={colors.coral}
-            onBuy={() => handleBuyWithKevs(st, 'streaks')}
+            key={item.id}
+            title={item.title}
+            desc={item.desc}
+            priceKevs={item.priceKevs}
+            icon={item.icon}
+            accentColor={item.accentColor}
+            onPressItem={() => setSelectedDetailItem(item)}
+            onBuy={() => handleBuyWithKevs(item, 'streaks')}
           />
         ))}
 
-        <View style={styles.sectionHeadingRow}>
-          <Ionicons name="flash" size={16} color={colors.mint} style={{ marginRight: 6 }} />
-          <Text style={[styles.sectionHeading, { color: themeColors.textSecondary }]}>JOKERS TACTIQUES</Text>
-        </View>
-        {catalog?.boosters?.map((b: any) => (
+        <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>JOKERS TACTIQUES</Text>
+        {catalog.boosters.map((item: any) => (
           <ShopRowItem
-            key={b.id}
-            title={b.title}
-            desc={b.desc}
-            priceKevs={b.priceKevs}
-            icon={b.icon}
-            accentColor={colors.mint}
-            onBuy={() => handleBuyWithKevs(b, 'boosters')}
+            key={item.id}
+            title={item.title}
+            desc={item.desc}
+            priceKevs={item.priceKevs}
+            icon={item.icon}
+            accentColor={item.accentColor}
+            onPressItem={() => setSelectedDetailItem(item)}
+            onBuy={() => handleBuyWithKevs(item, 'boosters')}
           />
         ))}
 
-        <View style={styles.sectionHeadingRow}>
-          <Ionicons name="sparkles" size={16} color="#A066FF" style={{ marginRight: 6 }} />
-          <Text style={[styles.sectionHeading, { color: themeColors.textSecondary }]}>COSMÉTIQUES DE PRESTIGE</Text>
-        </View>
-        {catalog?.cosmetics?.map((c: any) => (
-          <ShopRowItem
-            key={c.id}
-            title={c.title}
-            desc={c.desc}
-            priceKevs={c.priceKevs}
-            icon={c.icon}
-            accentColor="#A066FF"
-            onBuy={() => handleBuyWithKevs(c, 'cosmetics')}
-          />
-        ))}
+        {catalog.combos && catalog.combos.length > 0 && (
+          <>
+            <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>PACKS COMBOS ÉCONOMIQUES</Text>
+            {catalog.combos.map((item: any) => (
+              <ShopRowItem
+                key={item.id}
+                title={item.title}
+                desc={item.desc}
+                priceKevs={item.priceKevs}
+                icon={item.icon}
+                accentColor={item.accentColor}
+                onPressItem={() => setSelectedDetailItem(item)}
+                onBuy={() => handleBuyWithKevs(item, 'combos')}
+              />
+            ))}
+          </>
+        )}
       </ScrollView>
 
-      {alertConfig.visible && (
-        <CustomAlert
-          visible={alertConfig.visible}
-          title={alertConfig.title}
-          message={alertConfig.message}
-          type={alertConfig.type}
-          buttonText={alertConfig.buttonText}
-          confirmText={alertConfig.confirmText}
-          onClose={() => setAlertConfig((prev) => ({ ...prev, visible: false }))}
-          onConfirm={alertConfig.onConfirm}
-        />
-      )}
+      <ShopItemDetailModal
+        visible={Boolean(selectedDetailItem)}
+        item={selectedDetailItem}
+        onClose={() => setSelectedDetailItem(null)}
+        onBuy={(item) => {
+          if (item.priceEur) {
+            handleInAppPurchase(item);
+          } else {
+            handleBuyWithKevs(item, item.category);
+          }
+        }}
+      />
+
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        buttonText={alertConfig.buttonText}
+        confirmText={alertConfig.confirmText}
+        onConfirm={alertConfig.onConfirm}
+        onClose={() => setAlertConfig({ visible: false, title: '', message: '' })}
+      />
     </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
   backButton: { padding: spacing.xs },
-  headerTitle: { fontSize: 18, fontFamily: 'Poppins_700Bold', letterSpacing: 2 },
-  headerStats: { flexDirection: 'row', alignItems: 'center' },
-  statBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.sm, paddingVertical: 5, borderRadius: borderRadius.md },
-  statText: { fontSize: 13, fontFamily: 'Poppins_700Bold', marginLeft: 4 },
-  scrollContent: { paddingHorizontal: spacing.md, paddingBottom: 170 },
-  sectionHeadingRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.md, marginBottom: spacing.sm, marginLeft: 4 },
-  sectionHeading: { fontSize: 13, fontFamily: 'Poppins_700Bold', letterSpacing: 1.5 },
+  headerTitle: { fontFamily: 'Poppins_800ExtraBold', fontSize: 18, letterSpacing: 2 },
+  headerStats: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: borderRadius.md,
+  },
+  badgeText: { fontFamily: 'Poppins_700Bold', fontSize: 13, marginLeft: 4 },
+  scrollContent: { paddingHorizontal: spacing.lg, paddingBottom: 140 },
+  sectionTitle: {
+    fontFamily: 'Poppins_700Bold',
+    fontSize: 12,
+    letterSpacing: 1.5,
+    marginTop: spacing.xl,
+    marginBottom: spacing.md,
+  },
 });

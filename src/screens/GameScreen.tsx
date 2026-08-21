@@ -38,9 +38,11 @@ export default function GameScreen({ navigation }: any) {
     handleUseHint,
     handleUseTimeFreeze,
     handleUseSuperClue,
+    handleUseSecondChance,
     isTimeFrozen,
     timeFreezeCount,
     superClueCount,
+    secondChanceCount,
     showNoKevsModal,
     setShowNoKevsModal,
     userLevel,
@@ -213,7 +215,7 @@ export default function GameScreen({ navigation }: any) {
       <CustomAlert
         visible={showNoKevsModal}
         title="KEVS INSUFFISANTS"
-        message="Vous n'avez pas assez de Kevs pour utiliser ce booster. Gagnez-en en résolvant des énigmes !"
+        message="Vous n'avez pas assez de Kevs pour cette action. Gagnez-en en résolvant des énigmes !"
         onClose={() => setShowNoKevsModal(false)}
         type="error"
         buttonText="Compris"
@@ -222,11 +224,14 @@ export default function GameScreen({ navigation }: any) {
       <GameOverLimitModal
         visible={Boolean(errorLimitData?.visible)}
         errorCount={errorLimitData?.count || 3}
+        secondChanceCount={secondChanceCount}
+        userKevs={userKevs}
         onConfirm={() => {
           const r = errorLimitData?.reason;
           setErrorLimitData(null);
           triggerGameOver(r);
         }}
+        onUseSecondChance={() => handleUseSecondChance(startNextWordAnimation)}
       />
     </ScreenWrapper>
   );

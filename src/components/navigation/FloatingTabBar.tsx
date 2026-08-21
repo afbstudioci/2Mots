@@ -1,5 +1,6 @@
+﻿//src/components/navigation/FloatingTabBar.tsx
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Animated, DeviceEventEmitter, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated, DeviceEventEmitter } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { colors, spacing, shadows } from '../../theme/theme';
@@ -29,10 +30,8 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
         { id: 'HomeTab', label: 'Accueil', icon: 'home' },
         { id: 'Shop', label: 'Boutique', icon: 'basket' },
         { id: 'Missions', label: 'Missions', icon: 'rocket' },
-        { id: 'Messages', label: 'Messages', icon: 'chatbubbles' },
     ];
 
-    // Fallback pour BlurView si le module n'est pas encore prêt
     const Blur = BlurView || View;
 
     return (
@@ -65,7 +64,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
                     const handlePress = () => {
                         const event = navigation.emit({
                             type: 'tabPress',
-                            target: state.routes[index].key,
+                            target: state.routes[index]?.key || tab.id,
                             canPreventDefault: true,
                         });
 
@@ -137,11 +136,6 @@ const TabItem = ({ item, isActive, onPress, themeColors, unreadChatCount }: any)
                         size={24}
                         color={isActive ? colors.coral : themeColors.textSecondary}
                     />
-                    {item.id === 'Messages' && unreadChatCount > 0 && (
-                        <View style={styles.badge}>
-                            <Text style={styles.badgeText}>{unreadChatCount > 9 ? '9+' : unreadChatCount}</Text>
-                        </View>
-                    )}
                 </Animated.View>
             </View>
             <Text style={[styles.tabText, { color: isActive ? colors.coral : themeColors.textSecondary }]}>
@@ -166,9 +160,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-around',
         paddingVertical: spacing.sm,
-        paddingHorizontal: spacing.sm,
+        paddingHorizontal: spacing.md,
         borderRadius: 35,
-        width: '92%',
+        width: '88%',
+        maxWidth: 380,
         height: 75,
         ...shadows.medium(true),
         borderWidth: 1,
@@ -192,29 +187,8 @@ const styles = StyleSheet.create({
     },
     tabText: {
         fontFamily: 'Poppins_700Bold',
-        fontSize: 10,
+        fontSize: 11,
         marginTop: 4,
         letterSpacing: 0.5
     },
-    badge: {
-        position: 'absolute',
-        top: -6,
-        right: -8,
-        backgroundColor: colors.error,
-        borderRadius: 10,
-        minWidth: 20,
-        height: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 4,
-        borderWidth: 2,
-        borderColor: '#FFF',
-        ...shadows.medium(false)
-    },
-    badgeText: {
-        color: '#FFF',
-        fontSize: 10,
-        fontFamily: 'Poppins_900Black',
-        includeFontPadding: false,
-    }
 });

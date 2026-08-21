@@ -1,31 +1,66 @@
 ﻿//src/screens/GameOverScreen.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Animated,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import { useTheme } from '../context/ThemeContext';
 import { useAudio } from '../hooks/useAudio';
-import { colors, spacing, borderRadius, typography } from '../theme/theme';
+import { colors, spacing, borderRadius, shadows } from '../theme/theme';
 
 export default function GameOverScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { themeColors } = useTheme();
+  const { themeColors, isDark } = useTheme();
   const { playGameOver, stopGameOver } = useAudio();
 
-  const { score, details = [], corrections = [], reason, hasScore } = route.params || {};
+  const { score, reason, stats, enigmasSummary = [], corrections = [], details = [] } = route.params || {};
   const [animatedScore, setAnimatedScore] = useState<number>(0);
-  const listAnim = useRef(new Animated.Value(0)).current;
+  const [currentPage, setCurrentPage] = useState<number>(0);
+  const [carouselWidth, setCarouselWidth] = useState<number>(0);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const horizontalScrollRef = useRef<ScrollView>(null);
 
   const targetScore = typeof score === 'number' ? score : 0;
-  const isScorePositive = hasScore !== undefined ? hasScore : targetScore > 0;
+  const isScorePositive = targetScore > 0;
+
+  const accuracy = stats?.accuracy ?? (details[0]?.accuracy ?? (targetScore > 0 ? 100 : 0));
+  const correctCount = stats?.correctCount ?? (details[1]?.value ?? targetScore);
+  const errorCount = stats?.errorCount ?? (details[2]?.value ?? corrections.length);
+
+  const playedEnigmas = enigmasSummary.length > 0
+    ? enigmasSummary
+    : corrections.map((c: any) => ({
+        word1: c.word1,
+        word2: c.word2,
+        userAnswer: 'Temps écoulé',
+        expectedAnswer: c.expectedAnswer,
+        isCorrect: false,
+      }));
+
+  // Découpage par lots de 5 propositions par page
+  const chunkSize = 5;
+  const pages: any[][] = [];
+  for (let i = 0; i < playedEnigmas.length; i += chunkSize) {
+    pages.push(playedEnigmas.slice(i, i + chunkSize));
+  }
+  const totalPages = Math.max(1, pages.length);
 
   useEffect(() => {
     playGameOver(isScorePositive);
 
-    Animated.timing(listAnim, {
+    Animated.timing(fadeAnim, {
       toValue: 1,
-      duration: 600,
+      duration: 500,
       useNativeDriver: true,
     }).start();
 
@@ -34,7 +69,7 @@ export default function GameOverScreen() {
       return;
     }
 
-    const duration = 1200;
+    const duration = 1000;
     const startTime = Date.now();
 
     const timer = setInterval(() => {
@@ -56,7 +91,30 @@ export default function GameOverScreen() {
     };
   }, [targetScore, isScorePositive]);
 
-  const correctionTitle = 'CORRECTIONS';
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (carouselWidth <= 0) return;
+    const contentOffsetX = e.nativeEvent.contentOffset.x;
+    const pageIndex = Math.round(contentOffsetX / carouselWidth);
+    if (pageIndex !== currentPage && pageIndex >= 0 && pageIndex < totalPages) {
+      setCurrentPage(pageIndex);
+    }
+  };
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages - 1 && carouselWidth > 0) {
+      const nextPage = currentPage + 1;
+      horizontalScrollRef.current?.scrollTo({ x: nextPage * carouselWidth, animated: true });
+      setCurrentPage(nextPage);
+    }
+  };
+
+  const goToPrevPage = () => {
+    if (currentPage > 0 && carouselWidth > 0) {
+      const prevPage = currentPage - 1;
+      horizontalScrollRef.current?.scrollTo({ x: prevPage * carouselWidth, animated: true });
+      setCurrentPage(prevPage);
+    }
+  };
 
   return (
     <ScreenWrapper>
@@ -71,89 +129,147 @@ export default function GameOverScreen() {
             </View>
           )}
 
-          {corrections && corrections.length > 0 && (
-            <View
-              style={[
-                styles.correctionsWrapper,
-                {
-                  borderWidth: themeColors.cardBorderWidth,
-                  borderColor: themeColors.cardBorder,
-                },
-              ]}
-            >
-              <Text style={styles.correctionsTitle}>{correctionTitle}</Text>
-              {corrections.map((item: any, index: number) => (
-                <View key={index} style={styles.correctionItem}>
-                  <Text style={[styles.correctionPair, { color: themeColors.text }]}>
-                    {item.word1.toUpperCase()} + {item.word2.toUpperCase()}
-                  </Text>
-                  <Text style={styles.correctionExpected}>
-                    = {item.expectedAnswer.toUpperCase()}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          )}
-
+          {/* STATS DU BILAN */}
           <View
             style={[
-              styles.cardContainer,
+              styles.statsCard,
               {
-                backgroundColor: themeColors.overlayLight,
-                borderWidth: themeColors.cardBorderWidth,
+                backgroundColor: themeColors.card,
                 borderColor: themeColors.cardBorder,
+                borderWidth: themeColors.cardBorderWidth || 1,
               },
+              shadows.soft(isDark),
             ]}
           >
-            {details.map((item: any, index: number) => {
-              const isHighAccuracy = item.accuracy >= 80;
-              const accuracyColor = isHighAccuracy ? colors.success : colors.coral;
-
-              const itemTranslateY = listAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [50 + index * 20, 0],
-              });
-              const itemOpacity = listAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, 1],
-              });
-
-              return (
-                <Animated.View
-                  key={index}
-                  style={[
-                    styles.detailRow,
-                    index === details.length - 1 && styles.lastRow,
-                    {
-                      borderBottomColor: themeColors.overlayLight,
-                      opacity: itemOpacity,
-                      transform: [{ translateY: itemTranslateY }],
-                    },
-                  ]}
-                >
-                  <View style={styles.wordContainer}>
-                    <Text style={[styles.word, { color: themeColors.text }]} numberOfLines={1}>
-                      {item.word}
-                    </Text>
-                  </View>
-                  <View style={styles.statsContainer}>
-                    <Text style={[styles.accuracy, { color: accuracyColor }]}>
-                      {item.accuracy}%
-                    </Text>
-                    <Text style={[styles.label, { color: themeColors.textSecondary }]}>
-                      {item.label}
-                    </Text>
-                  </View>
-                </Animated.View>
-              );
-            })}
+            <View style={styles.statBox}>
+              <Text style={[styles.statNumber, { color: colors.coral }]}>{accuracy}%</Text>
+              <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>Précision</Text>
+            </View>
+            <View style={[styles.statDivider, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }]} />
+            <View style={styles.statBox}>
+              <Text style={[styles.statNumber, { color: colors.mint }]}>{correctCount}</Text>
+              <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>Trouvés</Text>
+            </View>
+            <View style={[styles.statDivider, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }]} />
+            <View style={styles.statBox}>
+              <Text style={[styles.statNumber, { color: colors.error }]}>{errorCount}</Text>
+              <Text style={[styles.statLabel, { color: themeColors.textSecondary }]}>Erreurs</Text>
+            </View>
           </View>
+
+          {/* CARROUSEL HORIZONTAL 5 PROPOSITIONS PAR SLIDE */}
+          {playedEnigmas.length > 0 && (
+            <View
+              style={[
+                styles.summaryWrapper,
+                {
+                  backgroundColor: themeColors.card,
+                  borderColor: themeColors.cardBorder,
+                  borderWidth: themeColors.cardBorderWidth || 1,
+                },
+                shadows.soft(isDark),
+              ]}
+            >
+              <View style={styles.summaryTitleRow}>
+                <Text style={[styles.summaryTitle, { color: colors.coral }]}>
+                  CHOIX EFFECTUÉS & CORRECTIONS
+                </Text>
+                {totalPages > 1 && (
+                  <View style={styles.pageNavigationRow}>
+                    {currentPage > 0 && (
+                      <TouchableOpacity onPress={goToPrevPage} style={styles.arrowBtn} activeOpacity={0.7}>
+                        <Ionicons name="chevron-back" size={17} color={colors.coral} />
+                      </TouchableOpacity>
+                    )}
+                    <Text style={[styles.pageIndicatorText, { color: themeColors.textSecondary }]}>
+                      {currentPage + 1}/{totalPages}
+                    </Text>
+                    {currentPage < totalPages - 1 && (
+                      <TouchableOpacity onPress={goToNextPage} style={styles.arrowBtn} activeOpacity={0.7}>
+                        <Ionicons name="chevron-forward" size={17} color={colors.coral} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+              </View>
+
+              {/* Zone dynamique mesurant la largeur exacte disponible */}
+              <View
+                style={styles.carouselContainer}
+                onLayout={(e) => {
+                  const measuredWidth = Math.round(e.nativeEvent.layout.width);
+                  if (measuredWidth > 0 && measuredWidth !== carouselWidth) {
+                    setCarouselWidth(measuredWidth);
+                  }
+                }}
+              >
+                {carouselWidth > 0 && (
+                  <ScrollView
+                    ref={horizontalScrollRef}
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    onMomentumScrollEnd={handleScroll}
+                    decelerationRate="fast"
+                    snapToInterval={carouselWidth}
+                    snapToAlignment="center"
+                  >
+                    {pages.map((pageItems, pageIdx) => (
+                      <View key={pageIdx} style={[styles.pageSlide, { width: carouselWidth }]}>
+                        {pageItems.map((item: any, itemIdx: number) => {
+                          const isItemCorrect = Boolean(item.isCorrect);
+
+                          return (
+                            <View
+                              key={itemIdx}
+                              style={[
+                                styles.enigmaRow,
+                                itemIdx !== pageItems.length - 1 && styles.enigmaRowBorder,
+                                { borderBottomColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' },
+                              ]}
+                            >
+                              <View style={styles.enigmaHeader}>
+                                <Text style={[styles.enigmaPairText, { color: themeColors.text }]} numberOfLines={1}>
+                                  {item.word1?.toUpperCase()} + {item.word2?.toUpperCase()}
+                                </Text>
+                                <Ionicons
+                                  name={isItemCorrect ? 'checkmark-circle' : 'close-circle'}
+                                  size={22}
+                                  color={isItemCorrect ? colors.mint : colors.error}
+                                  style={{ marginLeft: 6 }}
+                                />
+                              </View>
+
+                              <View style={styles.answersBlock}>
+                                <Text
+                                  style={[
+                                    styles.answerChoiceText,
+                                    { color: isItemCorrect ? colors.mint : colors.error },
+                                  ]}
+                                  numberOfLines={1}
+                                >
+                                  Votre choix : {item.userAnswer?.toUpperCase() || 'TEMPS ÉCOULÉ'}
+                                </Text>
+                                <Text style={[styles.answerExpectedText, { color: colors.mint }]} numberOfLines={1}>
+                                  Solution : {item.expectedAnswer?.toUpperCase()}
+                                </Text>
+                              </View>
+                            </View>
+                          );
+                        })}
+                      </View>
+                    ))}
+                  </ScrollView>
+                )}
+              </View>
+            </View>
+          )}
         </ScrollView>
 
         <View style={styles.footer}>
           <TouchableOpacity
             style={styles.replayButton}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
             onPress={() => navigation.replace('Game')}
           >
             <Text style={styles.replayText}>REJOUER</Text>
@@ -161,10 +277,10 @@ export default function GameOverScreen() {
 
           <TouchableOpacity
             style={styles.homeButton}
-            activeOpacity={0.6}
+            activeOpacity={0.7}
             onPress={() => navigation.replace('Home')}
           >
-            <Text style={[styles.homeText, { color: themeColors.text }]}>RETOUR À L'ACCUEIL</Text>
+            <Text style={[styles.homeText, { color: themeColors.textSecondary }]}>RETOUR À L'ACCUEIL</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -175,139 +291,172 @@ export default function GameOverScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.lg,
   },
   scrollContent: {
-    paddingTop: spacing.xl * 2,
-    paddingBottom: spacing.xl * 2,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.lg,
     alignItems: 'center',
   },
   scoreLabel: {
     fontFamily: 'Poppins_700Bold',
-    fontSize: 16,
-    letterSpacing: 4,
-    opacity: 0.6,
+    fontSize: 14,
+    letterSpacing: 3,
     marginBottom: spacing.xs,
   },
   scoreValue: {
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Poppins_900Black',
     color: colors.coral,
     fontSize: 64,
-    lineHeight: 72,
-    marginBottom: spacing.md,
+    lineHeight: 70,
+    marginBottom: spacing.xs,
   },
   reasonBadge: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    borderRadius: borderRadius.md,
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
     borderWidth: 1,
     borderColor: 'rgba(239, 68, 68, 0.3)',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.md,
   },
   reasonText: {
     color: colors.error,
     fontFamily: 'Poppins_700Bold',
-    fontSize: 12,
-    letterSpacing: 1,
+    fontSize: 11,
+    letterSpacing: 0.8,
   },
-  correctionsWrapper: {
+  statsCard: {
     width: '100%',
-    backgroundColor: 'rgba(255, 90, 95, 0.1)',
-    borderRadius: 24,
-    padding: spacing.lg,
-    marginBottom: spacing.xl,
-  },
-  correctionsTitle: {
-    fontFamily: 'Poppins_700Bold',
-    color: colors.coral,
-    fontSize: 14,
-    letterSpacing: 2,
-    marginBottom: spacing.md,
-    textAlign: 'center',
-  },
-  correctionItem: {
+    borderRadius: borderRadius.xl,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: spacing.xs,
+    justifyContent: 'space-around',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    marginBottom: spacing.md,
   },
-  correctionPair: {
-    fontFamily: 'Poppins_500Medium',
-    fontSize: 14,
-    opacity: 0.8,
+  statBox: {
+    flex: 1,
+    alignItems: 'center',
   },
-  correctionExpected: {
-    fontFamily: 'Poppins_700Bold',
-    color: colors.success,
-    fontSize: 16,
+  statNumber: {
+    fontFamily: 'Poppins_900Black',
+    fontSize: 22,
+    lineHeight: 26,
+  },
+  statLabel: {
+    fontFamily: 'Poppins_600SemiBold',
+    fontSize: 11,
     marginTop: 2,
+    letterSpacing: 0.3,
   },
-  cardContainer: {
+  statDivider: {
+    width: 1,
+    height: 32,
+  },
+  summaryWrapper: {
     width: '100%',
-    borderRadius: 32,
-    padding: spacing.xl,
+    borderRadius: borderRadius.xl,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
-  detailRow: {
+  summaryTitleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: spacing.lg,
+    marginBottom: spacing.xs,
+  },
+  summaryTitle: {
+    fontFamily: 'Poppins_800ExtraBold',
+    fontSize: 12,
+    letterSpacing: 0.8,
+    flex: 1,
+  },
+  pageNavigationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  arrowBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(255, 90, 95, 0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pageIndicatorText: {
+    fontFamily: 'Poppins_700Bold',
+    fontSize: 11,
+    marginHorizontal: 2,
+  },
+  carouselContainer: {
+    width: '100%',
+  },
+  pageSlide: {
+    paddingHorizontal: 2,
+  },
+  enigmaRow: {
+    paddingVertical: 8,
+  },
+  enigmaRowBorder: {
     borderBottomWidth: 1,
   },
-  lastRow: {
-    borderBottomWidth: 0,
+  enigmaHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 2,
   },
-  wordContainer: {
-    flex: 1,
-    paddingRight: spacing.md,
-  },
-  word: {
+  enigmaPairText: {
     fontFamily: 'Poppins_700Bold',
-    fontSize: 18,
-    textTransform: 'uppercase',
+    fontSize: 13.5,
+    letterSpacing: 0.3,
+    flex: 1,
   },
-  statsContainer: {
-    alignItems: 'flex-end',
+  answersBlock: {
+    gap: 1,
   },
-  accuracy: {
-    fontFamily: 'Poppins_800ExtraBold',
-    fontSize: 20,
-  },
-  label: {
-    fontFamily: 'Poppins_500Medium',
-    opacity: 0.8,
+  answerChoiceText: {
+    fontFamily: 'Poppins_600SemiBold',
     fontSize: 12,
-    letterSpacing: 1,
-    marginTop: 2,
+  },
+  answerExpectedText: {
+    fontFamily: 'Poppins_700Bold',
+    fontSize: 12,
   },
   footer: {
-    paddingVertical: spacing.xl,
-    paddingBottom: spacing.xl * 2,
+    paddingVertical: spacing.sm,
+    paddingBottom: spacing.md,
     alignItems: 'center',
-    gap: spacing.md,
+    gap: 6,
   },
   replayButton: {
     backgroundColor: colors.coral,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xl * 3,
-    borderRadius: 50,
+    height: 48,
+    borderRadius: borderRadius.xl,
     width: '100%',
+    justifyContent: 'center',
     alignItems: 'center',
+    ...shadows.soft(false),
   },
   replayText: {
-    ...typography.buttonPrimary,
-    fontSize: 18,
-    letterSpacing: 2,
+    fontFamily: 'Poppins_800ExtraBold',
+    color: '#FFF',
+    fontSize: 15,
+    letterSpacing: 1.5,
   },
   homeButton: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xl,
-    width: '100%',
+    height: 38,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   homeText: {
-    ...typography.buttonPrimary,
-    fontSize: 14,
-    letterSpacing: 1,
-    opacity: 0.7,
+    fontFamily: 'Poppins_700Bold',
+    fontSize: 12,
+    letterSpacing: 0.8,
   },
 });

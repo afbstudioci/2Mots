@@ -1,5 +1,5 @@
 ﻿//src/components/game/GameChoicesArea.tsx
-import React, { useEffect, useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { colors, spacing, borderRadius, shadows } from '../../theme/theme';
 import { useTheme } from '../../context/ThemeContext';
@@ -10,18 +10,18 @@ interface GameChoicesAreaProps {
   selectedChoice: string | null;
   correctChoice: string | null;
   isCorrectState: boolean | null;
-  onSelectChoice: (choice: string) => void;
   isChecking: boolean;
   expectedType?: string;
-  clue?: string;
-  eliminatedChoices?: string[];
   isHintUsed?: boolean;
+  clue?: string | null;
+  eliminatedChoices?: string[];
+  timeFreezeCount?: number;
+  superClueCount?: number;
+  isTimeFrozen?: boolean;
+  onSelectChoice: (choice: string) => void;
   onHintPress?: () => void;
   onTimeFreezePress?: () => void;
   onSuperCluePress?: () => void;
-  isTimeFrozen?: boolean;
-  timeFreezeCount?: number;
-  superClueCount?: number;
 }
 
 export default function GameChoicesArea({
@@ -29,18 +29,18 @@ export default function GameChoicesArea({
   selectedChoice,
   correctChoice,
   isCorrectState,
-  onSelectChoice,
   isChecking,
   expectedType,
-  clue,
+  isHintUsed = false,
+  clue = null,
   eliminatedChoices = [],
-  isHintUsed,
+  timeFreezeCount = 0,
+  superClueCount = 0,
+  isTimeFrozen = false,
+  onSelectChoice,
   onHintPress,
   onTimeFreezePress,
   onSuperCluePress,
-  isTimeFrozen = false,
-  timeFreezeCount = 0,
-  superClueCount = 0,
 }: GameChoicesAreaProps) {
   const { themeColors } = useTheme();
   const shakeAnim = useRef(new Animated.Value(0)).current;
@@ -49,8 +49,8 @@ export default function GameChoicesArea({
   useEffect(() => {
     if (isCorrectState === false) {
       Animated.sequence([
-        Animated.timing(shakeAnim, { toValue: 12, duration: 60, useNativeDriver: true }),
-        Animated.timing(shakeAnim, { toValue: -12, duration: 60, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
         Animated.timing(shakeAnim, { toValue: 8, duration: 50, useNativeDriver: true }),
         Animated.timing(shakeAnim, { toValue: -8, duration: 50, useNativeDriver: true }),
         Animated.timing(shakeAnim, { toValue: 0, duration: 40, useNativeDriver: true }),
@@ -169,48 +169,59 @@ export default function GameChoicesArea({
         })}
       </Animated.View>
 
-      {/* Barre des 3 Jokers / Boosters Réels */}
+      {/* Barre des 3 Jokers Tactiques */}
       <View style={styles.boostersRow}>
         <TouchableOpacity
           style={[
             styles.boosterBtn,
-            { backgroundColor: isHintUsed ? 'rgba(255, 184, 77, 0.2)' : themeColors.surface, borderColor: isHintUsed ? '#FFB84D' : themeColors.border },
+            {
+              backgroundColor: isHintUsed ? 'rgba(255, 184, 77, 0.2)' : themeColors.surface,
+              borderColor: isHintUsed ? '#FFB84D' : themeColors.border,
+            },
           ]}
           onPress={onHintPress}
           activeOpacity={0.75}
           disabled={isChecking || isHintUsed}
         >
-          <Ionicons name="bulb-outline" size={16} color={isHintUsed ? '#FFB84D' : colors.coral} />
-          <Text style={[styles.boosterText, { color: isHintUsed ? '#FFB84D' : themeColors.text }]}>50/50</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.boosterBtn,
-            { backgroundColor: isTimeFrozen ? 'rgba(56, 189, 248, 0.2)' : themeColors.surface, borderColor: isTimeFrozen ? '#38BDF8' : themeColors.border },
-          ]}
-          onPress={onTimeFreezePress}
-          activeOpacity={0.75}
-          disabled={isChecking || isTimeFrozen}
-        >
-          <Ionicons name="snow-outline" size={16} color="#38BDF8" />
-          <Text style={[styles.boosterText, { color: '#38BDF8' }]}>
-            {isTimeFrozen ? 'Gelé' : `Gel (${timeFreezeCount > 0 ? timeFreezeCount : '15💎'})`}
+          <Ionicons name="bulb-outline" size={17} color={isHintUsed ? '#FFB84D' : colors.coral} />
+          <Text style={[styles.boosterText, { color: isHintUsed ? '#FFB84D' : themeColors.text }]}>
+            50/50
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[
             styles.boosterBtn,
-            { backgroundColor: themeColors.surface, borderColor: themeColors.border },
+            {
+              backgroundColor: isTimeFrozen ? 'rgba(56, 189, 248, 0.2)' : themeColors.surface,
+              borderColor: isTimeFrozen ? '#38BDF8' : themeColors.border,
+            },
+          ]}
+          onPress={onTimeFreezePress}
+          activeOpacity={0.75}
+          disabled={isChecking || isTimeFrozen}
+        >
+          <Ionicons name="snow-outline" size={17} color="#38BDF8" />
+          <Text style={[styles.boosterText, { color: '#38BDF8' }]}>
+            {isTimeFrozen ? 'Gelé' : `Gel (${timeFreezeCount > 0 ? timeFreezeCount : '15 K'})`}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.boosterBtn,
+            {
+              backgroundColor: themeColors.surface,
+              borderColor: themeColors.border,
+            },
           ]}
           onPress={onSuperCluePress}
           activeOpacity={0.75}
           disabled={isChecking || (eliminatedChoices && eliminatedChoices.length >= 2)}
         >
-          <Ionicons name="flash-outline" size={16} color="#FBBF24" />
+          <Ionicons name="flash-outline" size={17} color="#FBBF24" />
           <Text style={[styles.boosterText, { color: '#FBBF24' }]}>
-            {`Super (${superClueCount > 0 ? superClueCount : '25💎'})`}
+            {`Super (${superClueCount > 0 ? superClueCount : '25 K'})`}
           </Text>
         </TouchableOpacity>
       </View>
@@ -219,17 +230,68 @@ export default function GameChoicesArea({
 }
 
 const styles = StyleSheet.create({
-  container: { width: '100%', paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, paddingTop: spacing.xs },
-  typeBadge: { flexDirection: 'row', alignItems: 'center', alignSelf: 'center', paddingVertical: 6, paddingHorizontal: 14, borderRadius: borderRadius.lg, borderWidth: 1, marginBottom: spacing.xs },
+  container: {
+    width: '100%',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+    paddingTop: spacing.xs,
+  },
+  typeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    marginBottom: spacing.xs,
+  },
   badgeIcon: { marginRight: 6 },
   typeText: { fontSize: 13, fontFamily: 'Poppins_600SemiBold' },
-  clueBanner: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 14, borderRadius: borderRadius.lg, borderWidth: 1, backgroundColor: 'rgba(255, 184, 77, 0.12)', marginBottom: spacing.sm },
+  clueBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    backgroundColor: 'rgba(255, 184, 77, 0.12)',
+    marginBottom: spacing.sm,
+  },
   clueBannerText: { flex: 1, fontSize: 12, fontFamily: 'Poppins_500Medium', fontStyle: 'italic' },
   choicesList: { width: '100%', gap: 10 },
-  choiceButton: { height: 56, borderRadius: borderRadius.xl, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.lg, borderWidth: 1.5, ...shadows.soft(false) },
+  choiceButton: {
+    height: 56,
+    borderRadius: borderRadius.xl,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+    borderWidth: 1.5,
+    ...shadows.soft(false),
+  },
   choiceText: { fontSize: 16, fontFamily: 'Poppins_700Bold', letterSpacing: 1 },
   choiceIcon: { position: 'absolute', right: 18 },
-  boostersRow: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: spacing.md },
-  boosterBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 12, borderRadius: borderRadius.xl, borderWidth: 1 },
-  boosterText: { fontSize: 11, fontFamily: 'Poppins_700Bold', marginLeft: 4 },
+  boostersRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginTop: spacing.md,
+  },
+  boosterBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 9,
+    paddingHorizontal: 4,
+    borderRadius: borderRadius.xl,
+    borderWidth: 1,
+    minHeight: 44,
+  },
+  boosterText: {
+    fontSize: 12,
+    fontFamily: 'Poppins_700Bold',
+    marginLeft: 4,
+  },
 });

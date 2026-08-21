@@ -5,6 +5,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { colors, spacing, borderRadius, typography } from '../../theme/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import KevIcon from '../common/KevIcon';
 
 interface GameHeaderProps {
   level: number;
@@ -61,7 +62,7 @@ export default function GameHeader({ level, currentXp, xpNeeded, kevs = 0 }: Gam
 
         {/* Badge Solde Kevs */}
         <View style={styles.kevsBadge}>
-          <Ionicons name="diamond" size={14} color="#81E6D9" style={{ marginRight: 4 }} />
+          <KevIcon size={14} style={{ marginRight: 4 }} />
           <Text style={[styles.kevsValue, { color: themeColors.text }]}>{kevs}</Text>
         </View>
       </View>

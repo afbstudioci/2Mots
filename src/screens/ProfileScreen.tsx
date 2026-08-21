@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 import api from '../services/api';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import EditProfileModal from '../components/profile/EditProfileModal';
@@ -13,6 +14,7 @@ import { spacing, borderRadius, typography, colors } from '../theme/theme';
 export default function ProfileScreen() {
   const { themeColors } = useTheme();
   const { user, refreshProfile } = useAuth();
+  const { leaderboard, updateLeaderboard } = useData();
   const navigation = useNavigation();
 
   const [currentUser, setCurrentUser] = useState<any>(user);
@@ -31,18 +33,41 @@ export default function ProfileScreen() {
   useEffect(() => {
     fetchFreshProfile();
     refreshProfile();
+    updateLeaderboard();
   }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([refreshProfile(), fetchFreshProfile()]);
+    await Promise.all([refreshProfile(), fetchFreshProfile(), updateLeaderboard()]);
     setRefreshing(false);
   };
 
   const displayUser = currentUser || user;
   const pseudo = displayUser?.login || 'Joueur';
   const initial = pseudo.charAt(0).toUpperCase();
-  const userRank = displayUser?.rank ? `#${displayUser.rank}` : '-';
+
+  // Calcul du rang 100% synchronisé avec la liste officielle du classement
+  const computeExactRank = () => {
+    if (Array.isArray(leaderboard) && leaderboard.length > 0 && displayUser) {
+      const sorted = [...leaderboard].sort((a, b) => {
+        const lvlA = a.level || 1;
+        const lvlB = b.level || 1;
+        if (lvlB !== lvlA) return lvlB - lvlA;
+        const xpA = a.xp || 0;
+        const xpB = b.xp || 0;
+        if (xpB !== xpA) return xpB - xpA;
+        return (b.bestScore || 0) - (a.bestScore || 0);
+      });
+
+      const idx = sorted.findIndex(
+        (u: any) => u._id === displayUser._id || (u.login && u.login.toLowerCase() === pseudo.toLowerCase())
+      );
+      if (idx !== -1) return `#${idx + 1}`;
+    }
+    return displayUser?.rank ? `#${displayUser.rank}` : '#1';
+  };
+
+  const userRank = computeExactRank();
   const isVip = Boolean(displayUser?.isVip);
   const hasGoldenCrown = displayUser?.equippedFrame === 'frame_golden_crown' || isVip;
 
@@ -86,7 +111,7 @@ export default function ProfileScreen() {
 
           {hasGoldenCrown && (
             <View style={styles.crownBadge}>
-              <Ionicons name="sparkles" size={14} color="#FFF" />
+              <Ionicons name="trophy" size={13} color="#FFF" />
             </View>
           )}
         </View>

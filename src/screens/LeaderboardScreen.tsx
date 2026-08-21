@@ -1,39 +1,68 @@
 ﻿//src/screens/LeaderboardScreen.tsx
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Animated } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useData } from '../context/DataContext';
 import { colors, spacing } from '../theme/theme';
+import api from '../services/api';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import LeaderboardItem from '../components/leaderboard/LeaderboardItem';
-import AppLoader from '../components/common/AppLoader';
 
 export default function LeaderboardScreen() {
-  const { leaderboard, isLoading, updateLeaderboard } = useData();
+  const { leaderboard: cachedLeaderboard, updateLeaderboard } = useData();
   const navigation = useNavigation();
   const { themeColors } = useTheme();
 
-  const screenFadeAnim = useRef(new Animated.Value(1)).current;
+  const [leaderboardData, setLeaderboardData] = useState<any[]>(cachedLeaderboard || []);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const onRefresh = async () => {
-    try {
-      await updateLeaderboard();
-    } catch {}
-  };
+  const screenFadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    onRefresh();
-  }, []);
+    Animated.timing(screenFadeAnim, {
+      toValue: 1,
+      duration: 350,
+      useNativeDriver: true,
+    }).start();
+  }, [screenFadeAnim]);
 
-  if (isLoading && leaderboard.length === 0) {
-    return (
-      <ScreenWrapper>
-        <AppLoader onRetry={onRefresh} />
-      </ScreenWrapper>
-    );
-  }
+  const fetchLiveLeaderboard = useCallback(async () => {
+    try {
+      const res = await api.get('/leaderboard', { timeout: 4000 });
+      const data = res.data?.data;
+      if (Array.isArray(data) && data.length > 0) {
+        setLeaderboardData(data);
+      }
+      await updateLeaderboard();
+    } catch {}
+  }, [updateLeaderboard]);
+
+  useEffect(() => {
+    fetchLiveLeaderboard();
+  }, [fetchLiveLeaderboard]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchLiveLeaderboard();
+    setRefreshing(false);
+  };
+
+  // Tri absolu garanti côté client : Niveau DESC -> XP DESC -> Record DESC
+  const sortedList = [...leaderboardData].sort((a, b) => {
+    const lvlA = a.level || 1;
+    const lvlB = b.level || 1;
+    if (lvlB !== lvlA) return lvlB - lvlA;
+
+    const xpA = a.xp || 0;
+    const xpB = b.xp || 0;
+    if (xpB !== xpA) return xpB - xpA;
+
+    const scoreA = a.bestScore || 0;
+    const scoreB = b.bestScore || 0;
+    return scoreB - scoreA;
+  });
 
   const renderRisingStarsHeader = () => (
     <View style={styles.risingStarsContainer}>
@@ -64,10 +93,11 @@ export default function LeaderboardScreen() {
         </View>
 
         <FlatList
-          data={leaderboard}
+          data={sortedList}
           keyExtractor={(item) => item._id}
-          refreshing={isLoading}
-          onRefresh={onRefresh}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.coral} />
+          }
           renderItem={({ item, index }) => {
             const rank = index + 1;
             return (
@@ -79,6 +109,9 @@ export default function LeaderboardScreen() {
           }}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={5}
         />
       </Animated.View>
     </ScreenWrapper>
