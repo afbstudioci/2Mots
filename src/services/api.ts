@@ -1,4 +1,4 @@
-﻿//src/services/api.ts
+//src/services/api.ts
 import axios from 'axios';
 import { DeviceEventEmitter } from 'react-native';
 import { getToken, getRefreshToken, saveTokens, clearTokens } from './authStorage';
@@ -54,7 +54,8 @@ api.interceptors.response.use(
     const isAuthRequest =
       originalRequest?.url?.includes('/auth/login') ||
       originalRequest?.url?.includes('/auth/register') ||
-      originalRequest?.url?.includes('/auth/refresh-token');
+      originalRequest?.url?.includes('/auth/refresh-token') ||
+      originalRequest?.url?.includes('/auth/logout');
 
     if (error.response?.status === 401 && !originalRequest?._retry && !isAuthRequest) {
       const refreshToken = await getRefreshToken();

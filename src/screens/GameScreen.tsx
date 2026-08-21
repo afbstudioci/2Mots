@@ -1,4 +1,4 @@
-﻿//src/screens/GameScreen.tsx
+//src/screens/GameScreen.tsx
 import React, { useRef, useEffect } from 'react';
 import { View, StyleSheet, Dimensions, Animated, ScrollView } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
@@ -76,7 +76,7 @@ export default function GameScreen({ navigation }: any) {
       Animated.timing(fadeAnim, { toValue: 0, duration: 120, useNativeDriver: true }),
       Animated.timing(scaleAnim, { toValue: 0.94, duration: 120, useNativeDriver: true }),
     ]).start(() => {
-      setCurrentIndex((prev) => (prev + 1 < wordPairs.length ? prev + 1 : 0));
+      setCurrentIndex((prev) => prev + 1);
 
       Animated.parallel([
         Animated.timing(fadeAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
@@ -114,13 +114,13 @@ export default function GameScreen({ navigation }: any) {
     }
   }, [timeLeft, panicAnim, showLevelUpModal, errorLimitData?.visible]);
 
-  if (isLoading) return <GameLoading />;
+  const currentPair = wordPairs[currentIndex];
+
+  if (isLoading || (!currentPair && wordPairs.length > 0 && currentIndex < wordPairs.length)) return <GameLoading />;
 
   if (errorMessage || wordPairs.length === 0) {
     return <GameEmpty message={errorMessage || 'Chargement impossible'} onBack={() => navigation.navigate('Home')} />;
   }
-
-  const currentPair = wordPairs[currentIndex];
 
   return (
     <ScreenWrapper style={{ backgroundColor: themeColors.background }}>

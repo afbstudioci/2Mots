@@ -1,4 +1,4 @@
-﻿//src/components/auth/ReferralModal.tsx
+//src/components/auth/ReferralModal.tsx
 import React, { useState } from 'react';
 import { Modal, View, Text, StyleSheet, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { colors, typography, borderRadius, shadows, spacing } from '../../theme/theme';
@@ -56,9 +56,19 @@ export default function ReferralModal({ visible, onClose }: ReferralModalProps) 
                 </LinearGradient>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.skipBtn} onPress={() => onClose()}>
-                <Text style={[styles.skipText, { color: themeColors.textSecondary }]}>
-                  Continuer sans code (100 Kevs)
+              <TouchableOpacity
+                style={[
+                  styles.skipBtn,
+                  {
+                    backgroundColor: themeColors.overlay,
+                    borderColor: themeColors.border,
+                  },
+                ]}
+                onPress={() => onClose()}
+                activeOpacity={0.75}
+              >
+                <Text style={[styles.skipText, { color: themeColors.text }]}>
+                  Je n'ai pas de code promo
                 </Text>
               </TouchableOpacity>
             </View>
@@ -146,11 +156,17 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   skipBtn: {
-    padding: spacing.sm,
+    width: '100%',
+    height: 48,
+    borderRadius: borderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    marginTop: spacing.xs,
   },
   skipText: {
-    fontFamily: 'Poppins_500Medium',
-    fontSize: 12.5,
-    textDecorationLine: 'underline',
+    fontFamily: 'Poppins_600SemiBold',
+    fontSize: 14,
+    letterSpacing: 0.3,
   },
 });

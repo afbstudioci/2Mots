@@ -1,4 +1,4 @@
-﻿//src/screens/LoginScreen.tsx
+//src/screens/LoginScreen.tsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -19,7 +19,6 @@ import ScreenWrapper from '../components/layout/ScreenWrapper';
 import AuthInput from '../components/auth/AuthInput';
 import CustomAlert from '../components/common/CustomAlert';
 import ServerWakeUpLoader from '../components/auth/ServerWakeUpLoader';
-import GoogleAuthButton from '../components/auth/GoogleAuthButton';
 
 const LoginScreen = ({ navigation }: any) => {
   const { themeColors } = useTheme();
@@ -140,12 +139,6 @@ const LoginScreen = ({ navigation }: any) => {
                   <Ionicons name="arrow-forward" size={20} color="#FFF" style={{ marginLeft: spacing.sm }} />
                 </LinearGradient>
               </TouchableOpacity>
-
-                            <GoogleAuthButton
-                title="Se connecter avec Google"
-                onSuccess={() => {}}
-                onError={(err) => setAlert({ visible: true, title: 'Google Sign-In', message: err, type: 'error' })}
-              />
 
               <TouchableOpacity
                 onPress={() => navigation.navigate('Register')}

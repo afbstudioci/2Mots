@@ -1,4 +1,4 @@
-﻿//src/services/offlineVault.ts
+//src/services/offlineVault.ts
 export interface OfflineWordPair {
   _id: string;
   word1: string;
@@ -68,7 +68,7 @@ export const shuffleArray = <T>(array: T[]): T[] => {
   return arr;
 };
 
-export const getLocalGameBatch = (count = 10, userLevel = 1, excludeIds: string[] = []): OfflineWordPair[] => {
+export const getLocalGameBatch = (count = 15, userLevel = 1, excludeIds: string[] = []): OfflineWordPair[] => {
   let minDiff = 1;
   let maxDiff = 3;
   if (userLevel >= 8) {
@@ -80,7 +80,10 @@ export const getLocalGameBatch = (count = 10, userLevel = 1, excludeIds: string[
   }
 
   let available = OFFLINE_WORD_PAIRS.filter((p) => !excludeIds.includes(p._id));
-  if (available.length < count) {
+  if (available.length < 5) {
+    available = OFFLINE_WORD_PAIRS.filter((p) => !excludeIds.slice(-15).includes(p._id));
+  }
+  if (available.length === 0) {
     available = [...OFFLINE_WORD_PAIRS];
   }
 

@@ -1,4 +1,4 @@
-﻿//src/services/authStorage.ts
+//src/services/authStorage.ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ACCESS_TOKEN_KEY = '@twomots_token';
@@ -32,7 +32,7 @@ export const saveUser = async (user: any) => {
 };
 
 export const getToken = async (): Promise<string | null> => {
-  if (inMemoryToken) return inMemoryToken;
+  if (inMemoryToken !== null) return inMemoryToken;
   try {
     const token = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
     inMemoryToken = token;
@@ -43,7 +43,7 @@ export const getToken = async (): Promise<string | null> => {
 };
 
 export const getRefreshToken = async (): Promise<string | null> => {
-  if (inMemoryRefreshToken) return inMemoryRefreshToken;
+  if (inMemoryRefreshToken !== null) return inMemoryRefreshToken;
   try {
     const rToken = await AsyncStorage.getItem(REFRESH_TOKEN_KEY);
     inMemoryRefreshToken = rToken;
@@ -54,7 +54,7 @@ export const getRefreshToken = async (): Promise<string | null> => {
 };
 
 export const getUser = async (): Promise<any> => {
-  if (inMemoryUser) return inMemoryUser;
+  if (inMemoryUser !== null) return inMemoryUser;
   try {
     const userData = await AsyncStorage.getItem(USER_KEY);
     const parsed = userData ? JSON.parse(userData) : null;
@@ -66,10 +66,10 @@ export const getUser = async (): Promise<any> => {
 };
 
 export const clearTokens = async () => {
+  inMemoryToken = null;
+  inMemoryRefreshToken = null;
+  inMemoryUser = null;
   try {
-    inMemoryToken = null;
-    inMemoryRefreshToken = null;
-    inMemoryUser = null;
     await AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_KEY]);
   } catch (error) {
     console.warn("[AUTH] Erreur suppression session", error);

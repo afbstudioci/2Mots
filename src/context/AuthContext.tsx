@@ -1,4 +1,4 @@
-﻿//src/context/AuthContext.tsx
+//src/context/AuthContext.tsx
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { DeviceEventEmitter } from 'react-native';
 import api from '../services/api';
@@ -55,10 +55,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const refreshProfileSilently = async () => {
+    const token = await getToken();
+    if (!token) return;
+
     try {
       const response = await api.get('/auth/me');
       const freshUser = response.data?.data?.user;
-      if (freshUser) {
+      const currentToken = await getToken();
+      // On ne sauvegarde QUE si la session est toujours active après le retour de l'API
+      if (freshUser && currentToken) {
         await saveUser(freshUser);
         setUser(freshUser);
       }
@@ -126,7 +131,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const deleteAccount = async () => {
     try {
-      await api.delete('/auth/account');
+      const currentToken = await getToken();
+      if (currentToken) {
+        await api.delete('/auth/account', {
+          headers: { Authorization: `Bearer ${currentToken}` },
+        });
+      }
     } catch (e) {
       console.warn('[AUTH] Erreur serveur suppression compte:', e);
     } finally {
@@ -137,11 +147,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
+      const currentToken = await getToken();
+      // 1. Invalidation immédiate et synchrone locale
       await clearTokens();
       setUser(null);
-      api.post('/auth/logout', {}, { timeout: 1500 }).catch(() => {});
+
+      // 2. Notification au serveur en arrière-plan sans bloquer
+      if (currentToken) {
+        api.post('/auth/logout', {}, {
+          headers: { Authorization: `Bearer ${currentToken}` },
+          timeout: 2000,
+        }).catch(() => {});
+      }
     } catch (e) {
       console.warn('[AUTH] Erreur déconnexion:', e);
+      await clearTokens();
       setUser(null);
     }
   };

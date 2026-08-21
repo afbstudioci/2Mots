@@ -1,4 +1,4 @@
-﻿//src/screens/RegisterScreen.tsx
+//src/screens/RegisterScreen.tsx
 import React, { useState } from 'react';
 import {
   View,
@@ -19,16 +19,11 @@ import AuthInput from '../components/auth/AuthInput';
 import ServerWakeUpLoader from '../components/auth/ServerWakeUpLoader';
 import PasswordValidator from '../components/auth/PasswordValidator';
 import ReferralModal from '../components/auth/ReferralModal';
-import GoogleAuthButton from '../components/auth/GoogleAuthButton';
 import { borderRadius, colors, spacing } from '../theme/theme';
 import { useKeyboard } from '../hooks/useKeyboard';
 
 const RegisterScreen = ({ navigation }: any) => {
-  const [formData, setFormData] = useState({
-    login: '',
-    email: '',
-    password: '',
-  });
+  const [formData, setFormData] = useState({ login: '', email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [showReferralModal, setShowReferralModal] = useState(false);
   const [referralCode, setReferralCode] = useState<string | undefined>(undefined);
@@ -37,12 +32,7 @@ const RegisterScreen = ({ navigation }: any) => {
     title: string;
     message: string;
     type: 'success' | 'error';
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    type: 'error',
-  });
+  }>({ visible: false, title: '', message: '', type: 'error' });
 
   const { register } = useAuth();
   const { themeColors } = useTheme();
@@ -52,24 +42,13 @@ const RegisterScreen = ({ navigation }: any) => {
     const { login, email, password } = formData;
 
     if (!login.trim() || !email.trim() || !password) {
-      setAlert({
-        visible: true,
-        title: 'Champs requis',
-        message: 'Veuillez remplir tous les champs.',
-        type: 'error',
-      });
+      setAlert({ visible: true, title: 'Champs requis', message: 'Veuillez remplir tous les champs.', type: 'error' });
       return;
     }
 
-    const isPasswordValid =
-      password.length >= 8 && /[A-Z]/.test(password) && /[0-9]/.test(password);
+    const isPasswordValid = password.length >= 8 && /[A-Z]/.test(password) && /[0-9]/.test(password);
     if (!isPasswordValid) {
-      setAlert({
-        visible: true,
-        title: 'Sécurité',
-        message: 'Le mot de passe ne respecte pas tous les critères.',
-        type: 'error',
-      });
+      setAlert({ visible: true, title: 'Sécurité', message: 'Le mot de passe ne respecte pas tous les critères.', type: 'error' });
       return;
     }
 
@@ -190,12 +169,6 @@ const RegisterScreen = ({ navigation }: any) => {
                   <Ionicons name="checkmark" size={22} color="#FFF" style={{ marginLeft: spacing.sm }} />
                 </LinearGradient>
               </TouchableOpacity>
-
-                            <GoogleAuthButton
-                title="S'inscrire avec Google" mode="register"
-                onSuccess={() => {}}
-                onError={(err) => setAlert({ visible: true, title: 'Google Sign-In', message: err, type: 'error' })}
-              />
 
               <TouchableOpacity
                 onPress={() => navigation.navigate('Login')}
