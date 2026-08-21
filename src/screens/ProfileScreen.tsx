@@ -46,8 +46,13 @@ export default function ProfileScreen() {
   const pseudo = displayUser?.login || 'Joueur';
   const initial = pseudo.charAt(0).toUpperCase();
 
-  // Calcul du rang 100% synchronisé avec la liste officielle du classement
+    // Calcul du rang réel synchronisé avec le classement officiel (ou '-' si nouveau compte sans partie)
   const computeExactRank = () => {
+    const hasPlayed = (displayUser?.bestScore || 0) > 0 || (displayUser?.xp || 0) > 0 || (displayUser?.level || 1) > 1;
+    if (!hasPlayed) {
+      return '-';
+    }
+
     if (Array.isArray(leaderboard) && leaderboard.length > 0 && displayUser) {
       const sorted = [...leaderboard].sort((a, b) => {
         const lvlA = a.level || 1;
@@ -62,9 +67,13 @@ export default function ProfileScreen() {
       const idx = sorted.findIndex(
         (u: any) => u._id === displayUser._id || (u.login && u.login.toLowerCase() === pseudo.toLowerCase())
       );
-      if (idx !== -1) return `#${idx + 1}`;
+      if (idx !== -1) return '#' + (idx + 1);
     }
-    return displayUser?.rank ? `#${displayUser.rank}` : '#1';
+
+    if (displayUser?.rank && typeof displayUser.rank === 'number') {
+      return '#' + displayUser.rank;
+    }
+    return '-';
   };
 
   const userRank = computeExactRank();
