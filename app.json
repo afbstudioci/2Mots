@@ -16,7 +16,7 @@
     },
     "android": {
       "package": "com.afbstudio.twomots",
-      "versionCode": 7,
+      "versionCode": 8,
       "permissions": ["com.android.vending.BILLING"],
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
