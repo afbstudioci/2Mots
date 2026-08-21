@@ -1,4 +1,4 @@
-//src/components/auth/ReferralModal.tsx
+﻿//src/components/auth/ReferralModal.tsx
 import React, { useState } from 'react';
 import { Modal, View, Text, StyleSheet, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { colors, typography, borderRadius, shadows, spacing } from '../../theme/theme';
@@ -33,7 +33,7 @@ export default function ReferralModal({ visible, onClose }: ReferralModalProps) 
                                 As-tu un code de parrainage ?
                             </Text>
                             <Text style={[styles.subMessage, { color: themeColors.textSecondary }]}>
-                                En utilisant un code, tu gagneras <Text style={{ color: colors.coral, fontWeight: 'bold' }}>100 Kevs</Text> dès que tu atteindras le niveau 2 !
+                                En utilisant un code, tu gagneras <Text style={{ color: colors.coral, fontWeight: 'bold' }}>+200 Kevs</Text> dès que tu atteindras le niveau 2 !
                             </Text>
 
                             <TextInput

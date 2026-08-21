@@ -1,4 +1,4 @@
-//src/components/common/ReferralCelebration.tsx
+﻿//src/components/common/ReferralCelebration.tsx
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import { colors, typography, borderRadius, shadows, spacing } from '../../theme/theme';
@@ -52,7 +52,7 @@ export default function ReferralCelebration({ visible, onClose }: ReferralCelebr
             <View style={styles.textContainer}>
                 <Text style={[styles.title, { color: themeColors.text }]}>BONUS ACTIVÉ !</Text>
                 <Text style={[styles.message, { color: themeColors.textSecondary }]}>
-                    Joue jusqu'au <Text style={{ color: colors.coral, fontWeight: 'bold' }}>Niveau 2</Text> pour débloquer tes <Text style={{ color: colors.coral, fontWeight: 'bold' }}>100 Kevs</Text> de parrainage.
+                    Joue jusqu'au <Text style={{ color: colors.coral, fontWeight: 'bold' }}>Niveau 2</Text> pour débloquer tes <Text style={{ color: colors.coral, fontWeight: 'bold' }}>+200 Kevs bonus</Text> de parrainage.
                 </Text>
             </View>
 
