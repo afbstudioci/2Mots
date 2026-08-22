@@ -1,4 +1,4 @@
-﻿//src/screens/SplashScreen.tsx
+//src/screens/SplashScreen.tsx
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
@@ -7,12 +7,16 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 
-export default function SplashScreen({ navigation }: any) {
+interface SplashScreenProps {
+  onFinish?: () => void;
+}
+
+export default function SplashScreen({ onFinish }: SplashScreenProps) {
   const { themeColors } = useTheme();
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
   const { refreshAll } = useData();
   const [progress, setProgress] = useState(0);
-  const hasNavigated = useRef(false);
+  const hasFinished = useRef(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
@@ -37,30 +41,29 @@ export default function SplashScreen({ navigation }: any) {
     }
 
     const progressInterval = setInterval(() => {
-      setProgress((prev) => Math.min(95, prev + 15));
-    }, 100);
+      setProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(progressInterval);
+          return 100;
+        }
+        return Math.min(100, prev + 10);
+      });
+    }, 120);
 
     const timer = setTimeout(() => {
       setProgress(100);
       clearInterval(progressInterval);
-      if (!loading && !hasNavigated.current) {
-        hasNavigated.current = true;
-        navigation.replace(user ? 'Home' : 'Login');
+      if (!hasFinished.current) {
+        hasFinished.current = true;
+        if (onFinish) onFinish();
       }
-    }, 1200);
+    }, 1600);
 
     return () => {
       clearTimeout(timer);
       clearInterval(progressInterval);
     };
-  }, [fadeAnim, loading, navigation, refreshAll, scaleAnim, user]);
-
-  useEffect(() => {
-    if (!loading && progress >= 95 && !hasNavigated.current) {
-      hasNavigated.current = true;
-      navigation.replace(user ? 'Home' : 'Login');
-    }
-  }, [loading, navigation, progress, user]);
+  }, [fadeAnim, onFinish, refreshAll, scaleAnim, user]);
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>

@@ -1,4 +1,4 @@
-﻿//App.tsx
+//App.tsx
 import React, { useEffect, useRef } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer, DefaultTheme, DarkTheme as NavDarkTheme } from '@react-navigation/native';
@@ -29,8 +29,10 @@ import ChatScreen from './src/screens/ChatScreen';
 import RulesScreen from './src/screens/RulesScreen';
 import PrivacyScreen from './src/screens/PrivacyScreen';
 import MainTabNavigator from './src/components/navigation/MainTabNavigator';
+import UpdateModal from './src/components/common/UpdateModal';
 import { registerForPushNotificationsAsync } from './src/services/notificationService';
 import { useAppStartup } from './src/hooks/useAppStartup';
+import { useAppUpdates } from './src/hooks/useAppUpdates';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -61,6 +63,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const AppNavigator = () => {
   const { user, loading } = useAuth();
   const { themeColors } = useTheme();
+  const [isSplashDone, setIsSplashDone] = React.useState(false);
   const pushRegistered = useRef(false);
 
   useEffect(() => {
@@ -73,8 +76,8 @@ const AppNavigator = () => {
     }
   }, [user]);
 
-  if (loading) {
-    return <SplashScreen onFinish={() => {}} />;
+  if (!isSplashDone || loading) {
+    return <SplashScreen onFinish={() => setIsSplashDone(true)} />;
   }
 
   return (
@@ -116,6 +119,7 @@ const AppNavigator = () => {
 const AppContent = () => {
   const { isDark, themeColors } = useTheme();
   useAppStartup();
+  const { updateState, handleApplyUpdate, handleDismiss } = useAppUpdates();
 
   const navigationTheme = {
     ...(isDark ? NavDarkTheme : DefaultTheme),
@@ -154,6 +158,15 @@ const AppContent = () => {
         <NavigationContainer theme={navigationTheme} linking={linking as any}>
           <AppNavigator />
         </NavigationContainer>
+        <UpdateModal
+          visible={updateState.visible}
+          type={updateState.type}
+          title={updateState.title}
+          message={updateState.message}
+          isForced={updateState.isForced}
+          onUpdate={handleApplyUpdate}
+          onDismiss={handleDismiss}
+        />
       </GestureHandlerRootView>
     </SafeAreaProvider>
   );
