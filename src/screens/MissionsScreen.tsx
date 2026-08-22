@@ -1,4 +1,4 @@
-﻿//src/screens/MissionsScreen.tsx
+//src/screens/MissionsScreen.tsx
 import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
@@ -83,14 +83,13 @@ export default function MissionsScreen() {
     }
   };
 
-  const handleShare = async () => {
-    try {
-      await Share.share({
-        message: `Rejoins-moi sur 2MOTS ! Utilise mon code ${user?.referralCode} pour gagner 100 Kevs dès ton inscription. Télécharge l'app ici : https://2mots.app`,
-      });
-    } catch (error) {
-      console.log('Share error', error);
-    }
+  const handleShare = () => {
+    setAlertConfig({
+      visible: true,
+      title: 'Parrainage en Test',
+      message: "Indisponible actuellement car l'application est en test.",
+      type: 'info',
+    });
   };
 
   const submitReferral = async () => {

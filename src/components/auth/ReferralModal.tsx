@@ -8,12 +8,19 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 interface ReferralModalProps {
   visible: boolean;
+  initialCode?: string;
   onClose: (code?: string) => void;
 }
 
-export default function ReferralModal({ visible, onClose }: ReferralModalProps) {
+export default function ReferralModal({ visible, initialCode = '', onClose }: ReferralModalProps) {
   const { themeColors } = useTheme();
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(initialCode);
+
+  React.useEffect(() => {
+    if (initialCode) {
+      setCode(initialCode);
+    }
+  }, [initialCode, visible]);
 
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={() => onClose()}>

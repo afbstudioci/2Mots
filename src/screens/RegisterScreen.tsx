@@ -22,11 +22,13 @@ import ReferralModal from '../components/auth/ReferralModal';
 import { borderRadius, colors, spacing } from '../theme/theme';
 import { useKeyboard } from '../hooks/useKeyboard';
 
-const RegisterScreen = ({ navigation }: any) => {
+const RegisterScreen = ({ navigation, route }: any) => {
   const [formData, setFormData] = useState({ login: '', email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [showReferralModal, setShowReferralModal] = useState(false);
-  const [referralCode, setReferralCode] = useState<string | undefined>(undefined);
+  const [referralCode, setReferralCode] = useState<string | undefined>(
+    route?.params?.ref || route?.params?.referralCode || undefined
+  );
   const [alert, setAlert] = useState<{
     visible: boolean;
     title: string;
@@ -196,6 +198,7 @@ const RegisterScreen = ({ navigation }: any) => {
 
       <ReferralModal 
         visible={showReferralModal}
+        initialCode={referralCode || route?.params?.ref || route?.params?.referralCode || ''}
         onClose={onReferralSubmit}
       />
     </ScreenWrapper>
