@@ -14,7 +14,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { colors, spacing, borderRadius } from '../theme/theme';
 import { ACCENT_MAP, DEFAULT_SHOP_CATALOG } from '../constants/shopCatalog';
-import * as Haptics from 'expo-haptics';
+import { useShopPayment } from '../hooks/useShopPayment';
 import api from '../services/api';
 
 export default function ShopScreen() {
@@ -29,15 +29,13 @@ export default function ShopScreen() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [selectedDetailItem, setSelectedDetailItem] = useState<any>(null);
 
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type?: 'success' | 'error' | 'info';
-    buttonText?: string;
-    confirmText?: string;
-    onConfirm?: () => void;
-  }>({ visible: false, title: '', message: '' });
+  const { alertConfig, handleBuyWithKevs, handleInAppPurchase, closeAlert } = useShopPayment(
+    user,
+    userKevs,
+    setUserKevs,
+    setIsVip,
+    setStreakFreezes
+  );
 
   const sanitizeCatalog = (rawCatalog: any) => {
     const fixItem = (item: any) => {
@@ -46,10 +44,7 @@ export default function ShopScreen() {
     };
 
     return {
-      vip: {
-        ...rawCatalog.vip,
-        perks: DEFAULT_SHOP_CATALOG.vip.perks,
-      },
+      vip: { ...rawCatalog.vip, perks: DEFAULT_SHOP_CATALOG.vip.perks },
       kevsPacks: (rawCatalog.kevsPacks?.length ? rawCatalog.kevsPacks : DEFAULT_SHOP_CATALOG.kevsPacks).map(fixItem),
       streaks: (rawCatalog.streaks?.length ? rawCatalog.streaks : DEFAULT_SHOP_CATALOG.streaks).map(fixItem),
       boosters: (rawCatalog.boosters?.length ? rawCatalog.boosters : DEFAULT_SHOP_CATALOG.boosters).map(fixItem),
@@ -75,53 +70,6 @@ export default function ShopScreen() {
   useEffect(() => {
     fetchShop();
   }, []);
-
-  const handleBuyWithKevs = (item: any, category?: string) => {
-    const cat = category || item.category || 'boosters';
-    if (userKevs < item.priceKevs) {
-      setAlertConfig({ visible: true, title: 'KEVS INSUFFISANTS', message: `Il vous manque ${item.priceKevs - userKevs} Kevs pour acheter "${item.title}".`, type: 'error', buttonText: 'Compris' });
-      return;
-    }
-    setAlertConfig({
-      visible: true, title: "CONFIRMER L'ACHAT", message: `Acheter "${item.title}" pour ${item.priceKevs} Kevs ?`, buttonText: 'Annuler', confirmText: 'Acheter',
-      onConfirm: async () => {
-        try {
-          const res = await api.post('/shop/buy-with-kevs', { itemId: item.id, category: cat });
-          const d = res.data?.data;
-          if (d) {
-            setUserKevs(d.userKevs);
-            if (user) { user.kevs = d.userKevs; user.inventory = d.inventory; }
-            if (d.streakFreezes !== undefined) setStreakFreezes(d.streakFreezes);
-          }
-          try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
-          setAlertConfig({ visible: true, title: 'ACHAT RÉUSSI !', message: `${item.title} a été ajouté à votre inventaire.`, type: 'success', buttonText: 'Super !' });
-        } catch (e: any) {
-          setAlertConfig({ visible: true, title: 'ERREUR', message: e.response?.data?.message || "Erreur lors de l'achat.", type: 'error', buttonText: 'Fermer' });
-        }
-      },
-    });
-  };
-
-  const handleInAppPurchase = (pack: any) => {
-    setAlertConfig({
-      visible: true, title: 'COMMANDE SÉCURISÉE', message: `Confirmer la commande de "${pack.title}" (${pack.priceEur}) ?`, buttonText: 'Annuler', confirmText: 'Confirmer',
-      onConfirm: async () => {
-        try {
-          const res = await api.post('/shop/verify-purchase', { packId: pack.id });
-          const d = res.data?.data;
-          if (d) {
-            setUserKevs(d.userKevs);
-            if (user) { user.kevs = d.userKevs; user.isVip = d.isVip; }
-            if (d.isVip) setIsVip(true);
-          }
-          try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
-          setAlertConfig({ visible: true, title: 'ACHAT VALIDÉ !', message: 'Vos avantages et Kevs ont été crédités sur votre compte.', type: 'success', buttonText: 'Parfait !' });
-        } catch {
-          setAlertConfig({ visible: true, title: 'ERREUR', message: 'Service de paiement indisponible.', type: 'error', buttonText: 'Fermer' });
-        }
-      },
-    });
-  };
 
   return (
     <ScreenWrapper style={{ backgroundColor: themeColors.background }}>
@@ -223,7 +171,7 @@ export default function ShopScreen() {
         buttonText={alertConfig.buttonText}
         confirmText={alertConfig.confirmText}
         onConfirm={alertConfig.onConfirm}
-        onClose={() => setAlertConfig({ visible: false, title: '', message: '' })}
+        onClose={closeAlert}
       />
     </ScreenWrapper>
   );

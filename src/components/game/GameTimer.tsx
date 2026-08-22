@@ -14,6 +14,7 @@ interface GameTimerProps {
     timeLeft: number;
     maxTime: number; 
     timeWon?: number; 
+    isFastCombo?: boolean;
     onTimeGainAnimationEnd?: () => void;
 }
 
@@ -21,6 +22,7 @@ export default function GameTimer({
     timeLeft, 
     maxTime, 
     timeWon = 0, 
+    isFastCombo = false,
     onTimeGainAnimationEnd 
 }: GameTimerProps) {
     const { themeColors } = useTheme(); 
@@ -127,7 +129,9 @@ export default function GameTimer({
                             transform: [{ translateY: bonusTranslateY }] 
                         }
                     ]}>
-                        <Text style={styles.bonusText}>+{timeWon}s</Text>
+                        <Text style={styles.bonusText}>
+                          {isFastCombo ? '+RAPIDE (+2K)' : `+${timeWon}s`}
+                        </Text>
                     </Animated.View>
                 )}
             </View>

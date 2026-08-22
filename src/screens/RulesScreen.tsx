@@ -1,11 +1,11 @@
-﻿//src/screens/RulesScreen.tsx
+//src/screens/RulesScreen.tsx
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import { useTheme } from '../context/ThemeContext';
-import { spacing, typography, borderRadius } from '../theme/theme';
+import { spacing, typography, borderRadius, colors } from '../theme/theme';
 
 export default function RulesScreen() {
   const { themeColors } = useTheme();
@@ -23,7 +23,7 @@ export default function RulesScreen() {
       ]}
     >
       <View style={[styles.iconContainer, { backgroundColor: themeColors.primary + '20' }]}>
-        <Ionicons name={icon} size={24} color={themeColors.primary} />
+        <Ionicons name={icon} size={24} color={colors.coral} />
       </View>
       <View style={styles.ruleTextContent}>
         <Text style={[styles.ruleTitle, { color: themeColors.text }]}>{title}</Text>
@@ -44,31 +44,37 @@ export default function RulesScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={[styles.introText, { color: themeColors.textSecondary }]}>
-          Bienvenue dans 2Mots ! Rapidité, déduction et précision sont vos meilleurs atouts.
+          Bienvenue dans 2Mots ! Déduction pure, vitesse et perspicacité sont les clés de la victoire.
         </Text>
 
         <RuleItem
-          icon="flash"
-          title="Le Concept"
-          description="Deux mots s'affichent à l'écran. Votre mission est de trouver le mot qui les lie ou leur combinaison logique le plus vite possible."
+          icon="bulb"
+          title="Le Point Commun"
+          description="Deux mots s'affichent. Identifiez la seule caractéristique, matière, fonction ou propriété logique partagée par les deux termes."
+        />
+
+        <RuleItem
+          icon="shield-checkmark"
+          title="Pièges Asymétriques"
+          description="Les faux choix sont très proches de l'un des deux mots, mais jamais des deux simultanément. Ne tombez pas dans le panneau !"
         />
 
         <RuleItem
           icon="timer"
-          title="Chronomètre Continu"
-          description="Le compte à rebours tourne sans interruption. Chaque bonne réponse vous fait gagner +8 secondes précieuses (max 30s)."
+          title="Chronomètre par Paliers"
+          description="Le temps s'accélère avec votre niveau : 30s au départ, puis 25s, 20s, 15s et jusqu'à 10s pour les niveaux experts."
+        />
+
+        <RuleItem
+          icon="flash"
+          title="Bonus Combo Rapide"
+          description="Trouvez la bonne réponse en moins de 3 secondes sans utiliser d'aide pour remporter un bonus immédiat de +2 Kevs et de l'XP supplémentaire !"
         />
 
         <RuleItem
           icon="alert-circle"
           title="Tolérance aux Erreurs"
-          description="Attention : 3 erreurs consécutives ou 5 erreurs cumulées dans la partie entraînent une défaite immédiate (Game Over) !"
-        />
-
-        <RuleItem
-          icon="trending-up"
-          title="Niveaux & XP"
-          description="Plus vous enchaînez de bonnes réponses, plus vous gagnez d'XP et de Kevs pour grimper dans le classement mondial."
+          description="3 erreurs consécutives ou 5 erreurs cumulées mettent fin à la partie, à moins d'utiliser un joker Seconde Chance."
         />
       </ScrollView>
     </ScreenWrapper>

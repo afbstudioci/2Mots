@@ -42,11 +42,14 @@ export const useGameLogic = () => {
   const currentPairRef = useRef<EnrichedWordPair | null>(null);
   currentPairRef.current = wordPairs[currentIndex] || null;
 
+  const [isFastCombo, setIsFastCombo] = useState<boolean>(false);
+
   const timer = useGameTimer({
     isLoading,
     isTimeFrozen: false,
     showLevelUpModal,
     errorLimitData,
+    userLevel,
     currentPairRef,
     sessionAnswersRef,
     playedPairsHistoryRef,
@@ -63,9 +66,8 @@ export const useGameLogic = () => {
     hasTriggeredGameOver: timer.hasTriggeredGameOver,
     playHint,
     playSuccess,
-    onTimeFreezeActivated: (extraMs) => {
-      timer.setTimeWon(5);
-      timer.addTimeMs(extraMs);
+    onTimeFreezeActivated: () => {
+      timer.freezeTimer(5);
     },
     onSecondChanceReset: () => {
       consecutiveErrorsRef.current = 0;
@@ -75,7 +77,7 @@ export const useGameLogic = () => {
       setCorrectChoice(null);
       setIsCorrectState(null);
       setIsChecking(false);
-      timer.resetTimer(30);
+      timer.resetTimer();
     },
   });
 
@@ -133,7 +135,7 @@ export const useGameLogic = () => {
       setWordPairs(local as any);
     } finally {
       setIsLoading(false);
-      timer.resetTimer(30);
+      timer.resetTimer();
     }
   }, []);
 
@@ -149,7 +151,8 @@ export const useGameLogic = () => {
 
     setSelectedChoice(choice);
     setIsChecking(true);
-    const timeSpent = Math.max(1, 30 - timer.timeLeft);
+    const maxT = timer.maxTime || 30;
+    const timeSpent = Math.max(1, maxT - timer.timeLeft);
 
     const officialSolution = pair.exactMatch?.[0] || pair.options[0];
     const isCorrect = pair.exactMatch?.some((m: string) => normalizeStr(m) === normalizeStr(choice)) ?? (normalizeStr(officialSolution) === normalizeStr(choice));
@@ -161,7 +164,6 @@ export const useGameLogic = () => {
     sessionAnswersRef.current.push({ wordPairId: pair._id, answer: choice, isCorrect, timeSpent, accuracy: isCorrect ? 100 : 0 });
     playedWordIdsRef.current.push(pair._id);
 
-    // Pré-chargement automatique de la suite sans interruption
     if (currentIndex + 4 >= wordPairs.length) {
       fetchNextBatch();
     }
@@ -172,13 +174,18 @@ export const useGameLogic = () => {
       setSuccessTrigger((prev) => prev + 1);
       try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
       playSuccess();
-      setUserKevs((prev) => prev + 1);
-      if (user) user.kevs = (user.kevs || 0) + 1;
-      timer.setTimeWon(8);
-      timer.addTimeMs(8000);
+
+      const isFast = timeSpent <= 3 && !boosters.isHintUsed;
+      setIsFastCombo(isFast);
+      const kevsToAdd = isFast ? 3 : 1; // +1 de base + 2 bonus de rapidité
+
+      setUserKevs((prev) => prev + kevsToAdd);
+      if (user) user.kevs = (user.kevs || 0) + kevsToAdd;
+      timer.setTimeWon(isFast ? 10 : 8);
+      timer.addTimeMs(isFast ? 10000 : 8000);
 
       setCurrentXp((prev) => {
-        const next = prev + 1;
+        const next = prev + (isFast ? 2 : 1);
         const needed = 3 + userLevel * 2;
         if (next >= needed) {
           const nextLvl = userLevel + 1;
@@ -196,6 +203,7 @@ export const useGameLogic = () => {
         return next;
       });
     } else {
+      setIsFastCombo(false);
       consecutiveErrorsRef.current += 1;
       totalErrorsRef.current += 1;
       try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch {}
@@ -219,6 +227,7 @@ export const useGameLogic = () => {
       setSelectedChoice(null);
       setCorrectChoice(null);
       setIsCorrectState(null);
+      setIsFastCombo(false);
       boosters.resetBoosterState();
       setIsChecking(false);
       if (!showLevelUpModal && !timer.hasTriggeredGameOver && !errorLimitData?.visible) {
@@ -229,16 +238,16 @@ export const useGameLogic = () => {
 
   const handleCloseLevelUp = () => {
     setShowLevelUpModal(false);
-    timer.resetTimer(30);
+    timer.resetTimer();
   };
 
   return {
-    wordPairs, currentIndex, setCurrentIndex, timeLeft: timer.timeLeft, setTimeLeft: timer.setTimeLeft,
-    selectedChoice, correctChoice, isCorrectState, isLoading, errorMessage: null, isChecking,
+    wordPairs, currentIndex, setCurrentIndex, timeLeft: timer.timeLeft, maxTime: timer.maxTime,
+    selectedChoice, correctChoice, isCorrectState, isFastCombo, isLoading, errorMessage: null, isChecking,
     eliminatedChoices: boosters.eliminatedChoices, isHintUsed: boosters.isHintUsed,
     handleUseHint: boosters.handleUseHint, handleUseTimeFreeze: boosters.handleUseTimeFreeze,
     handleUseSuperClue: boosters.handleUseSuperClue, handleUseSecondChance: boosters.handleUseSecondChance,
-    isTimeFrozen: boosters.isTimeFrozen, timeFreezeCount: boosters.timeFreezeCount,
+    isTimeFrozen: timer.isTimeFrozen || boosters.isTimeFrozen, timeFreezeCount: boosters.timeFreezeCount,
     superClueCount: boosters.superClueCount, secondChanceCount: boosters.secondChanceCount,
     showNoKevsModal: boosters.showNoKevsModal, setShowNoKevsModal: boosters.setShowNoKevsModal,
     userLevel, currentXp, xpNeeded, userKevs, timeWon: timer.timeWon, setTimeWon: timer.setTimeWon,

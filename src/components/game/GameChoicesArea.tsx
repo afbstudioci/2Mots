@@ -1,4 +1,4 @@
-﻿//src/components/game/GameChoicesArea.tsx
+//src/components/game/GameChoicesArea.tsx
 import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { colors, spacing, borderRadius, shadows } from '../../theme/theme';
@@ -30,7 +30,6 @@ export default function GameChoicesArea({
   correctChoice,
   isCorrectState,
   isChecking,
-  expectedType,
   isHintUsed = false,
   clue = null,
   eliminatedChoices = [],
@@ -44,7 +43,6 @@ export default function GameChoicesArea({
 }: GameChoicesAreaProps) {
   const { themeColors } = useTheme();
   const shakeAnim = useRef(new Animated.Value(0)).current;
-  const clueFadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (isCorrectState === false) {
@@ -58,46 +56,29 @@ export default function GameChoicesArea({
     }
   }, [isCorrectState, shakeAnim]);
 
-  useEffect(() => {
-    if (isHintUsed) {
-      Animated.timing(clueFadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }).start();
-    } else {
-      clueFadeAnim.setValue(0);
-    }
-  }, [isHintUsed, clueFadeAnim]);
-
-  const formatGrammarType = (type?: string) => {
-    const lower = (type || 'nom').toLowerCase().trim();
-    if (lower === 'verbe') return 'un verbe';
-    if (lower === 'adjectif') return 'un adjectif';
-    return 'un nom';
-  };
-
   const normalizeChoice = (text: string) =>
     (text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
+  const displayQuestion = clue && clue.trim().length > 0
+    ? clue
+    : 'Quel point commun les relie ?';
+
   return (
     <View style={styles.container}>
-      <View style={[styles.typeBadge, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
-        <Ionicons name="information-circle-outline" size={16} color={colors.coral} style={styles.badgeIcon} />
-        <Text style={[styles.typeText, { color: themeColors.textSecondary }]}>
-          La solution est {formatGrammarType(expectedType)}
+      {/* Bulle de question stimulante (Point Commun) */}
+      <View style={[styles.questionCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+        <Ionicons name="help-circle-outline" size={17} color={colors.coral} style={styles.questionIcon} />
+        <Text style={[styles.questionText, { color: themeColors.text }]} numberOfLines={2}>
+          {displayQuestion}
         </Text>
       </View>
-
-      {isHintUsed && clue ? (
-        <Animated.View style={[styles.clueBanner, { opacity: clueFadeAnim, borderColor: '#FFB84D' }]}>
-          <Ionicons name="bulb" size={18} color="#FFB84D" style={{ marginRight: 8 }} />
-          <Text style={[styles.clueBannerText, { color: themeColors.text }]}>{clue}</Text>
-        </Animated.View>
-      ) : null}
 
       <Animated.View style={[styles.choicesList, { transform: [{ translateX: shakeAnim }] }]}>
         {(options || []).map((option, index) => {
           const normOption = normalizeChoice(option);
           const normSelected = normalizeChoice(selectedChoice || '');
           const normCorrect = normalizeChoice(correctChoice || '');
-          const isEliminated = (eliminatedChoices || []).some(e => normalizeChoice(e) === normOption);
+          const isEliminated = (eliminatedChoices || []).some((e) => normalizeChoice(e) === normOption);
 
           const isThisSelected = selectedChoice !== null && normOption === normSelected;
           const isThisCorrectAnswer = correctChoice !== null && normOption === normCorrect;
@@ -169,7 +150,7 @@ export default function GameChoicesArea({
         })}
       </Animated.View>
 
-      {/* Barre des 3 Jokers Tactiques */}
+      {/* Barre des Jokers Tactiques */}
       <View style={styles.boostersRow}>
         <TouchableOpacity
           style={[
@@ -185,7 +166,7 @@ export default function GameChoicesArea({
         >
           <Ionicons name="bulb-outline" size={17} color={isHintUsed ? '#FFB84D' : colors.coral} />
           <Text style={[styles.boosterText, { color: isHintUsed ? '#FFB84D' : themeColors.text }]}>
-            50/50
+            {isHintUsed ? '50/50 Actif' : '50/50'}
           </Text>
         </TouchableOpacity>
 
@@ -236,29 +217,20 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
     paddingTop: spacing.xs,
   },
-  typeBadge: {
+  questionCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     alignSelf: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    marginBottom: spacing.xs,
-  },
-  badgeIcon: { marginRight: 6 },
-  typeText: { fontSize: 13, fontFamily: 'Poppins_600SemiBold' },
-  clueBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    backgroundColor: 'rgba(255, 184, 77, 0.12)',
     marginBottom: spacing.sm,
+    maxWidth: '96%',
   },
-  clueBannerText: { flex: 1, fontSize: 12, fontFamily: 'Poppins_500Medium', fontStyle: 'italic' },
+  questionIcon: { marginRight: 8 },
+  questionText: { fontSize: 13, fontFamily: 'Poppins_600SemiBold', textAlign: 'center' },
   choicesList: { width: '100%', gap: 10 },
   choiceButton: {
     height: 56,

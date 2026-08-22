@@ -26,10 +26,11 @@ export default function GameScreen({ navigation }: any) {
     currentIndex,
     setCurrentIndex,
     timeLeft,
-    setTimeLeft,
+    maxTime,
     selectedChoice,
     correctChoice,
     isCorrectState,
+    isFastCombo,
     isLoading,
     errorMessage,
     isChecking,
@@ -162,8 +163,9 @@ export default function GameScreen({ navigation }: any) {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <GameTimer
           timeLeft={timeLeft}
-          maxTime={30}
+          maxTime={maxTime || 30}
           timeWon={timeWon}
+          isFastCombo={isFastCombo}
           onTimeGainAnimationEnd={() => setTimeWon(0)}
         />
 

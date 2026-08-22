@@ -6,11 +6,19 @@ import * as Haptics from 'expo-haptics';
 import api from '../services/api';
 import { EnrichedWordPair, GameAnswer } from '../types/gameTypes';
 
+export const getLevelMaxTime = (level: number = 1): number => {
+  if (level <= 10) return 30;
+  if (level <= 30) return 25;
+  if (level <= 60) return 20;
+  if (level <= 100) return 15;
+  return Math.max(8, 10 - Math.floor((level - 101) / 50));
+};
+
 interface UseGameTimerProps {
   isLoading: boolean;
-  isTimeFrozen: boolean;
   showLevelUpModal: boolean;
   errorLimitData: any;
+  userLevel?: number;
   currentPairRef: React.MutableRefObject<EnrichedWordPair | null>;
   sessionAnswersRef: React.MutableRefObject<GameAnswer[]>;
   playedPairsHistoryRef: React.MutableRefObject<Map<string, any>>;
@@ -20,9 +28,9 @@ interface UseGameTimerProps {
 
 export const useGameTimer = ({
   isLoading,
-  isTimeFrozen,
   showLevelUpModal,
   errorLimitData,
+  userLevel = 1,
   currentPairRef,
   sessionAnswersRef,
   playedPairsHistoryRef,
@@ -30,10 +38,15 @@ export const useGameTimer = ({
   playDanger,
 }: UseGameTimerProps) => {
   const navigation = useNavigation<any>();
-  const [timeLeft, setTimeLeft] = useState<number>(30);
+  const initialMax = getLevelMaxTime(userLevel);
+  const [maxTime, setMaxTime] = useState<number>(initialMax);
+  const [timeLeft, setTimeLeft] = useState<number>(initialMax);
   const [timeWon, setTimeWon] = useState<number>(0);
+  const [isTimeFrozen, setIsTimeFrozen] = useState<boolean>(false);
 
-  const timeLeftMsRef = useRef<number>(30000);
+  const timeLeftMsRef = useRef<number>(initialMax * 1000);
+  const maxTimeRef = useRef<number>(initialMax);
+  maxTimeRef.current = initialMax;
   const lastTickTimeRef = useRef<number>(Date.now());
   const timerIntervalRef = useRef<any>(null);
   const hasTriggeredGameOver = useRef<boolean>(false);
@@ -144,15 +157,28 @@ export const useGameTimer = ({
   }, [triggerGameOver, showLevelUpModal, errorLimitData?.visible, isTimeFrozen]);
 
   const addTimeMs = (extraMs: number) => {
-    timeLeftMsRef.current = Math.min(30000, timeLeftMsRef.current + extraMs);
+    timeLeftMsRef.current = Math.min(maxTimeRef.current * 1000, timeLeftMsRef.current + extraMs);
     setTimeLeft(Math.ceil(timeLeftMsRef.current / 1000));
   };
 
-  const resetTimer = (newSeconds = 30) => {
-    timeLeftMsRef.current = newSeconds * 1000;
-    setTimeLeft(newSeconds);
+  const resetTimer = (newSeconds?: number) => {
+    const sec = newSeconds || maxTimeRef.current;
+    setMaxTime(sec);
+    maxTimeRef.current = sec;
+    timeLeftMsRef.current = sec * 1000;
+    setTimeLeft(sec);
     lastTickTimeRef.current = Date.now();
     hasTriggeredGameOver.current = false;
+  };
+
+  const freezeTimer = (seconds: number = 5) => {
+    setIsTimeFrozen(true);
+    lastTickTimeRef.current = Date.now();
+    try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+    setTimeout(() => {
+      lastTickTimeRef.current = Date.now();
+      setIsTimeFrozen(false);
+    }, seconds * 1000);
   };
 
   const stopTimer = () => {
@@ -162,8 +188,12 @@ export const useGameTimer = ({
   return {
     timeLeft,
     setTimeLeft,
+    maxTime,
+    setMaxTime,
     timeWon,
     setTimeWon,
+    isTimeFrozen,
+    freezeTimer,
     addTimeMs,
     resetTimer,
     stopTimer,
