@@ -32,7 +32,11 @@ export const useAppUpdates = () => {
     if (__DEV__) return false;
     try {
       if (otaDownloaded.current) return true;
-      const checkResult = await Updates.checkForUpdateAsync();
+      const checkPromise = Updates.checkForUpdateAsync();
+      const timeoutPromise = new Promise<{ isAvailable: boolean }>((_, reject) =>
+        setTimeout(() => reject(new Error('OTA check timeout')), 3000)
+      );
+      const checkResult = await Promise.race([checkPromise, timeoutPromise]);
       if (checkResult.isAvailable) {
         await Updates.fetchUpdateAsync();
         otaDownloaded.current = true;

@@ -61,9 +61,8 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AppNavigator = () => {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
   const { themeColors } = useTheme();
-  const [isSplashDone, setIsSplashDone] = React.useState(false);
   const pushRegistered = useRef(false);
 
   useEffect(() => {
@@ -75,10 +74,6 @@ const AppNavigator = () => {
       pushRegistered.current = false;
     }
   }, [user]);
-
-  if (!isSplashDone || loading) {
-    return <SplashScreen onFinish={() => setIsSplashDone(true)} />;
-  }
 
   return (
     <Stack.Navigator
@@ -118,6 +113,7 @@ const AppNavigator = () => {
 
 const AppContent = () => {
   const { isDark, themeColors } = useTheme();
+  const [showSplash, setShowSplash] = React.useState(true);
   useAppStartup();
   const { updateState, handleApplyUpdate, handleDismiss } = useAppUpdates();
 
@@ -158,6 +154,11 @@ const AppContent = () => {
         <NavigationContainer theme={navigationTheme} linking={linking as any}>
           <AppNavigator />
         </NavigationContainer>
+
+        {showSplash && (
+          <SplashScreen onFinish={() => setShowSplash(false)} />
+        )}
+
         <UpdateModal
           visible={updateState.visible}
           type={updateState.type}

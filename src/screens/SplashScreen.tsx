@@ -1,11 +1,9 @@
 //src/screens/SplashScreen.tsx
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { StyleSheet, Animated } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, spacing } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
-import { useAuth } from '../context/AuthContext';
-import { useData } from '../context/DataContext';
 
 interface SplashScreenProps {
   onFinish?: () => void;
@@ -13,19 +11,31 @@ interface SplashScreenProps {
 
 export default function SplashScreen({ onFinish }: SplashScreenProps) {
   const { themeColors } = useTheme();
-  const { user } = useAuth();
-  const { refreshAll } = useData();
   const [progress, setProgress] = useState(0);
+
+  const containerFadeAnim = useRef(new Animated.Value(1)).current;
+  const contentFadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const hasFinished = useRef(false);
 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const completeSplash = () => {
+    if (hasFinished.current) return;
+    hasFinished.current = true;
+
+    Animated.timing(containerFadeAnim, {
+      toValue: 0,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => {
+      if (onFinish) onFinish();
+    });
+  };
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, {
+      Animated.timing(contentFadeAnim, {
         toValue: 1,
-        duration: 350,
+        duration: 300,
         useNativeDriver: true,
       }),
       Animated.spring(scaleAnim, {
@@ -36,40 +46,54 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
       }),
     ]).start();
 
-    if (user) {
-      refreshAll().catch(() => {});
-    }
-
     const progressInterval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
           clearInterval(progressInterval);
           return 100;
         }
-        return Math.min(100, prev + 10);
+        return Math.min(100, prev + 15);
       });
-    }, 120);
+    }, 100);
 
-    const timer = setTimeout(() => {
+    const animTimer = setTimeout(() => {
       setProgress(100);
       clearInterval(progressInterval);
-      if (!hasFinished.current) {
-        hasFinished.current = true;
-        if (onFinish) onFinish();
-      }
-    }, 1600);
+      completeSplash();
+    }, 1400);
+
+    const failsafeTimer = setTimeout(() => {
+      completeSplash();
+    }, 2000);
 
     return () => {
-      clearTimeout(timer);
+      clearTimeout(animTimer);
+      clearTimeout(failsafeTimer);
       clearInterval(progressInterval);
     };
-  }, [fadeAnim, onFinish, refreshAll, scaleAnim, user]);
+  }, []);
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
-        <View style={styles.centerBlock}>
-          {/* Tracé SVG élégant du symbole Infini */}
+    <Animated.View
+      style={[
+        styles.overlayContainer,
+        {
+          backgroundColor: themeColors.background,
+          opacity: containerFadeAnim,
+        },
+      ]}
+      pointerEvents="none"
+    >
+      <Animated.View
+        style={[
+          styles.content,
+          {
+            opacity: contentFadeAnim,
+            transform: [{ scale: scaleAnim }],
+          },
+        ]}
+      >
+        <Animated.View style={styles.centerBlock}>
           <Svg width={130} height={65} viewBox="0 0 100 50">
             <Path
               d="M 50 25 C 65 0, 95 0, 95 25 C 95 50, 65 50, 50 25 C 35 0, 5 0, 5 25 C 5 50, 35 50, 50 25 Z"
@@ -80,23 +104,33 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
             />
           </Svg>
 
-          {/* Signature By_ KEVY agrandie et mise en valeur */}
-          <Text style={styles.signatureText}>By_ KEVY</Text>
-        </View>
+          <Animated.Text style={styles.signatureText}>By_ KEVY</Animated.Text>
+        </Animated.View>
 
-        <View style={styles.bottomBlock}>
-          <View style={[styles.progressBarBackground, { backgroundColor: themeColors.overlayLight }]}>
-            <View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: colors.coral }]} />
-          </View>
-        </View>
+        <Animated.View style={styles.bottomBlock}>
+          <Animated.View
+            style={[
+              styles.progressBarBackground,
+              { backgroundColor: themeColors.overlayLight },
+            ]}
+          >
+            <Animated.View
+              style={[
+                styles.progressBarFill,
+                { width: `${progress}%`, backgroundColor: colors.coral },
+              ]}
+            />
+          </Animated.View>
+        </Animated.View>
       </Animated.View>
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  overlayContainer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 9999,
     alignItems: 'center',
     justifyContent: 'center',
   },
