@@ -1,4 +1,4 @@
-﻿//src/components/leaderboard/LeaderboardItem.tsx
+//src/components/leaderboard/LeaderboardItem.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Animated } from 'react-native';
 import { colors, spacing } from '../../theme/theme';
@@ -124,16 +124,16 @@ export default function LeaderboardItem({ rank, user, index }: LeaderboardItemPr
           <View style={[styles.detailsContainer, { borderTopColor: isPodium ? 'rgba(0,0,0,0.1)' : themeColors.overlayLight }]}>
             <View style={styles.detailItem}>
               <Text style={[styles.detailValue, { color: cardConfig.textColor }]}>
-                {(user.bestScore || 0).toLocaleString()}
+                {user.bestScore || 0}
               </Text>
-              <Text style={[styles.detailLabel, { color: cardConfig.textColor, opacity: 0.6 }]}>Record</Text>
+              <Text style={[styles.detailLabel, { color: cardConfig.textColor, opacity: 0.7 }]}>Record Mots</Text>
             </View>
             <View style={[styles.divider, { backgroundColor: isPodium ? 'rgba(0,0,0,0.1)' : themeColors.overlayLight }]} />
             <View style={styles.detailItem}>
               <Text style={[styles.detailValue, { color: cardConfig.textColor }]}>
                 {user.xp || 0}
               </Text>
-              <Text style={[styles.detailLabel, { color: cardConfig.textColor, opacity: 0.6 }]}>XP Total</Text>
+              <Text style={[styles.detailLabel, { color: cardConfig.textColor, opacity: 0.7 }]}>XP Palier</Text>
             </View>
           </View>
         )}
@@ -143,11 +143,7 @@ export default function LeaderboardItem({ rank, user, index }: LeaderboardItemPr
 }
 
 const styles = StyleSheet.create({
-  card: {
-    marginHorizontal: spacing.xl,
-    marginVertical: spacing.xs,
-    overflow: 'hidden',
-  },
+  card: { marginHorizontal: spacing.xl, marginVertical: spacing.xs, overflow: 'hidden' },
   glowEffect: {
     shadowColor: '#FFB84D',
     shadowOffset: { width: 0, height: 4 },
@@ -155,50 +151,15 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 8,
   },
-  cardPodium: {
-    borderRadius: 40,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-  cardStandard: {
-    borderRadius: 24,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-  },
-  cardExpanded: {
-    paddingBottom: spacing.sm,
-  },
-  mainContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatarContainerPodium: {
-    position: 'relative',
-    marginRight: spacing.md,
-  },
-  avatar: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    overflow: 'hidden',
-  },
-  avatarPodium: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-  },
-  avatarStandard: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginHorizontal: spacing.md,
-  },
-  avatarInitial: {
-    fontFamily: 'Poppins_700Bold',
-    color: colors.white,
-    fontSize: 20,
-  },
+  cardPodium: { borderRadius: 40, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, marginBottom: spacing.sm },
+  cardStandard: { borderRadius: 24, paddingVertical: spacing.md, paddingHorizontal: spacing.lg },
+  cardExpanded: { paddingBottom: spacing.sm },
+  mainContent: { flexDirection: 'row', alignItems: 'center' },
+  avatarContainerPodium: { position: 'relative', marginRight: spacing.md },
+  avatar: { justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.2)', overflow: 'hidden' },
+  avatarPodium: { width: 54, height: 54, borderRadius: 27 },
+  avatarStandard: { width: 40, height: 40, borderRadius: 20, marginHorizontal: spacing.md },
+  avatarInitial: { fontFamily: 'Poppins_700Bold', color: colors.white, fontSize: 20 },
   rankBadgePodium: {
     position: 'absolute',
     top: -4,
@@ -212,68 +173,17 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.2)',
   },
-  rankTextPodium: {
-    fontFamily: 'Poppins_700Bold',
-    color: colors.white,
-    fontSize: 12,
-  },
-  rankTextStandard: {
-    fontFamily: 'Poppins_800ExtraBold',
-    fontSize: 20,
-    width: 25,
-    textAlign: 'center',
-  },
-  infoContainer: {
-    flex: 1,
-    flexShrink: 1,
-    paddingRight: spacing.md,
-  },
-  username: {
-    fontFamily: 'Poppins_700Bold',
-    fontSize: 18,
-    marginBottom: -4,
-    flexShrink: 1,
-  },
-  titleText: {
-    fontFamily: 'Poppins_500Medium',
-    fontSize: 12,
-  },
-  scoreContainer: {
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  scoreText: {
-    fontFamily: 'Poppins_800ExtraBold',
-    fontSize: 22,
-  },
-  pointsLabel: {
-    fontFamily: 'Poppins_700Bold',
-    fontSize: 9,
-    marginTop: -4,
-    letterSpacing: 1,
-  },
-  detailsContainer: {
-    flexDirection: 'row',
-    marginTop: spacing.md,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    justifyContent: 'space-around',
-  },
-  detailItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  divider: {
-    width: 1,
-    height: '100%',
-  },
-  detailValue: {
-    fontFamily: 'Poppins_800ExtraBold',
-    fontSize: 16,
-  },
-  detailLabel: {
-    fontFamily: 'Poppins_500Medium',
-    fontSize: 10,
-  },
+  rankTextPodium: { fontFamily: 'Poppins_700Bold', color: colors.white, fontSize: 12 },
+  rankTextStandard: { fontFamily: 'Poppins_800ExtraBold', fontSize: 20, width: 25, textAlign: 'center' },
+  infoContainer: { flex: 1, flexShrink: 1, paddingRight: spacing.md },
+  username: { fontFamily: 'Poppins_700Bold', fontSize: 18, marginBottom: -4, flexShrink: 1 },
+  titleText: { fontFamily: 'Poppins_500Medium', fontSize: 12 },
+  scoreContainer: { alignItems: 'flex-end', justifyContent: 'center', flexShrink: 0 },
+  scoreText: { fontFamily: 'Poppins_800ExtraBold', fontSize: 22 },
+  pointsLabel: { fontFamily: 'Poppins_700Bold', fontSize: 9, marginTop: -4, letterSpacing: 1 },
+  detailsContainer: { flexDirection: 'row', marginTop: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, justifyContent: 'space-around' },
+  detailItem: { alignItems: 'center', flex: 1 },
+  divider: { width: 1, height: '100%' },
+  detailValue: { fontFamily: 'Poppins_800ExtraBold', fontSize: 16 },
+  detailLabel: { fontFamily: 'Poppins_500Medium', fontSize: 10 },
 });
