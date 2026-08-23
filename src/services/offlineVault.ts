@@ -9,10 +9,11 @@ export interface OfflineWordPair {
   exactMatch: string[];
   distractors: string[];
   options?: string[];
+  hasKey?: boolean;
 }
 
 export const OFFLINE_WORD_PAIRS: OfflineWordPair[] = [
-  // Tier 1 : Facile (1-3)
+  // Palier 1 : Débutant (Niveau 1-10)
   { _id: 'off_1', word1: 'Soleil', word2: 'Pluie', clue: 'Spectre colore qui apparait dans le ciel', expectedType: 'nom', difficulty: 1, exactMatch: ['arc-en-ciel'], distractors: ['orage', 'nuage'] },
   { _id: 'off_2', word1: 'Chaleur', word2: 'Eau', clue: 'Porter un liquide a 100 degres', expectedType: 'verbe', difficulty: 1, exactMatch: ['bouillir'], distractors: ['geler', 'fondre'] },
   { _id: 'off_3', word1: 'Voiture', word2: 'Volant', clue: 'Action de diriger un vehicule sur la route', expectedType: 'verbe', difficulty: 1, exactMatch: ['conduire'], distractors: ['rouler', 'freiner'] },
@@ -29,7 +30,7 @@ export const OFFLINE_WORD_PAIRS: OfflineWordPair[] = [
   { _id: 'off_14', word1: 'Neige', word2: 'Montagne', clue: 'Glisser a toute vitesse sur la pente', expectedType: 'verbe', difficulty: 1, exactMatch: ['skier'], distractors: ['marcher', 'grimper'] },
   { _id: 'off_15', word1: 'Musique', word2: 'Pieds', clue: 'Bouger son corps en rythme avec la melodie', expectedType: 'verbe', difficulty: 1, exactMatch: ['danser'], distractors: ['sauter', 'marcher'] },
 
-  // Tier 2 : Moyen (4-6)
+  // Palier 2 : Intermédiaire (Niveau 11-30)
   { _id: 'off_16', word1: 'Champagne', word2: 'Coupe', clue: 'Formation continue de fines bulles', expectedType: 'verbe', difficulty: 4, exactMatch: ['petiller'], distractors: ['mousser', 'trinquer'] },
   { _id: 'off_17', word1: 'Fer', word2: 'Humidite', clue: 'Couche rougeatre due a l oxydation', expectedType: 'nom', difficulty: 4, exactMatch: ['rouille'], distractors: ['peinture', 'mousse'] },
   { _id: 'off_18', word1: 'Boussole', word2: 'Nord', clue: 'Indiquer la bonne direction a suivre', expectedType: 'verbe', difficulty: 5, exactMatch: ['orienter'], distractors: ['guider', 'pointer'] },
@@ -46,7 +47,7 @@ export const OFFLINE_WORD_PAIRS: OfflineWordPair[] = [
   { _id: 'off_29', word1: 'Serpent', word2: 'Venin', clue: 'Injecter une toxine par morsure', expectedType: 'verbe', difficulty: 5, exactMatch: ['mordre'], distractors: ['piquer', 'empoisonner'] },
   { _id: 'off_30', word1: 'Diamant', word2: 'Verre', clue: 'Tracer une entaille avec precision', expectedType: 'verbe', difficulty: 6, exactMatch: ['graver'], distractors: ['fissurer', 'casser'] },
 
-  // Tier 3 : Difficile (7-10)
+  // Palier 3 : Avancé (Niveau 31-60)
   { _id: 'off_31', word1: 'Echo', word2: 'Silence', clue: 'Faire cesser brusquement le calme ambiant', expectedType: 'verbe', difficulty: 7, exactMatch: ['rompre'], distractors: ['troubler', 'resonner'] },
   { _id: 'off_32', word1: 'Eclat', word2: 'Diamant', clue: 'Briller d une tres vive lumiere changeante', expectedType: 'verbe', difficulty: 7, exactMatch: ['scintiller'], distractors: ['eblouir', 'etinceler'] },
   { _id: 'off_33', word1: 'Aimant', word2: 'Fer', clue: 'Exercer une force d attraction invisible', expectedType: 'verbe', difficulty: 7, exactMatch: ['attirer'], distractors: ['coller', 'polariser'] },
@@ -71,12 +72,12 @@ export const shuffleArray = <T>(array: T[]): T[] => {
 export const getLocalGameBatch = (count = 15, userLevel = 1, excludeIds: string[] = []): OfflineWordPair[] => {
   let minDiff = 1;
   let maxDiff = 3;
-  if (userLevel >= 8) {
-    minDiff = 6;
+  if (userLevel >= 31) {
+    minDiff = 7;
     maxDiff = 10;
-  } else if (userLevel >= 4) {
-    minDiff = 3;
-    maxDiff = 7;
+  } else if (userLevel >= 11) {
+    minDiff = 4;
+    maxDiff = 6;
   }
 
   let available = OFFLINE_WORD_PAIRS.filter((p) => !excludeIds.includes(p._id));
@@ -91,9 +92,13 @@ export const getLocalGameBatch = (count = 15, userLevel = 1, excludeIds: string[
   const pool = matched.length >= count ? matched : available;
 
   const shuffled = shuffleArray(pool).slice(0, count);
-  return shuffled.map((p) => {
+  return shuffled.map((p, idx) => {
     const correct = p.exactMatch[0];
     const opts = shuffleArray([correct, p.distractors[0], p.distractors[1]]);
-    return { ...p, options: opts };
+    return {
+      ...p,
+      options: opts,
+      hasKey: idx === 17
+    };
   });
 };
