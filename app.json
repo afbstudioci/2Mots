@@ -16,7 +16,7 @@
     },
     "android": {
       "package": "com.afbstudio.twomots",
-      "versionCode": 14,
+      "versionCode": 15,
       "permissions": [
         "com.android.vending.BILLING",
         "android.permission.RECORD_AUDIO",
@@ -32,7 +32,10 @@
       "favicon": "./assets/favicon.png"
     },
     "updates": {
-      "url": "https://u.expo.dev/b10e5217-af10-4e8a-a753-b7b2608af455"
+      "url": "https://u.expo.dev/b10e5217-af10-4e8a-a753-b7b2608af455",
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
     },
     "runtimeVersion": {
       "policy": "appVersion"
