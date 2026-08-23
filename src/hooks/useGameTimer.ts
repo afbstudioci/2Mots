@@ -17,11 +17,13 @@ export const getLevelMaxTime = (level: number = 1): number => {
 interface UseGameTimerProps {
   isLoading: boolean;
   showLevelUpModal: boolean;
+  showKevyChest?: boolean;
   errorLimitData: any;
   userLevel?: number;
   currentPairRef: React.MutableRefObject<EnrichedWordPair | null>;
   sessionAnswersRef: React.MutableRefObject<GameAnswer[]>;
   playedPairsHistoryRef: React.MutableRefObject<Map<string, any>>;
+  kevyKeysRef?: React.MutableRefObject<number>;
   stopBgm: () => void;
   playDanger: () => void;
 }
@@ -29,11 +31,13 @@ interface UseGameTimerProps {
 export const useGameTimer = ({
   isLoading,
   showLevelUpModal,
+  showKevyChest = false,
   errorLimitData,
   userLevel = 1,
   currentPairRef,
   sessionAnswersRef,
   playedPairsHistoryRef,
+  kevyKeysRef,
   stopBgm,
   playDanger,
 }: UseGameTimerProps) => {
@@ -94,7 +98,7 @@ export const useGameTimer = ({
         };
       });
 
-      api.post('/game/end', { score: correctCount, answers }, { timeout: 3500 }).catch(() => {});
+      api.post('/game/end', { score: correctCount, answers, kevyKeys: kevyKeysRef?.current || 0 }, { timeout: 3500 }).catch(() => {});
 
       navigation.replace('GameOver', {
         score: correctCount,
@@ -103,7 +107,7 @@ export const useGameTimer = ({
         enigmasSummary,
       });
     },
-    [navigation, stopBgm, currentPairRef, playedPairsHistoryRef, sessionAnswersRef]
+    [navigation, stopBgm, currentPairRef, playedPairsHistoryRef, sessionAnswersRef, kevyKeysRef]
   );
 
   useEffect(() => {
@@ -111,7 +115,7 @@ export const useGameTimer = ({
     lastTickTimeRef.current = Date.now();
 
     timerIntervalRef.current = setInterval(() => {
-      if (hasTriggeredGameOver.current || errorLimitData?.visible || showLevelUpModal || isTimeFrozen) {
+      if (hasTriggeredGameOver.current || errorLimitData?.visible || showLevelUpModal || showKevyChest || isTimeFrozen) {
         lastTickTimeRef.current = Date.now();
         return;
       }
@@ -133,7 +137,7 @@ export const useGameTimer = ({
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
-  }, [isLoading, playDanger, triggerGameOver, errorLimitData?.visible, showLevelUpModal, isTimeFrozen]);
+  }, [isLoading, playDanger, triggerGameOver, errorLimitData?.visible, showLevelUpModal, showKevyChest, isTimeFrozen]);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next: AppStateStatus) => {

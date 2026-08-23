@@ -1,4 +1,4 @@
-﻿//src/components/game/GamePlayArea.tsx
+//src/components/game/GamePlayArea.tsx
 import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
@@ -45,6 +45,14 @@ export default function GamePlayArea({ currentPair }: GamePlayAreaProps) {
 
   return (
     <View style={styles.container}>
+      {/* Badge Clé Mystère (si l'énigme porte une clé) */}
+      {currentPair.hasKey && (
+        <View style={styles.mysteryKeyPill}>
+          <Ionicons name="key" size={13} color="#F59E0B" style={{ marginRight: 4 }} />
+          <Text style={styles.mysteryKeyText}>CLÉ MYSTÈRE</Text>
+        </View>
+      )}
+
       {/* Mot 1 : Carte Flottante Stylisée en Haut à Gauche */}
       <Animated.View
         style={[
@@ -147,6 +155,24 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontFamily: 'Poppins_900Black',
     letterSpacing: 1.5,
+  },
+  mysteryKeyPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.18)',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.35)',
+  },
+  mysteryKeyText: {
+    fontFamily: 'Poppins_700Bold',
+    fontSize: 10,
+    color: '#F59E0B',
+    letterSpacing: 1,
   },
   connectorWrapper: {
     flexDirection: 'row',

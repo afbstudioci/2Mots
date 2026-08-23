@@ -1,4 +1,4 @@
-﻿//src/context/AudioContext.tsx
+//src/context/AudioContext.tsx
 import React, { createContext, useContext, useEffect, useRef } from 'react';
 import { createAudioPlayer, setAudioModeAsync, AudioPlayer } from 'expo-audio';
 import { useSettings } from './SettingsContext';
@@ -13,6 +13,7 @@ interface AudioContextData {
   playGameOver: (hasScore: boolean) => void;
   stopGameOver: () => void;
   playHint: () => void;
+  playChest: () => void;
 }
 
 const AudioContext = createContext<AudioContextData>({} as AudioContextData);
@@ -50,6 +51,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         gameover_zero: require('../../assets/sounds/gameover_zero.mp3'),
         gameover_score: require('../../assets/sounds/gameover_score.mp3'),
         hint: require('../../assets/sounds/hint.mp3'),
+        chest: require('../../assets/sounds/chest.mp3'),
       };
 
       for (const [key, asset] of Object.entries(effectAssets)) {
@@ -146,6 +148,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             sfxPlayersRef.current.gameover_score?.pause();
           } catch (e) {}
         },
+        playChest: () => playEffect('chest', 1.0, 1500),
       }}
     >
       {children}

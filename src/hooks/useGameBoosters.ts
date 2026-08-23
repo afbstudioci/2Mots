@@ -139,6 +139,12 @@ export const useGameBoosters = ({
     setIsHintUsed(false);
   };
 
+  const addBooster = (type: 'freeze' | 'hint' | 'shield', amount: number = 1) => {
+    if (type === 'freeze') setTimeFreezeCount((prev) => prev + amount);
+    if (type === 'hint') setSuperClueCount((prev) => prev + amount);
+    if (type === 'shield') setSecondChanceCount((prev) => prev + amount);
+  };
+
   return {
     timeFreezeCount,
     superClueCount,
@@ -154,5 +160,6 @@ export const useGameBoosters = ({
     handleUseSuperClue,
     handleUseSecondChance,
     resetBoosterState,
+    addBooster,
   };
 };

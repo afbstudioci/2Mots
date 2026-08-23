@@ -12,14 +12,18 @@ type ThemeContextType = {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    // État dynamique au lieu du booléen codé en dur
-    const [isDark, setIsDark] = useState(true);
+    // Thème Blanc / Jour par défaut
+    const [isDark, setIsDark] = useState<boolean>(false);
     const [isLoaded, setIsLoaded] = useState(false);
 
     useEffect(() => {
         const initTheme = async () => {
             const settings = await loadSettings();
-            setIsDark(settings.isDark);
+            if (typeof settings.isDark === 'boolean') {
+                setIsDark(settings.isDark);
+            } else {
+                setIsDark(false); // Mode Jour par défaut
+            }
             setIsLoaded(true);
         };
         initTheme();
@@ -34,7 +38,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     const themeColors = useMemo(() => getPalette(isDark), [isDark]);
 
-    if (!isLoaded) return null; // Attente du chargement local pour éviter les clignotements
+    if (!isLoaded) return null;
 
     return (
         <ThemeContext.Provider value={{ isDark, toggleTheme, themeColors }}>

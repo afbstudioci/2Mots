@@ -7,13 +7,13 @@ const SETTINGS_KEY = '2mots_user_settings';
 export interface UserSettings {
     soundEnabled: boolean;
     hapticsEnabled: boolean;
-    isDark: boolean;
+    isDark?: boolean;
 }
 
 const defaultSettings: UserSettings = {
     soundEnabled: true,
     hapticsEnabled: true,
-    isDark: true, // Le thème Bleu Nuit reste la valeur par défaut
+    isDark: false, // Thème Clair / Blanc par défaut
 };
 
 export const saveSettings = async (settings: UserSettings): Promise<void> => {

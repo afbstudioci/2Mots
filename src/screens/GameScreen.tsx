@@ -14,6 +14,7 @@ import GameLoading from '../components/game/GameLoading';
 import GameEmpty from '../components/game/GameEmpty';
 import CustomAlert from '../components/common/CustomAlert';
 import GameOverLimitModal from '../components/game/GameOverLimitModal';
+import KevyChestModal from '../components/game/KevyChestModal';
 import { useGameLogic } from '../hooks/useGameLogic';
 
 const { width } = Dimensions.get('window');
@@ -50,6 +51,9 @@ export default function GameScreen({ navigation }: any) {
     currentXp,
     xpNeeded,
     userKevs,
+    kevyKeys,
+    showKevyChest,
+    handleCloseKevyChest,
     timeWon,
     setTimeWon,
     successTrigger,
@@ -158,7 +162,7 @@ export default function GameScreen({ navigation }: any) {
         />
       </View>
 
-      <GameHeader level={userLevel} currentXp={currentXp} xpNeeded={xpNeeded} kevs={userKevs} />
+      <GameHeader level={userLevel} currentXp={currentXp} xpNeeded={xpNeeded} kevs={userKevs} kevyKeys={kevyKeys} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <GameTimer
@@ -234,6 +238,11 @@ export default function GameScreen({ navigation }: any) {
           triggerGameOver(r);
         }}
         onUseSecondChance={() => handleUseSecondChance(startNextWordAnimation)}
+      />
+
+      <KevyChestModal
+        visible={showKevyChest}
+        onClose={handleCloseKevyChest}
       />
     </ScreenWrapper>
   );

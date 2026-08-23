@@ -1,4 +1,4 @@
-﻿//src/components/game/GameHeader.tsx
+//src/components/game/GameHeader.tsx
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
@@ -12,9 +12,10 @@ interface GameHeaderProps {
   currentXp: number;
   xpNeeded: number;
   kevs?: number;
+  kevyKeys?: number;
 }
 
-export default function GameHeader({ level, currentXp, xpNeeded, kevs = 0 }: GameHeaderProps) {
+export default function GameHeader({ level, currentXp, xpNeeded, kevs = 0, kevyKeys = 0 }: GameHeaderProps) {
   const { themeColors } = useTheme();
   const navigation = useNavigation();
 
@@ -59,6 +60,14 @@ export default function GameHeader({ level, currentXp, xpNeeded, kevs = 0 }: Gam
             <View style={[styles.xpBar, { width: `${progress}%` }]} />
           </View>
         </View>
+
+        {/* Badge Clés Kevy (affiché uniquement à partir d'1 clé) */}
+        {kevyKeys >= 1 && (
+          <View style={styles.keysBadge}>
+            <Ionicons name="key" size={12} color="#F59E0B" style={{ marginRight: 3 }} />
+            <Text style={styles.keysValue}>{`${kevyKeys}/3`}</Text>
+          </View>
+        )}
 
         {/* Badge Solde Kevs */}
         <View style={styles.kevsBadge}>
@@ -139,6 +148,20 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: colors.mint,
     borderRadius: 3,
+  },
+  keysBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: borderRadius.md,
+    marginRight: 4,
+  },
+  keysValue: {
+    fontFamily: 'Poppins_700Bold',
+    fontSize: 12,
+    color: '#F59E0B',
   },
   kevsBadge: {
     flexDirection: 'row',

@@ -29,12 +29,12 @@ export const useAppUpdates = () => {
     (Platform.OS === 'android' ? 11 : 1);
 
   const checkOTAUpdates = async (): Promise<boolean> => {
-    if (__DEV__) return false;
+    if (__DEV__ || !Updates.isEnabled) return false;
     try {
       if (otaDownloaded.current) return true;
       const checkPromise = Updates.checkForUpdateAsync();
       const timeoutPromise = new Promise<{ isAvailable: boolean }>((_, reject) =>
-        setTimeout(() => reject(new Error('OTA check timeout')), 3000)
+        setTimeout(() => reject(new Error('OTA check timeout')), 6000)
       );
       const checkResult = await Promise.race([checkPromise, timeoutPromise]);
       if (checkResult.isAvailable) {

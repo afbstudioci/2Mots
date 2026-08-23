@@ -14,7 +14,7 @@ const normalizeStr = (str: string) =>
 
 export const useGameLogic = () => {
   const { user } = useAuth();
-  const { playSuccess, playError, playLevelUp, playHint, playDanger, stopBgm } = useAudio();
+  const { playSuccess, playError, playLevelUp, playHint, playDanger, stopBgm, playChest } = useAudio();
 
   const [wordPairs, setWordPairs] = useState<EnrichedWordPair[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
@@ -27,11 +27,14 @@ export const useGameLogic = () => {
   const [currentXp, setCurrentXp] = useState<number>(user?.xp || 0);
   const [xpNeeded, setXpNeeded] = useState<number>(3 + (user?.level || 1) * 2);
   const [userKevs, setUserKevs] = useState<number>(user?.kevs || 0);
+  const [kevyKeys, setKevyKeys] = useState<number>(user?.kevyKeys || 0);
+  const [showKevyChest, setShowKevyChest] = useState<boolean>(false);
   const [successTrigger, setSuccessTrigger] = useState<number>(0);
   const [lastAccuracy, setLastAccuracy] = useState<number>(100);
   const [showLevelUpModal, setShowLevelUpModal] = useState<boolean>(false);
   const [errorLimitData, setErrorLimitData] = useState<{ visible: boolean; count: number; reason: string } | null>(null);
 
+  const kevyKeysRef = useRef<number>(user?.kevyKeys || 0);
   const consecutiveErrorsRef = useRef<number>(0);
   const totalErrorsRef = useRef<number>(0);
   const playedWordIdsRef = useRef<string[]>([]);
@@ -46,13 +49,14 @@ export const useGameLogic = () => {
 
   const timer = useGameTimer({
     isLoading,
-    isTimeFrozen: false,
     showLevelUpModal,
+    showKevyChest,
     errorLimitData,
     userLevel,
     currentPairRef,
     sessionAnswersRef,
     playedPairsHistoryRef,
+    kevyKeysRef,
     stopBgm,
     playDanger,
   });
@@ -66,9 +70,7 @@ export const useGameLogic = () => {
     hasTriggeredGameOver: timer.hasTriggeredGameOver,
     playHint,
     playSuccess,
-    onTimeFreezeActivated: () => {
-      timer.freezeTimer(5);
-    },
+    onTimeFreezeActivated: () => { timer.freezeTimer(5); },
     onSecondChanceReset: () => {
       consecutiveErrorsRef.current = 0;
       totalErrorsRef.current = 0;
@@ -91,7 +93,11 @@ export const useGameLogic = () => {
       if (d && Array.isArray(d) && d.length > 0) {
         const fresh = d.filter((p: any) => !playedWordIdsRef.current.includes(p._id));
         if (fresh.length > 0) {
-          const enriched = fresh.map((p: any) => ({ ...p, options: shuffleArray(p.options || []) }));
+          const enriched = fresh.map((p: any, idx: number) => ({
+            ...p,
+            options: shuffleArray(p.options || []),
+            hasKey: idx % 6 === 2,
+          }));
           setWordPairs((prev) => {
             const existingIds = new Set(prev.map((i) => i._id));
             const uniqueNew = enriched.filter((i: any) => !existingIds.has(i._id));
@@ -100,11 +106,12 @@ export const useGameLogic = () => {
         }
       }
     } catch {
-      const local = getLocalGameBatch(15, userLevel, playedWordIdsRef.current);
+      const local = getLocalGameBatch(30, userLevel, playedWordIdsRef.current);
       if (local.length > 0) {
+        const enriched = (local as any).map((p: any, idx: number) => ({ ...p, hasKey: idx % 6 === 2 }));
         setWordPairs((prev) => {
           const existingIds = new Set(prev.map((i) => i._id));
-          const uniqueNew = (local as any).filter((i: any) => !existingIds.has(i._id));
+          const uniqueNew = enriched.filter((i: any) => !existingIds.has(i._id));
           return [...prev, ...uniqueNew];
         });
       }
@@ -120,19 +127,27 @@ export const useGameLogic = () => {
       const d = res.data?.data;
       const s = res.data?.userStats;
       if (d?.length > 0) {
-        setWordPairs(d.map((p: any) => ({ ...p, options: shuffleArray(p.options || []) })));
+        setWordPairs(d.map((p: any, idx: number) => ({
+          ...p,
+          options: shuffleArray(p.options || []),
+          hasKey: idx % 6 === 2,
+        })));
         if (s) {
           setUserLevel(s.level || 1);
           setCurrentXp(s.xp || 0);
           setXpNeeded(s.xpNeeded || 3 + (s.level || 1) * 2);
           setUserKevs(s.kevs || 0);
+          if (typeof s.kevyKeys === 'number') {
+            setKevyKeys(s.kevyKeys);
+            kevyKeysRef.current = s.kevyKeys;
+          }
         }
       } else {
         throw new Error('Batch initial vide');
       }
     } catch {
-      const local = getLocalGameBatch(15, 1, []);
-      setWordPairs(local as any);
+      const local = getLocalGameBatch(30, 1, []);
+      setWordPairs((local as any).map((p: any, idx: number) => ({ ...p, hasKey: idx % 6 === 2 })));
     } finally {
       setIsLoading(false);
       timer.resetTimer();
@@ -145,7 +160,7 @@ export const useGameLogic = () => {
   }, []);
 
   const selectChoice = (choice: string, onSuccessTransition: () => void) => {
-    if (isChecking || selectedChoice !== null || timer.hasTriggeredGameOver) return;
+    if (isChecking || selectedChoice !== null || timer.hasTriggeredGameOver || showKevyChest) return;
     const pair = currentPairRef.current;
     if (!pair) return;
 
@@ -175,9 +190,24 @@ export const useGameLogic = () => {
       try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
       playSuccess();
 
+      if (pair.hasKey) {
+        setKevyKeys((prev) => {
+          const next = Math.min(3, prev + 1);
+          kevyKeysRef.current = next;
+          if (user) user.kevyKeys = next;
+          if (next >= 3) {
+            setTimeout(() => {
+              setShowKevyChest(true);
+              playChest();
+            }, 300);
+          }
+          return next;
+        });
+      }
+
       const isFast = timeSpent <= 3 && !boosters.isHintUsed;
       setIsFastCombo(isFast);
-      const kevsToAdd = isFast ? 3 : 1; // +1 de base + 2 bonus de rapidité
+      const kevsToAdd = isFast ? 3 : 1;
 
       setUserKevs((prev) => prev + kevsToAdd);
       if (user) user.kevs = (user.kevs || 0) + kevsToAdd;
@@ -230,7 +260,7 @@ export const useGameLogic = () => {
       setIsFastCombo(false);
       boosters.resetBoosterState();
       setIsChecking(false);
-      if (!showLevelUpModal && !timer.hasTriggeredGameOver && !errorLimitData?.visible) {
+      if (!showLevelUpModal && !showKevyChest && !timer.hasTriggeredGameOver && !errorLimitData?.visible) {
         onSuccessTransition();
       }
     }, isCorrect ? 300 : 450);
@@ -238,6 +268,21 @@ export const useGameLogic = () => {
 
   const handleCloseLevelUp = () => {
     setShowLevelUpModal(false);
+    timer.resetTimer();
+  };
+
+  const handleCloseKevyChest = (gains: { kevs: number; freeze: number; hint: number; shield: number }) => {
+    setShowKevyChest(false);
+    setKevyKeys(0);
+    kevyKeysRef.current = 0;
+    if (user) {
+      user.kevyKeys = 0;
+      if (gains.kevs > 0) user.kevs = (user.kevs || 0) + gains.kevs;
+    }
+    if (gains.kevs > 0) setUserKevs((prev) => prev + gains.kevs);
+    if (gains.freeze > 0) boosters.addBooster('freeze', gains.freeze);
+    if (gains.hint > 0) boosters.addBooster('hint', gains.hint);
+    if (gains.shield > 0) boosters.addBooster('shield', gains.shield);
     timer.resetTimer();
   };
 
@@ -250,7 +295,8 @@ export const useGameLogic = () => {
     isTimeFrozen: timer.isTimeFrozen || boosters.isTimeFrozen, timeFreezeCount: boosters.timeFreezeCount,
     superClueCount: boosters.superClueCount, secondChanceCount: boosters.secondChanceCount,
     showNoKevsModal: boosters.showNoKevsModal, setShowNoKevsModal: boosters.setShowNoKevsModal,
-    userLevel, currentXp, xpNeeded, userKevs, timeWon: timer.timeWon, setTimeWon: timer.setTimeWon,
+    userLevel, currentXp, xpNeeded, userKevs, kevyKeys, showKevyChest, handleCloseKevyChest,
+    timeWon: timer.timeWon, setTimeWon: timer.setTimeWon,
     successTrigger, lastAccuracy, selectChoice, showLevelUpModal, setShowLevelUpModal,
     handleCloseLevelUp, errorLimitData, setErrorLimitData, triggerGameOver: timer.triggerGameOver,
   };
