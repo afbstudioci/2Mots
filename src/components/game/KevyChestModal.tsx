@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, Animated, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Svg, { Path, Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Rect, Circle, Defs, LinearGradient, Stop, G, RadialGradient } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { colors, spacing } from '../../theme/theme';
 import { useTheme } from '../../context/ThemeContext';
@@ -37,7 +37,7 @@ interface KevyChestModalProps {
 
 export default function KevyChestModal({ visible, onClose }: KevyChestModalProps) {
   const { themeColors } = useTheme();
-  const [currentStep, setCurrentStep] = useState<number>(0); // 0: Start, 1..3: Draws, 4: Summary
+  const [currentStep, setCurrentStep] = useState<number>(0);
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [history, setHistory] = useState<ChestReward[]>([]);
   const [activeReward, setActiveReward] = useState<ChestReward | null>(null);
@@ -45,6 +45,7 @@ export default function KevyChestModal({ visible, onClose }: KevyChestModalProps
   const scaleAnim = useRef(new Animated.Value(0.85)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const rewardPopAnim = useRef(new Animated.Value(0)).current;
+  const chestBounceAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (visible) {
@@ -65,6 +66,11 @@ export default function KevyChestModal({ visible, onClose }: KevyChestModalProps
     const nextStep = currentStep + 1;
     setCurrentStep(nextStep);
     setIsOpen(true);
+
+    Animated.sequence([
+      Animated.timing(chestBounceAnim, { toValue: 1.15, duration: 150, useNativeDriver: true }),
+      Animated.spring(chestBounceAnim, { toValue: 1, friction: 4, tension: 80, useNativeDriver: true }),
+    ]).start();
 
     const randomPick = POSSIBLE_REWARDS[Math.floor(Math.random() * POSSIBLE_REWARDS.length)];
     setActiveReward(randomPick);
@@ -105,25 +111,78 @@ export default function KevyChestModal({ visible, onClose }: KevyChestModalProps
         <Animated.View style={[styles.card, { backgroundColor: themeColors.card, borderColor: themeColors.cardBorder, opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
           {currentStep < 4 ? (
             <View style={styles.centerContainer}>
-              <Text style={[styles.badgeText, { color: colors.coral }]}>KEVY-COFFRE</Text>
+              <Text style={[styles.badgeText, { color: colors.coral }]}>LE KEV-COFFRE</Text>
               <Text style={[styles.title, { color: themeColors.text }]}>
                 {currentStep === 0 ? 'Félicitations, vous avez obtenu les 3 clés !' : `Tirage ${currentStep} sur 3`}
               </Text>
 
-              <View style={styles.chestWrapper}>
-                <Svg width={110} height={95} viewBox="0 0 100 85">
+              {/* Coffre Magnifique Haute Définition avec Sceau 'K' */}
+              <Animated.View style={[styles.chestWrapper, { transform: [{ scale: chestBounceAnim }] }]}>
+                <Svg width={140} height={120} viewBox="0 0 120 100">
                   <Defs>
-                    <LinearGradient id="chestGrad" x1="0" y1="0" x2="1" y2="1">
-                      <Stop offset="0" stopColor="#F59E0B" />
-                      <Stop offset="1" stopColor="#B45309" />
+                    <LinearGradient id="woodBase" x1="0" y1="0" x2="0" y2="1">
+                      <Stop offset="0" stopColor="#B45309" />
+                      <Stop offset="0.5" stopColor="#78350F" />
+                      <Stop offset="1" stopColor="#451A03" />
+                    </LinearGradient>
+                    <LinearGradient id="goldPlate" x1="0" y1="0" x2="1" y2="1">
+                      <Stop offset="0" stopColor="#FDE047" />
+                      <Stop offset="0.5" stopColor="#EAB308" />
+                      <Stop offset="1" stopColor="#A16207" />
+                    </LinearGradient>
+                    <LinearGradient id="glowGems" x1="0" y1="1" x2="0" y2="0">
+                      <Stop offset="0" stopColor="#FBBF24" stopOpacity="0.9" />
+                      <Stop offset="1" stopColor="#F59E0B" stopOpacity="0" />
                     </LinearGradient>
                   </Defs>
-                  <Rect x="10" y="32" width="80" height="48" rx="8" fill="url(#chestGrad)" stroke="#78350F" strokeWidth="3" />
-                  <Path d={isOpen ? "M 5 30 C 5 10, 95 10, 95 30 L 85 20 C 85 5, 15 5, 15 20 Z" : "M 10 32 C 10 12, 90 12, 90 32 Z"} fill="#FBBF24" stroke="#78350F" strokeWidth="3" />
-                  <Rect x="44" y="44" width="12" height="16" rx="3" fill="#1E293B" />
-                  <Path d="M 50 49 L 50 55" stroke="#FBBF24" strokeWidth="2" strokeLinecap="round" />
+
+                  {/* Lueur d'or lors de l'ouverture */}
+                  {isOpen && (
+                    <G>
+                      <Circle cx="60" cy="35" r="35" fill="url(#glowGems)" />
+                      <Circle cx="45" cy="30" r="4" fill="#38BDF8" />
+                      <Circle cx="75" cy="28" r="4" fill="#34D399" />
+                      <Circle cx="60" cy="22" r="5" fill="#F43F5E" />
+                    </G>
+                  )}
+
+                  {/* Corps du Coffre en Bois Noble */}
+                  <Rect x="15" y="42" width="90" height="48" rx="10" fill="url(#woodBase)" stroke="#291102" strokeWidth="2.5" />
+
+                  {/* Armatures en Or Métallique (Gauche, Droite, Centre) */}
+                  <Rect x="22" y="42" width="10" height="48" fill="url(#goldPlate)" />
+                  <Rect x="88" y="42" width="10" height="48" fill="url(#goldPlate)" />
+                  <Rect x="52" y="42" width="16" height="48" fill="url(#goldPlate)" />
+
+                  {/* Rivets Métalliques Décoratifs */}
+                  <Circle cx="27" cy="48" r="1.5" fill="#FEF08A" />
+                  <Circle cx="27" cy="82" r="1.5" fill="#FEF08A" />
+                  <Circle cx="93" cy="48" r="1.5" fill="#FEF08A" />
+                  <Circle cx="93" cy="82" r="1.5" fill="#FEF08A" />
+
+                  {/* Couvercle Incliné / Ouvert ou Fermé */}
+                  {isOpen ? (
+                    <G>
+                      <Path d="M 8 36 C 8 10, 112 10, 112 36 L 102 24 C 102 4, 18 4, 18 24 Z" fill="url(#woodBase)" stroke="#291102" strokeWidth="2.5" />
+                      <Path d="M 22 28 L 26 12 L 36 12 L 32 28 Z" fill="url(#goldPlate)" />
+                      <Path d="M 88 28 L 84 12 L 94 12 L 98 28 Z" fill="url(#goldPlate)" />
+                    </G>
+                  ) : (
+                    <G>
+                      <Path d="M 12 42 C 12 16, 108 16, 108 42 Z" fill="url(#woodBase)" stroke="#291102" strokeWidth="2.5" />
+                      <Path d="M 22 42 C 22 20, 32 20, 32 42 Z" fill="url(#goldPlate)" />
+                      <Path d="M 88 42 C 88 20, 98 20, 98 42 Z" fill="url(#goldPlate)" />
+                      <Path d="M 52 42 C 52 18, 68 18, 68 42 Z" fill="url(#goldPlate)" />
+                    </G>
+                  )}
+
+                  {/* Médaillon Doré Central avec Symbole 'K' de KEVY */}
+                  <Circle cx="60" cy="54" r="13" fill="url(#goldPlate)" stroke="#78350F" strokeWidth="2" />
+                  <Circle cx="60" cy="54" r="10" fill="#78350F" />
+                  {/* Lettre 'K' dorée gravée en vectoriel */}
+                  <Path d="M 56 47 L 58.5 47 L 58.5 61 L 56 61 Z M 58.5 54 L 63.5 47 L 66 47 L 61 53.5 L 66.5 61 L 63.5 61 L 58.5 54.5 Z" fill="#FDE047" />
                 </Svg>
-              </View>
+              </Animated.View>
 
               {activeReward && (
                 <Animated.View style={[styles.rewardBox, { backgroundColor: themeColors.overlayLight, transform: [{ scale: rewardPopAnim }] }]}>
@@ -142,7 +201,7 @@ export default function KevyChestModal({ visible, onClose }: KevyChestModalProps
             <View style={styles.centerContainer}>
               <Ionicons name="trophy" size={38} color={colors.coral} />
               <Text style={[styles.summaryTitle, { color: themeColors.text }]}>BILAN DES GAINS</Text>
-              <Text style={[styles.summarySub, { color: themeColors.textSecondary }]}>Voici les trésors récupérés dans votre Kevy-Coffre :</Text>
+              <Text style={[styles.summarySub, { color: themeColors.textSecondary }]}>Voici les trésors récupérés dans votre Kev-Coffre :</Text>
 
               <View style={styles.summaryList}>
                 {history.map((item, idx) => (
@@ -165,18 +224,18 @@ export default function KevyChestModal({ visible, onClose }: KevyChestModalProps
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.lg },
-  card: { width: width - 40, borderRadius: 28, borderWidth: 1.5, padding: spacing.xl, alignItems: 'center' },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.72)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.lg },
+  card: { width: width - 36, borderRadius: 28, borderWidth: 1.5, padding: spacing.lg, alignItems: 'center' },
   centerContainer: { width: '100%', alignItems: 'center' },
   badgeText: { fontFamily: 'Poppins_800ExtraBold', fontSize: 13, letterSpacing: 2, marginBottom: spacing.xs },
-  title: { fontFamily: 'Poppins_700Bold', fontSize: 17, textAlign: 'center', marginBottom: spacing.md },
-  chestWrapper: { marginVertical: spacing.md, alignItems: 'center', justifyContent: 'center' },
-  rewardBox: { width: '100%', borderRadius: 16, padding: spacing.md, alignItems: 'center', marginVertical: spacing.sm },
+  title: { fontFamily: 'Poppins_700Bold', fontSize: 16, textAlign: 'center', marginBottom: spacing.xs },
+  chestWrapper: { marginVertical: spacing.sm, alignItems: 'center', justifyContent: 'center', height: 125 },
+  rewardBox: { width: '100%', borderRadius: 16, padding: spacing.md, alignItems: 'center', marginVertical: spacing.xs },
   rewardTitle: { fontFamily: 'Poppins_700Bold', fontSize: 15, textAlign: 'center', marginTop: spacing.xs },
   rewardSubtext: { fontFamily: 'Poppins_500Medium', fontSize: 12, textAlign: 'center', marginTop: 2 },
-  mainButton: { width: '100%', height: 50, borderRadius: 18, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: spacing.md },
+  mainButton: { width: '100%', height: 48, borderRadius: 18, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: spacing.md },
   buttonIcon: { marginRight: spacing.sm },
-  mainButtonText: { fontFamily: 'Poppins_700Bold', color: colors.white, fontSize: 14 },
+  mainButtonText: { fontFamily: 'Poppins_700Bold', color: colors.white, fontSize: 13.5 },
   summaryTitle: { fontFamily: 'Poppins_800ExtraBold', fontSize: 20, marginTop: spacing.xs, letterSpacing: 1 },
   summarySub: { fontFamily: 'Poppins_500Medium', fontSize: 12, textAlign: 'center', marginBottom: spacing.md },
   summaryList: { width: '100%', marginVertical: spacing.sm },

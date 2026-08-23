@@ -257,12 +257,13 @@ export default function GameScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
+    paddingBottom: 4,
   },
   playAreaWrapper: {
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: spacing.xs,
+    paddingVertical: 2,
   },
   orb: {
     position: 'absolute',

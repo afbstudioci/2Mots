@@ -25,15 +25,15 @@ export default function GamePlayArea({ currentPair }: GamePlayAreaProps) {
 
     Animated.loop(
       Animated.sequence([
-        Animated.timing(floatAnim1, { toValue: -3, duration: 1600, useNativeDriver: true }),
-        Animated.timing(floatAnim1, { toValue: 3, duration: 1600, useNativeDriver: true }),
+        Animated.timing(floatAnim1, { toValue: -2, duration: 1600, useNativeDriver: true }),
+        Animated.timing(floatAnim1, { toValue: 2, duration: 1600, useNativeDriver: true }),
       ])
     ).start();
 
     Animated.loop(
       Animated.sequence([
-        Animated.timing(floatAnim2, { toValue: 3, duration: 1800, useNativeDriver: true }),
-        Animated.timing(floatAnim2, { toValue: -3, duration: 1800, useNativeDriver: true }),
+        Animated.timing(floatAnim2, { toValue: 2, duration: 1800, useNativeDriver: true }),
+        Animated.timing(floatAnim2, { toValue: -2, duration: 1800, useNativeDriver: true }),
       ])
     ).start();
   }, [pulseAnim, floatAnim1, floatAnim2]);
@@ -48,7 +48,7 @@ export default function GamePlayArea({ currentPair }: GamePlayAreaProps) {
       {/* Badge Clé Mystère (si l'énigme porte une clé) */}
       {currentPair.hasKey && (
         <View style={styles.mysteryKeyPill}>
-          <Ionicons name="key" size={13} color="#F59E0B" style={{ marginRight: 4 }} />
+          <Ionicons name="key" size={11} color="#F59E0B" style={{ marginRight: 4 }} />
           <Text style={styles.mysteryKeyText}>CLÉ MYSTÈRE</Text>
         </View>
       )}
@@ -85,7 +85,7 @@ export default function GamePlayArea({ currentPair }: GamePlayAreaProps) {
             },
           ]}
         >
-          <Ionicons name="add" size={20} color="#FFFFFF" />
+          <Ionicons name="add" size={16} color="#FFFFFF" />
         </Animated.View>
         <View style={[styles.connectorLine, { backgroundColor: themeColors.border }]} />
       </View>
@@ -118,13 +118,13 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    paddingVertical: 2,
   },
   wordCard: {
-    paddingVertical: 14,
-    paddingHorizontal: 22,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     borderRadius: borderRadius.xl,
-    minWidth: '60%',
+    minWidth: '58%',
     maxWidth: '82%',
     borderWidth: 1.5,
     ...shadows.soft(false),
@@ -149,50 +149,51 @@ const styles = StyleSheet.create({
   cardTag: {
     fontSize: 10,
     fontFamily: 'Poppins_700Bold',
-    letterSpacing: 1.2,
+    letterSpacing: 1,
   },
   wordText: {
     fontSize: 22,
+    lineHeight: 26,
     fontFamily: 'Poppins_900Black',
-    letterSpacing: 1.5,
+    letterSpacing: 1.3,
   },
   mysteryKeyPill: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'center',
     backgroundColor: 'rgba(245, 158, 11, 0.18)',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 12,
-    marginBottom: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginBottom: 4,
     borderWidth: 1,
     borderColor: 'rgba(245, 158, 11, 0.35)',
   },
   mysteryKeyText: {
     fontFamily: 'Poppins_700Bold',
-    fontSize: 10,
+    fontSize: 9.5,
     color: '#F59E0B',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
   },
   connectorWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 6,
+    marginVertical: 3,
   },
   connectorLine: {
-    width: 30,
+    width: 24,
     height: 2,
     borderRadius: 1,
   },
   plusBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: colors.coral,
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 8,
+    marginHorizontal: 6,
     ...shadows.soft(true),
   },
 });

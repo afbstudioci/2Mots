@@ -38,8 +38,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     const themeColors = useMemo(() => getPalette(isDark), [isDark]);
 
-    if (!isLoaded) return null;
-
     return (
         <ThemeContext.Provider value={{ isDark, toggleTheme, themeColors }}>
             {children}

@@ -18,18 +18,18 @@ export default function LiveRivalBanner({ alert }: LiveRivalBannerProps) {
 
   useEffect(() => {
     if (alert) {
-      slideAnim.setValue(-50);
+      slideAnim.setValue(-40);
       opacityAnim.setValue(0);
-      scaleAnim.setValue(0.9);
+      scaleAnim.setValue(0.92);
       Animated.parallel([
         Animated.spring(slideAnim, { toValue: 0, friction: 6, tension: 65, useNativeDriver: true }),
-        Animated.timing(opacityAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
+        Animated.timing(opacityAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
         Animated.spring(scaleAnim, { toValue: 1, friction: 6, tension: 70, useNativeDriver: true }),
       ]).start();
     } else {
       Animated.parallel([
-        Animated.timing(slideAnim, { toValue: -50, duration: 180, useNativeDriver: true }),
-        Animated.timing(opacityAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: -40, duration: 200, useNativeDriver: true }),
+        Animated.timing(opacityAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
       ]).start();
     }
   }, [alert]);
@@ -38,6 +38,16 @@ export default function LiveRivalBanner({ alert }: LiveRivalBannerProps) {
 
   const isOvertake = alert.type === 'overtake';
   const accentColor = isOvertake ? colors.mint : colors.coral;
+
+  const titleText = isOvertake
+    ? (alert.rivalRank ? `Tu passes #${alert.rivalRank} Mondial !` : `Tu dépasses @${alert.rivalPseudo} !`)
+    : (alert.rivalRank ? `Cible : #${alert.rivalRank} @${alert.rivalPseudo}` : `Cible en vue : @${alert.rivalPseudo}`);
+
+  const subText = isOvertake
+    ? (alert.nextRivalPseudo
+        ? `Prochaine cible : #${alert.nextRivalRank || ''} @${alert.nextRivalPseudo} (${alert.nextRivalScore} mots)`
+        : `Tu viens de dépasser @${alert.rivalPseudo} (${alert.rivalScore} mots) !`)
+    : `Plus qu'un mot pour lui ravir la ${alert.rivalRank ? `${alert.rivalRank}e` : ''} place (${alert.rivalScore} mots) !`;
 
   return (
     <Animated.View
@@ -62,7 +72,7 @@ export default function LiveRivalBanner({ alert }: LiveRivalBannerProps) {
       >
         <View style={[styles.iconCircle, { backgroundColor: isOvertake ? 'rgba(78, 205, 196, 0.18)' : 'rgba(255, 107, 107, 0.18)' }]}>
           <Ionicons
-            name={isOvertake ? 'flash' : 'trending-up'}
+            name={isOvertake ? 'trophy' : 'trending-up'}
             size={18}
             color={accentColor}
           />
@@ -70,17 +80,11 @@ export default function LiveRivalBanner({ alert }: LiveRivalBannerProps) {
 
         <View style={styles.textContainer}>
           <Text style={[styles.title, { color: themeColors.text }]} numberOfLines={1}>
-            {isOvertake
-              ? `Tu viens de dépasser @${alert.rivalPseudo} !`
-              : `Cible en vue : @${alert.rivalPseudo}`}
+            {titleText}
           </Text>
 
           <Text style={[styles.subtext, { color: themeColors.textSecondary }]} numberOfLines={1}>
-            {isOvertake
-              ? alert.nextRivalPseudo
-                ? `Prochaine cible : @${alert.nextRivalPseudo} (${alert.nextRivalScore} mots)`
-                : 'Tu pulvérises tes précédents records !'
-              : `Plus qu'un mot pour égaler son score (${alert.rivalScore} mots) !`}
+            {subText}
           </Text>
         </View>
       </View>
@@ -91,9 +95,9 @@ export default function LiveRivalBanner({ alert }: LiveRivalBannerProps) {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: 60,
-    left: spacing.lg,
-    right: spacing.lg,
+    top: 54,
+    left: spacing.md,
+    right: spacing.md,
     zIndex: 999,
     alignItems: 'center',
   },
@@ -101,7 +105,7 @@ const styles = StyleSheet.create({
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 9,
     paddingHorizontal: spacing.md,
     borderRadius: borderRadius.lg,
     shadowColor: '#000',
@@ -111,9 +115,9 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   iconCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.sm,
@@ -123,11 +127,11 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: 'Poppins_700Bold',
-    fontSize: 13,
+    fontSize: 12.5,
   },
   subtext: {
     fontFamily: 'Poppins_500Medium',
-    fontSize: 11,
+    fontSize: 10.5,
     marginTop: 1,
   },
 });

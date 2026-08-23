@@ -180,6 +180,7 @@ export const useGameLogic = () => {
           const next = Math.min(3, prev + 1);
           kevyKeysRef.current = next;
           if (user) user.kevyKeys = next;
+          api.post('/game/sync-keys', { kevyKeys: next }, { timeout: 3000 }).catch(() => {});
           if (next >= 3) { setTimeout(() => { setShowKevyChest(true); playChest(); }, 300); }
           return next;
         });
@@ -254,6 +255,7 @@ export const useGameLogic = () => {
     if (gains.freeze > 0) boosters.addBooster('freeze', gains.freeze);
     if (gains.hint > 0) boosters.addBooster('hint', gains.hint);
     if (gains.shield > 0) boosters.addBooster('shield', gains.shield);
+    api.post('/game/chest-opened', { gains }, { timeout: 3000 }).catch(() => {});
     timer.resetTimer();
   };
 

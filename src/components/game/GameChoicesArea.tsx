@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native
 import { colors, spacing, borderRadius, shadows } from '../../theme/theme';
 import { useTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import KevIcon from '../common/KevIcon';
 
 interface GameChoicesAreaProps {
   options: string[];
@@ -65,10 +66,10 @@ export default function GameChoicesArea({
 
   return (
     <View style={styles.container}>
-      {/* Bulle de question stimulante (Point Commun) */}
+      {/* Bulle d'indice complète sans aucune troncature */}
       <View style={[styles.questionCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
-        <Ionicons name="help-circle-outline" size={17} color={colors.coral} style={styles.questionIcon} />
-        <Text style={[styles.questionText, { color: themeColors.text }]} numberOfLines={2}>
+        <Ionicons name="help-circle-outline" size={16} color={colors.coral} style={styles.questionIcon} />
+        <Text style={[styles.questionText, { color: themeColors.text }]}>
           {displayQuestion}
         </Text>
       </View>
@@ -153,57 +154,51 @@ export default function GameChoicesArea({
       {/* Barre des Jokers Tactiques */}
       <View style={styles.boostersRow}>
         <TouchableOpacity
-          style={[
-            styles.boosterBtn,
-            {
-              backgroundColor: isHintUsed ? 'rgba(255, 184, 77, 0.2)' : themeColors.surface,
-              borderColor: isHintUsed ? '#FFB84D' : themeColors.border,
-            },
-          ]}
+          style={[styles.boosterBtn, { backgroundColor: isHintUsed ? 'rgba(255, 184, 77, 0.2)' : themeColors.surface, borderColor: isHintUsed ? '#FFB84D' : themeColors.border }]}
           onPress={onHintPress}
           activeOpacity={0.75}
           disabled={isChecking || isHintUsed}
         >
-          <Ionicons name="bulb-outline" size={17} color={isHintUsed ? '#FFB84D' : colors.coral} />
+          <Ionicons name="bulb-outline" size={16} color={isHintUsed ? '#FFB84D' : colors.coral} />
           <Text style={[styles.boosterText, { color: isHintUsed ? '#FFB84D' : themeColors.text }]}>
-            {isHintUsed ? '50/50 Actif' : '50/50'}
+            {isHintUsed ? '50/50' : '50/50'}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[
-            styles.boosterBtn,
-            {
-              backgroundColor: isTimeFrozen ? 'rgba(56, 189, 248, 0.2)' : themeColors.surface,
-              borderColor: isTimeFrozen ? '#38BDF8' : themeColors.border,
-            },
-          ]}
+          style={[styles.boosterBtn, { backgroundColor: isTimeFrozen ? 'rgba(56, 189, 248, 0.2)' : themeColors.surface, borderColor: isTimeFrozen ? '#38BDF8' : themeColors.border }]}
           onPress={onTimeFreezePress}
           activeOpacity={0.75}
           disabled={isChecking || isTimeFrozen}
         >
-          <Ionicons name="snow-outline" size={17} color="#38BDF8" />
+          <Ionicons name="snow-outline" size={16} color="#38BDF8" />
           <Text style={[styles.boosterText, { color: '#38BDF8' }]}>
-            {isTimeFrozen ? 'Gelé' : `Gel (${timeFreezeCount > 0 ? timeFreezeCount : '15 K'})`}
+            {isTimeFrozen ? 'Gelé' : (timeFreezeCount > 0 ? `Gel (${timeFreezeCount})` : 'Gel')}
           </Text>
+          {!isTimeFrozen && timeFreezeCount <= 0 && (
+            <View style={styles.priceRow}>
+              <Text style={[styles.boosterPriceText, { color: '#38BDF8' }]}>15</Text>
+              <KevIcon size={11} style={{ marginLeft: 2 }} />
+            </View>
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[
-            styles.boosterBtn,
-            {
-              backgroundColor: themeColors.surface,
-              borderColor: themeColors.border,
-            },
-          ]}
+          style={[styles.boosterBtn, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
           onPress={onSuperCluePress}
           activeOpacity={0.75}
           disabled={isChecking || (eliminatedChoices && eliminatedChoices.length >= 2)}
         >
-          <Ionicons name="flash-outline" size={17} color="#FBBF24" />
+          <Ionicons name="flash-outline" size={16} color="#FBBF24" />
           <Text style={[styles.boosterText, { color: '#FBBF24' }]}>
-            {`Super (${superClueCount > 0 ? superClueCount : '25 K'})`}
+            {superClueCount > 0 ? `Super (${superClueCount})` : 'Super'}
           </Text>
+          {superClueCount <= 0 && (
+            <View style={styles.priceRow}>
+              <Text style={[styles.boosterPriceText, { color: '#FBBF24' }]}>25</Text>
+              <KevIcon size={11} style={{ marginLeft: 2 }} />
+            </View>
+          )}
         </TouchableOpacity>
       </View>
     </View>
@@ -214,56 +209,71 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
-    paddingTop: spacing.xs,
+    paddingBottom: spacing.sm,
+    paddingTop: 2,
   },
   questionCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: borderRadius.lg,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: borderRadius.md,
     borderWidth: 1,
-    marginBottom: spacing.sm,
-    maxWidth: '96%',
+    marginBottom: 6,
+    width: '100%',
   },
-  questionIcon: { marginRight: 8 },
-  questionText: { fontSize: 13, fontFamily: 'Poppins_600SemiBold', textAlign: 'center' },
-  choicesList: { width: '100%', gap: 10 },
+  questionIcon: { marginRight: 6 },
+  questionText: {
+    fontSize: 11.5,
+    lineHeight: 16,
+    fontFamily: 'Poppins_600SemiBold',
+    textAlign: 'center',
+    flexShrink: 1,
+  },
+  choicesList: { width: '100%', gap: 8 },
   choiceButton: {
-    height: 56,
-    borderRadius: borderRadius.xl,
+    height: 48,
+    borderRadius: borderRadius.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     borderWidth: 1.5,
     ...shadows.soft(false),
   },
-  choiceText: { fontSize: 16, fontFamily: 'Poppins_700Bold', letterSpacing: 1 },
-  choiceIcon: { position: 'absolute', right: 18 },
+  choiceText: { fontSize: 15, fontFamily: 'Poppins_700Bold', letterSpacing: 0.8 },
+  choiceIcon: { position: 'absolute', right: 16 },
   boostersRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 8,
-    marginTop: spacing.md,
+    gap: 6,
+    marginTop: 8,
   },
   boosterBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 9,
+    paddingVertical: 7,
     paddingHorizontal: 4,
-    borderRadius: borderRadius.xl,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
-    minHeight: 44,
+    minHeight: 38,
   },
   boosterText: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: 'Poppins_700Bold',
+    marginLeft: 3,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginLeft: 4,
+  },
+  boosterPriceText: {
+    fontSize: 11,
+    fontFamily: 'Poppins_800ExtraBold',
   },
 });

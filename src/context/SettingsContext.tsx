@@ -40,8 +40,6 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         await saveSettings({ ...currentSettings, hapticsEnabled: newValue });
     };
 
-    if (!isLoaded) return null; // Evite un flash d'états asynchrones au démarrage
-
     return (
         <SettingsContext.Provider value={{ soundEnabled, hapticsEnabled, toggleSound, toggleHaptics }}>
             {children}
