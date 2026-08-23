@@ -9,14 +9,14 @@
     "splash": {
       "image": "./assets/Splash-Center.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FF7F50"
+      "backgroundColor": "#F7F5F0"
     },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "package": "com.afbstudio.twomots",
-      "versionCode": 16,
+      "versionCode": 17,
       "permissions": [
         "com.android.vending.BILLING",
         "android.permission.RECORD_AUDIO",

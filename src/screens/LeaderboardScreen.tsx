@@ -1,4 +1,4 @@
-﻿//src/screens/LeaderboardScreen.tsx
+//src/screens/LeaderboardScreen.tsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -9,6 +9,7 @@ import { colors, spacing } from '../theme/theme';
 import api from '../services/api';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import LeaderboardItem from '../components/leaderboard/LeaderboardItem';
+import LeaderboardUserDetailModal from '../components/leaderboard/LeaderboardUserDetailModal';
 
 export default function LeaderboardScreen() {
   const { leaderboard: cachedLeaderboard, updateLeaderboard } = useData();
@@ -17,6 +18,7 @@ export default function LeaderboardScreen() {
 
   const [leaderboardData, setLeaderboardData] = useState<any[]>(cachedLeaderboard || []);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedUserDetail, setSelectedUserDetail] = useState<{ user: any; rank: number } | null>(null);
 
   const screenFadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -49,7 +51,6 @@ export default function LeaderboardScreen() {
     setRefreshing(false);
   };
 
-  // Tri absolu garanti côté client : Niveau DESC -> XP DESC -> Record DESC
   const sortedList = [...leaderboardData].sort((a, b) => {
     const lvlA = a.level || 1;
     const lvlB = b.level || 1;
@@ -103,7 +104,12 @@ export default function LeaderboardScreen() {
             return (
               <View>
                 {rank === 4 && renderRisingStarsHeader()}
-                <LeaderboardItem rank={rank} user={item} index={index} />
+                <LeaderboardItem
+                  rank={rank}
+                  user={item}
+                  index={index}
+                  onPress={(user, r) => setSelectedUserDetail({ user, rank: r })}
+                />
               </View>
             );
           }}
@@ -112,6 +118,13 @@ export default function LeaderboardScreen() {
           initialNumToRender={10}
           maxToRenderPerBatch={10}
           windowSize={5}
+        />
+
+        {/* Modale d'inspection de profil joueur sans coupure de texte */}
+        <LeaderboardUserDetailModal
+          visible={Boolean(selectedUserDetail)}
+          data={selectedUserDetail}
+          onClose={() => setSelectedUserDetail(null)}
         />
       </Animated.View>
     </ScreenWrapper>

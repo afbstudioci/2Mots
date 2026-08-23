@@ -14,8 +14,8 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
   const [progress, setProgress] = useState(0);
 
   const containerFadeAnim = useRef(new Animated.Value(1)).current;
-  const contentFadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const contentFadeAnim = useRef(new Animated.Value(1)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
   const hasFinished = useRef(false);
 
   const completeSplash = () => {
@@ -32,19 +32,6 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
   };
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(contentFadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 6,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-    ]).start();
 
     const progressInterval = setInterval(() => {
       setProgress((prev) => {

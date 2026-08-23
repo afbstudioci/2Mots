@@ -36,18 +36,33 @@ export default function LiveRivalBanner({ alert }: LiveRivalBannerProps) {
 
   if (!alert) return null;
 
-  const isOvertake = alert.type === 'overtake';
-  const accentColor = isOvertake ? colors.mint : colors.coral;
+  let accentColor = colors.coral;
+  let iconName: keyof typeof Ionicons.glyphMap = 'trending-up';
+  let iconBg = 'rgba(255, 127, 80, 0.18)';
+  let titleText = '';
+  let subText = '';
 
-  const titleText = isOvertake
-    ? (alert.rivalRank ? `Tu passes #${alert.rivalRank} Mondial !` : `Tu dépasses @${alert.rivalPseudo} !`)
-    : (alert.rivalRank ? `Cible : #${alert.rivalRank} @${alert.rivalPseudo}` : `Cible en vue : @${alert.rivalPseudo}`);
-
-  const subText = isOvertake
-    ? (alert.nextRivalPseudo
-        ? `Prochaine cible : #${alert.nextRivalRank || ''} @${alert.nextRivalPseudo} (${alert.nextRivalScore} mots)`
-        : `Tu viens de dépasser @${alert.rivalPseudo} (${alert.rivalScore} mots) !`)
-    : `Plus qu'un mot pour lui ravir la ${alert.rivalRank ? `${alert.rivalRank}e` : ''} place (${alert.rivalScore} mots) !`;
+  if (alert.type === 'overtake') {
+    accentColor = colors.mint;
+    iconName = 'trophy';
+    iconBg = 'rgba(74, 222, 128, 0.18)';
+    titleText = alert.rivalRank ? `Tu passes #${alert.rivalRank} Mondial !` : `Tu dépasses @${alert.rivalPseudo} !`;
+    subText = alert.nextRivalPseudo
+      ? `Prochaine cible : #${alert.nextRivalRank || ''} @${alert.nextRivalPseudo}`
+      : `Tu viens de dépasser @${alert.rivalPseudo} au classement !`;
+  } else if (alert.type === 'danger') {
+    accentColor = '#F59E0B';
+    iconName = 'warning-outline';
+    iconBg = 'rgba(245, 158, 11, 0.18)';
+    titleText = `Attention : @${alert.rivalPseudo} (#${alert.rivalRank}) te talonne !`;
+    subText = `Garde le rythme pour sécuriser ta ${alert.myRank ? `${alert.myRank}e` : ''} place mondiale !`;
+  } else {
+    accentColor = colors.coral;
+    iconName = 'trending-up';
+    iconBg = 'rgba(255, 127, 80, 0.18)';
+    titleText = alert.rivalRank ? `Cible : #${alert.rivalRank} @${alert.rivalPseudo}` : `Cible en vue : @${alert.rivalPseudo}`;
+    subText = `Plus qu'un mot pour lui ravir la ${alert.rivalRank ? `${alert.rivalRank}e` : ''} place mondiale !`;
+  }
 
   return (
     <Animated.View
@@ -70,12 +85,8 @@ export default function LiveRivalBanner({ alert }: LiveRivalBannerProps) {
           },
         ]}
       >
-        <View style={[styles.iconCircle, { backgroundColor: isOvertake ? 'rgba(78, 205, 196, 0.18)' : 'rgba(255, 107, 107, 0.18)' }]}>
-          <Ionicons
-            name={isOvertake ? 'trophy' : 'trending-up'}
-            size={18}
-            color={accentColor}
-          />
+        <View style={[styles.iconCircle, { backgroundColor: iconBg }]}>
+          <Ionicons name={iconName} size={18} color={accentColor} />
         </View>
 
         <View style={styles.textContainer}>

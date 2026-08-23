@@ -108,7 +108,11 @@ export const useGameLogic = () => {
       const d = res.data?.data;
       const s = res.data?.userStats;
       const rivals = res.data?.rivals;
-      if (rivals && Array.isArray(rivals)) liveRivals.setRivals(rivals);
+      const threatBehind = res.data?.threatBehind;
+      const userRank = res.data?.userRank || 1;
+      if (rivals && Array.isArray(rivals)) {
+        liveRivals.setRivalData(rivals, threatBehind, userRank);
+      }
       if (d?.length > 0) {
         setWordPairs(d.map((p: any, idx: number) => ({ ...p, options: shuffleArray(p.options || []), hasKey: idx % 6 === 2 })));
         if (s) {

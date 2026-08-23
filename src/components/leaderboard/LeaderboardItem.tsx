@@ -1,5 +1,5 @@
 //src/components/leaderboard/LeaderboardItem.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Animated } from 'react-native';
 import { colors, spacing } from '../../theme/theme';
 import { useTheme } from '../../context/ThemeContext';
@@ -14,11 +14,11 @@ interface LeaderboardItemProps {
     avatar?: string;
   };
   index: number;
+  onPress?: (user: any, rank: number) => void;
 }
 
-export default function LeaderboardItem({ rank, user, index }: LeaderboardItemProps) {
+export default function LeaderboardItem({ rank, user, index, onPress }: LeaderboardItemProps) {
   const { themeColors } = useTheme();
-  const [expanded, setExpanded] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
@@ -81,11 +81,10 @@ export default function LeaderboardItem({ rank, user, index }: LeaderboardItemPr
           { backgroundColor: cardConfig.backgroundColor },
           !isPodium && { borderColor: themeColors.cardBorder, borderWidth: themeColors.cardBorderWidth || 1 },
           isPodium ? styles.cardPodium : styles.cardStandard,
-          expanded && styles.cardExpanded,
           rank === 1 && styles.glowEffect,
         ]}
-        onPress={() => setExpanded(!expanded)}
-        activeOpacity={0.9}
+        onPress={() => onPress && onPress(user, rank)}
+        activeOpacity={0.85}
       >
         <View style={styles.mainContent}>
           {isPodium ? (
@@ -119,24 +118,6 @@ export default function LeaderboardItem({ rank, user, index }: LeaderboardItemPr
             </Text>
           </View>
         </View>
-
-        {expanded && (
-          <View style={[styles.detailsContainer, { borderTopColor: isPodium ? 'rgba(0,0,0,0.1)' : themeColors.overlayLight }]}>
-            <View style={styles.detailItem}>
-              <Text style={[styles.detailValue, { color: cardConfig.textColor }]}>
-                {user.bestScore || 0}
-              </Text>
-              <Text style={[styles.detailLabel, { color: cardConfig.textColor, opacity: 0.7 }]}>Record Mots</Text>
-            </View>
-            <View style={[styles.divider, { backgroundColor: isPodium ? 'rgba(0,0,0,0.1)' : themeColors.overlayLight }]} />
-            <View style={styles.detailItem}>
-              <Text style={[styles.detailValue, { color: cardConfig.textColor }]}>
-                {user.xp || 0}
-              </Text>
-              <Text style={[styles.detailLabel, { color: cardConfig.textColor, opacity: 0.7 }]}>XP Palier</Text>
-            </View>
-          </View>
-        )}
       </TouchableOpacity>
     </Animated.View>
   );
@@ -153,7 +134,6 @@ const styles = StyleSheet.create({
   },
   cardPodium: { borderRadius: 40, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, marginBottom: spacing.sm },
   cardStandard: { borderRadius: 24, paddingVertical: spacing.md, paddingHorizontal: spacing.lg },
-  cardExpanded: { paddingBottom: spacing.sm },
   mainContent: { flexDirection: 'row', alignItems: 'center' },
   avatarContainerPodium: { position: 'relative', marginRight: spacing.md },
   avatar: { justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.2)', overflow: 'hidden' },
@@ -181,9 +161,4 @@ const styles = StyleSheet.create({
   scoreContainer: { alignItems: 'flex-end', justifyContent: 'center', flexShrink: 0 },
   scoreText: { fontFamily: 'Poppins_800ExtraBold', fontSize: 22 },
   pointsLabel: { fontFamily: 'Poppins_700Bold', fontSize: 9, marginTop: -4, letterSpacing: 1 },
-  detailsContainer: { flexDirection: 'row', marginTop: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, justifyContent: 'space-around' },
-  detailItem: { alignItems: 'center', flex: 1 },
-  divider: { width: 1, height: '100%' },
-  detailValue: { fontFamily: 'Poppins_800ExtraBold', fontSize: 16 },
-  detailLabel: { fontFamily: 'Poppins_500Medium', fontSize: 10 },
 });
