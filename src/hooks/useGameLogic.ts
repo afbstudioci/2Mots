@@ -83,7 +83,11 @@ export const useGameLogic = () => {
       if (d && Array.isArray(d) && d.length > 0) {
         const fresh = d.filter((p: any) => !playedWordIdsRef.current.includes(p._id));
         if (fresh.length > 0) {
-          const enriched = fresh.map((p: any, idx: number) => ({ ...p, options: shuffleArray(p.options || []), hasKey: idx % 6 === 2 }));
+          const enriched = fresh.map((p: any, idx: number) => ({
+            ...p,
+            options: shuffleArray(p.options || []),
+            hasKey: typeof p.hasKey === 'boolean' ? p.hasKey : (idx % 18 === 7)
+          }));
           setWordPairs((prev) => {
             const existingIds = new Set(prev.map((i) => i._id));
             return [...prev, ...enriched.filter((i: any) => !existingIds.has(i._id))];
@@ -93,7 +97,7 @@ export const useGameLogic = () => {
     } catch {
       const local = getLocalGameBatch(30, userLevel, playedWordIdsRef.current);
       if (local.length > 0) {
-        const enriched = (local as any).map((p: any, idx: number) => ({ ...p, hasKey: idx % 6 === 2 }));
+        const enriched = (local as any).map((p: any, idx: number) => ({ ...p, hasKey: idx % 18 === 7 }));
         setWordPairs((prev) => [...prev, ...enriched.filter((i: any) => !new Set(prev.map(x => x._id)).has(i._id))]);
       }
     } finally {
@@ -114,7 +118,11 @@ export const useGameLogic = () => {
         liveRivals.setRivalData(rivals, threatBehind, userRank);
       }
       if (d?.length > 0) {
-        setWordPairs(d.map((p: any, idx: number) => ({ ...p, options: shuffleArray(p.options || []), hasKey: idx % 6 === 2 })));
+        setWordPairs(d.map((p: any, idx: number) => ({
+          ...p,
+          options: shuffleArray(p.options || []),
+          hasKey: typeof p.hasKey === 'boolean' ? p.hasKey : (idx % 18 === 7)
+        })));
         if (s) {
           setUserLevel(s.level || 1);
           setCurrentXp(s.xp || 0);
@@ -125,7 +133,7 @@ export const useGameLogic = () => {
       } else { throw new Error('Batch initial vide'); }
     } catch {
       const local = getLocalGameBatch(30, 1, []);
-      setWordPairs((local as any).map((p: any, idx: number) => ({ ...p, hasKey: idx % 6 === 2 })));
+      setWordPairs((local as any).map((p: any, idx: number) => ({ ...p, hasKey: idx % 18 === 7 })));
     } finally {
       setIsLoading(false);
       timer.resetTimer();

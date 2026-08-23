@@ -12,15 +12,15 @@ interface LiveRivalBannerProps {
 
 export default function LiveRivalBanner({ alert }: LiveRivalBannerProps) {
   const { themeColors } = useTheme();
-  const slideAnim = useRef(new Animated.Value(-60)).current;
+  const slideAnim = useRef(new Animated.Value(140)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.92)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
 
   useEffect(() => {
     if (alert) {
-      slideAnim.setValue(-40);
+      slideAnim.setValue(140);
       opacityAnim.setValue(0);
-      scaleAnim.setValue(0.92);
+      scaleAnim.setValue(0.9);
       Animated.parallel([
         Animated.spring(slideAnim, { toValue: 0, friction: 6, tension: 65, useNativeDriver: true }),
         Animated.timing(opacityAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
@@ -28,7 +28,7 @@ export default function LiveRivalBanner({ alert }: LiveRivalBannerProps) {
       ]).start();
     } else {
       Animated.parallel([
-        Animated.timing(slideAnim, { toValue: -40, duration: 200, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 140, duration: 220, useNativeDriver: true }),
         Animated.timing(opacityAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
       ]).start();
     }
@@ -39,29 +39,31 @@ export default function LiveRivalBanner({ alert }: LiveRivalBannerProps) {
   let accentColor = colors.coral;
   let iconName: keyof typeof Ionicons.glyphMap = 'trending-up';
   let iconBg = 'rgba(255, 127, 80, 0.18)';
-  let titleText = '';
+  let tagText = '';
+  let mainText = '';
   let subText = '';
 
   if (alert.type === 'overtake') {
     accentColor = colors.mint;
     iconName = 'trophy';
-    iconBg = 'rgba(74, 222, 128, 0.18)';
-    titleText = alert.rivalRank ? `Tu passes #${alert.rivalRank} Mondial !` : `Tu dépasses @${alert.rivalPseudo} !`;
-    subText = alert.nextRivalPseudo
-      ? `Prochaine cible : #${alert.nextRivalRank || ''} @${alert.nextRivalPseudo}`
-      : `Tu viens de dépasser @${alert.rivalPseudo} au classement !`;
+    iconBg = 'rgba(74, 222, 128, 0.2)';
+    tagText = 'DÉPASSÉ !';
+    mainText = `@${alert.rivalPseudo}`;
+    subText = alert.rivalRank ? `Tu es #${alert.rivalRank} Mondial` : 'Tu le doubles !';
   } else if (alert.type === 'danger') {
     accentColor = '#F59E0B';
     iconName = 'warning-outline';
-    iconBg = 'rgba(245, 158, 11, 0.18)';
-    titleText = `Attention : @${alert.rivalPseudo} (#${alert.rivalRank}) te talonne !`;
-    subText = `Garde le rythme pour sécuriser ta ${alert.myRank ? `${alert.myRank}e` : ''} place mondiale !`;
+    iconBg = 'rgba(245, 158, 11, 0.2)';
+    tagText = 'EN DANGER';
+    mainText = `@${alert.rivalPseudo}`;
+    subText = alert.rivalRank ? `Te talonne (#${alert.rivalRank})` : 'Te talonne !';
   } else {
     accentColor = colors.coral;
-    iconName = 'trending-up';
-    iconBg = 'rgba(255, 127, 80, 0.18)';
-    titleText = alert.rivalRank ? `Cible : #${alert.rivalRank} @${alert.rivalPseudo}` : `Cible en vue : @${alert.rivalPseudo}`;
-    subText = `Plus qu'un mot pour lui ravir la ${alert.rivalRank ? `${alert.rivalRank}e` : ''} place mondiale !`;
+    iconName = 'locate';
+    iconBg = 'rgba(255, 127, 80, 0.2)';
+    tagText = 'CIBLE EN VUE';
+    mainText = `@${alert.rivalPseudo}`;
+    subText = alert.rivalRank ? `Rang #${alert.rivalRank}` : 'À portée !';
   }
 
   return (
@@ -71,33 +73,38 @@ export default function LiveRivalBanner({ alert }: LiveRivalBannerProps) {
         styles.container,
         {
           opacity: opacityAnim,
-          transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
+          transform: [{ translateX: slideAnim }, { scale: scaleAnim }],
         },
       ]}
     >
       <View
         style={[
-          styles.card,
+          styles.portraitCard,
           {
             backgroundColor: themeColors.card,
             borderColor: accentColor,
-            borderWidth: 1.5,
           },
         ]}
       >
+        {/* En-tête avec Icône */}
         <View style={[styles.iconCircle, { backgroundColor: iconBg }]}>
-          <Ionicons name={iconName} size={18} color={accentColor} />
+          <Ionicons name={iconName} size={16} color={accentColor} />
         </View>
 
-        <View style={styles.textContainer}>
-          <Text style={[styles.title, { color: themeColors.text }]} numberOfLines={1}>
-            {titleText}
-          </Text>
-
-          <Text style={[styles.subtext, { color: themeColors.textSecondary }]} numberOfLines={1}>
-            {subText}
-          </Text>
+        {/* Badge d'action */}
+        <View style={[styles.tagBadge, { backgroundColor: accentColor }]}>
+          <Text style={styles.tagText}>{tagText}</Text>
         </View>
+
+        {/* Pseudo du Rival */}
+        <Text style={[styles.mainPseudo, { color: themeColors.text }]} numberOfLines={1}>
+          {mainText}
+        </Text>
+
+        {/* Détail du Rang */}
+        <Text style={[styles.subRank, { color: themeColors.textSecondary }]} numberOfLines={2}>
+          {subText}
+        </Text>
       </View>
     </Animated.View>
   );
@@ -106,43 +113,55 @@ export default function LiveRivalBanner({ alert }: LiveRivalBannerProps) {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: 54,
-    left: spacing.md,
+    top: 78,
     right: spacing.md,
     zIndex: 999,
-    alignItems: 'center',
   },
-  card: {
-    width: '100%',
-    flexDirection: 'row',
+  portraitCard: {
+    width: 104,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    borderRadius: borderRadius.md,
+    borderWidth: 1.5,
     alignItems: 'center',
-    paddingVertical: 9,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.lg,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.18,
     shadowRadius: 8,
     elevation: 8,
   },
   iconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: spacing.sm,
+    marginBottom: 4,
   },
-  textContainer: {
-    flex: 1,
+  tagBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginBottom: 4,
   },
-  title: {
+  tagText: {
+    fontFamily: 'Poppins_800ExtraBold',
+    fontSize: 8.5,
+    color: '#1A1A1A',
+    letterSpacing: 0.5,
+  },
+  mainPseudo: {
     fontFamily: 'Poppins_700Bold',
-    fontSize: 12.5,
+    fontSize: 11,
+    textAlign: 'center',
+    width: '100%',
   },
-  subtext: {
-    fontFamily: 'Poppins_500Medium',
-    fontSize: 10.5,
-    marginTop: 1,
+  subRank: {
+    fontFamily: 'Poppins_600SemiBold',
+    fontSize: 9,
+    textAlign: 'center',
+    marginTop: 2,
+    lineHeight: 12,
+    width: '100%',
   },
 });
