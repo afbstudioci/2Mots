@@ -1,4 +1,4 @@
-﻿//src/screens/GameOverScreen.tsx
+//src/screens/GameOverScreen.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -14,6 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 import { useAudio } from '../hooks/useAudio';
 import { colors, spacing, borderRadius, shadows } from '../theme/theme';
 
@@ -22,6 +24,13 @@ export default function GameOverScreen() {
   const navigation = useNavigation<any>();
   const { themeColors, isDark } = useTheme();
   const { playGameOver, stopGameOver } = useAudio();
+  const { refreshProfile } = useAuth();
+  const { updateLeaderboard } = useData();
+
+  useEffect(() => {
+    refreshProfile();
+    updateLeaderboard();
+  }, []);
 
   const { score, reason, stats, enigmasSummary = [], corrections = [], details = [] } = route.params || {};
   const [animatedScore, setAnimatedScore] = useState<number>(0);

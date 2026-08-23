@@ -47,11 +47,19 @@ export const useGameLogic = () => {
   const playedPairsHistoryRef = useRef<Map<string, any>>(new Map());
   const isFetchingNextBatch = useRef<boolean>(false);
 
+  const userLevelRef = useRef<number>(userLevel);
+  userLevelRef.current = userLevel;
+  const currentXpRef = useRef<number>(currentXp);
+  currentXpRef.current = currentXp;
+  const userKevsRef = useRef<number>(userKevs);
+  userKevsRef.current = userKevs;
+
   const currentPairRef = useRef<EnrichedWordPair | null>(null);
   currentPairRef.current = wordPairs[currentIndex] || null;
 
   const timer = useGameTimer({
     isLoading, showLevelUpModal, showKevyChest, errorLimitData, userLevel,
+    userLevelRef, currentXpRef, userKevsRef,
     currentPairRef, sessionAnswersRef, playedPairsHistoryRef, kevyKeysRef, stopBgm, playDanger,
   });
 
@@ -94,14 +102,14 @@ export const useGameLogic = () => {
         const enriched = fresh.map((p: any, idx: number) => ({
           ...p,
           options: shuffleArray(p.options || []),
-          hasKey: typeof p.hasKey === 'boolean' ? p.hasKey : (idx % 18 === 7)
+          hasKey: typeof p.hasKey === 'boolean' ? p.hasKey : (idx === 17)
         }));
         setWordPairs((prev) => [...prev, ...enriched]);
       }
     } catch {
       const local = getLocalGameBatch(30, userLevel, playedWordIdsRef.current.slice(-20));
       if (local.length > 0) {
-        const enriched = (local as any).map((p: any, idx: number) => ({ ...p, hasKey: idx % 18 === 7 }));
+        const enriched = (local as any).map((p: any, idx: number) => ({ ...p, hasKey: idx === 17 }));
         setWordPairs((prev) => [...prev, ...enriched]);
       }
     } finally {
@@ -125,7 +133,7 @@ export const useGameLogic = () => {
         setWordPairs(d.map((p: any, idx: number) => ({
           ...p,
           options: shuffleArray(p.options || []),
-          hasKey: typeof p.hasKey === 'boolean' ? p.hasKey : (idx % 18 === 7)
+          hasKey: typeof p.hasKey === 'boolean' ? p.hasKey : (idx === 17)
         })));
         if (s) {
           setUserLevel(s.level || 1);
@@ -137,7 +145,7 @@ export const useGameLogic = () => {
       } else { throw new Error('Batch initial vide'); }
     } catch {
       const local = getLocalGameBatch(30, 1, []);
-      setWordPairs((local as any).map((p: any, idx: number) => ({ ...p, hasKey: idx % 18 === 7 })));
+      setWordPairs((local as any).map((p: any, idx: number) => ({ ...p, hasKey: idx === 17 })));
     } finally {
       setIsLoading(false);
       timer.resetTimer();
@@ -222,11 +230,13 @@ export const useGameLogic = () => {
         const needed = 3 + userLevel * 2;
         if (next >= needed) {
           const nextLvl = userLevel + 1;
+          const updatedKevs = (userKevs || 0) + 5;
           setUserLevel(nextLvl);
           setXpNeeded(3 + nextLvl * 2);
           setShowLevelUpModal(true);
           playLevelUp();
           if (user) { user.level = nextLvl; user.xp = 0; user.kevs = (user.kevs || 0) + 5; }
+          api.post('/game/sync-level', { level: nextLvl, xp: 0, kevs: updatedKevs }, { timeout: 3000 }).catch(() => {});
           return 0;
         }
         return next;

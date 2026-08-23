@@ -20,6 +20,9 @@ interface UseGameTimerProps {
   showKevyChest?: boolean;
   errorLimitData: any;
   userLevel?: number;
+  userLevelRef?: React.MutableRefObject<number>;
+  currentXpRef?: React.MutableRefObject<number>;
+  userKevsRef?: React.MutableRefObject<number>;
   currentPairRef: React.MutableRefObject<EnrichedWordPair | null>;
   sessionAnswersRef: React.MutableRefObject<GameAnswer[]>;
   playedPairsHistoryRef: React.MutableRefObject<Map<string, any>>;
@@ -34,6 +37,9 @@ export const useGameTimer = ({
   showKevyChest = false,
   errorLimitData,
   userLevel = 1,
+  userLevelRef,
+  currentXpRef,
+  userKevsRef,
   currentPairRef,
   sessionAnswersRef,
   playedPairsHistoryRef,
@@ -98,7 +104,18 @@ export const useGameTimer = ({
         };
       });
 
-      api.post('/game/end', { score: correctCount, answers, kevyKeys: kevyKeysRef?.current || 0 }, { timeout: 3500 }).catch(() => {});
+      api.post(
+        '/game/end',
+        {
+          score: correctCount,
+          answers,
+          kevyKeys: kevyKeysRef?.current || 0,
+          level: userLevelRef?.current || userLevel,
+          xp: currentXpRef?.current || 0,
+          kevs: userKevsRef?.current || 0,
+        },
+        { timeout: 3500 }
+      ).catch(() => {});
 
       navigation.replace('GameOver', {
         score: correctCount,
