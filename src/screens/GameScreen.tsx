@@ -15,6 +15,8 @@ import GameEmpty from '../components/game/GameEmpty';
 import CustomAlert from '../components/common/CustomAlert';
 import GameOverLimitModal from '../components/game/GameOverLimitModal';
 import KevyChestModal from '../components/game/KevyChestModal';
+import LiveRivalBanner from '../components/game/LiveRivalBanner';
+import FeverOverlay from '../components/game/FeverOverlay';
 import { useGameLogic } from '../hooks/useGameLogic';
 
 const { width } = Dimensions.get('window');
@@ -32,6 +34,7 @@ export default function GameScreen({ navigation }: any) {
     correctChoice,
     isCorrectState,
     isFastCombo,
+    isFeverMode,
     isLoading,
     errorMessage,
     isChecking,
@@ -54,6 +57,7 @@ export default function GameScreen({ navigation }: any) {
     kevyKeys,
     showKevyChest,
     handleCloseKevyChest,
+    activeRivalAlert,
     timeWon,
     setTimeWon,
     successTrigger,
@@ -163,6 +167,8 @@ export default function GameScreen({ navigation }: any) {
       </View>
 
       <GameHeader level={userLevel} currentXp={currentXp} xpNeeded={xpNeeded} kevs={userKevs} kevyKeys={kevyKeys} />
+      <LiveRivalBanner alert={activeRivalAlert} />
+      <FeverOverlay active={isFeverMode} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <GameTimer
