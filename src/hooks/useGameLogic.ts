@@ -77,28 +77,32 @@ export const useGameLogic = () => {
     if (isFetchingNextBatch.current) return;
     isFetchingNextBatch.current = true;
     try {
-      const excludeParam = playedWordIdsRef.current.slice(-50).join(',');
+      const excludeParam = playedWordIdsRef.current.slice(-20).join(',');
       const res = await api.get(`/game/batch?exclude=${excludeParam}`, { timeout: 3500 });
       const d = res.data?.data;
+      let fresh: any[] = [];
       if (d && Array.isArray(d) && d.length > 0) {
-        const fresh = d.filter((p: any) => !playedWordIdsRef.current.includes(p._id));
-        if (fresh.length > 0) {
-          const enriched = fresh.map((p: any, idx: number) => ({
-            ...p,
-            options: shuffleArray(p.options || []),
-            hasKey: typeof p.hasKey === 'boolean' ? p.hasKey : (idx % 18 === 7)
-          }));
-          setWordPairs((prev) => {
-            const existingIds = new Set(prev.map((i) => i._id));
-            return [...prev, ...enriched.filter((i: any) => !existingIds.has(i._id))];
-          });
-        }
+        const recent = new Set(playedWordIdsRef.current.slice(-15));
+        fresh = d.filter((p: any) => !recent.has(p._id));
+        if (fresh.length === 0) fresh = d;
+      }
+      if (fresh.length === 0) {
+        const local = getLocalGameBatch(30, userLevel, playedWordIdsRef.current.slice(-20));
+        fresh = local as any;
+      }
+      if (fresh.length > 0) {
+        const enriched = fresh.map((p: any, idx: number) => ({
+          ...p,
+          options: shuffleArray(p.options || []),
+          hasKey: typeof p.hasKey === 'boolean' ? p.hasKey : (idx % 18 === 7)
+        }));
+        setWordPairs((prev) => [...prev, ...enriched]);
       }
     } catch {
-      const local = getLocalGameBatch(30, userLevel, playedWordIdsRef.current);
+      const local = getLocalGameBatch(30, userLevel, playedWordIdsRef.current.slice(-20));
       if (local.length > 0) {
         const enriched = (local as any).map((p: any, idx: number) => ({ ...p, hasKey: idx % 18 === 7 }));
-        setWordPairs((prev) => [...prev, ...enriched.filter((i: any) => !new Set(prev.map(x => x._id)).has(i._id))]);
+        setWordPairs((prev) => [...prev, ...enriched]);
       }
     } finally {
       isFetchingNextBatch.current = false;
@@ -144,6 +148,12 @@ export const useGameLogic = () => {
     loadInitialBatch();
     boosters.syncInventory();
   }, []);
+
+  useEffect(() => {
+    if (wordPairs.length > 0 && currentIndex >= wordPairs.length - 4) {
+      fetchNextBatch();
+    }
+  }, [currentIndex, wordPairs.length, fetchNextBatch]);
 
   const selectChoice = (choice: string, onSuccessTransition: () => void) => {
     if (isChecking || selectedChoice !== null || timer.hasTriggeredGameOver || showKevyChest) return;

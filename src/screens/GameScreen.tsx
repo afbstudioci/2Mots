@@ -18,6 +18,7 @@ import KevyChestModal from '../components/game/KevyChestModal';
 import LiveRivalBanner from '../components/game/LiveRivalBanner';
 import FeverOverlay from '../components/game/FeverOverlay';
 import { useGameLogic } from '../hooks/useGameLogic';
+import { getLocalGameBatch } from '../services/offlineVault';
 
 const { width } = Dimensions.get('window');
 
@@ -123,11 +124,15 @@ export default function GameScreen({ navigation }: any) {
     }
   }, [timeLeft, panicAnim, showLevelUpModal, errorLimitData?.visible]);
 
-  const currentPair = wordPairs[currentIndex];
+  let currentPair = wordPairs[currentIndex];
+  if (!currentPair && wordPairs.length > 0) {
+    const emergency = getLocalGameBatch(5, userLevel)[0];
+    currentPair = emergency as any;
+  }
 
   if (isLoading || (!currentPair && wordPairs.length > 0 && currentIndex < wordPairs.length)) return <GameLoading />;
 
-  if (errorMessage || wordPairs.length === 0) {
+  if (errorMessage && wordPairs.length === 0) {
     return <GameEmpty message={errorMessage || 'Chargement impossible'} onBack={() => navigation.navigate('Home')} />;
   }
 
