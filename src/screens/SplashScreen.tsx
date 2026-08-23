@@ -3,14 +3,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Animated } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, spacing } from '../theme/theme';
-import { useTheme } from '../context/ThemeContext';
 
 interface SplashScreenProps {
   onFinish?: () => void;
 }
 
 export default function SplashScreen({ onFinish }: SplashScreenProps) {
-  const { themeColors } = useTheme();
   const [progress, setProgress] = useState(0);
 
   const containerFadeAnim = useRef(new Animated.Value(1)).current;
@@ -24,7 +22,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
 
     Animated.timing(containerFadeAnim, {
       toValue: 0,
-      duration: 250,
+      duration: 350,
       useNativeDriver: true,
     }).start(() => {
       if (onFinish) onFinish();
@@ -32,7 +30,6 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
   };
 
   useEffect(() => {
-
     const progressInterval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
@@ -65,7 +62,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
       style={[
         styles.overlayContainer,
         {
-          backgroundColor: themeColors.background,
+          backgroundColor: colors.coral,
           opacity: containerFadeAnim,
         },
       ]}
@@ -85,7 +82,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
             <Path
               d="M 50 25 C 65 0, 95 0, 95 25 C 95 50, 65 50, 50 25 C 35 0, 5 0, 5 25 C 5 50, 35 50, 50 25 Z"
               fill="none"
-              stroke={colors.coral}
+              stroke={colors.white}
               strokeWidth="6"
               strokeLinecap="round"
             />
@@ -95,16 +92,11 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
         </Animated.View>
 
         <Animated.View style={styles.bottomBlock}>
-          <Animated.View
-            style={[
-              styles.progressBarBackground,
-              { backgroundColor: themeColors.overlayLight },
-            ]}
-          >
+          <Animated.View style={styles.progressBarBackground}>
             <Animated.View
               style={[
                 styles.progressBarFill,
-                { width: `${progress}%`, backgroundColor: colors.coral },
+                { width: `${progress}%`, backgroundColor: colors.white },
               ]}
             />
           </Animated.View>
@@ -135,7 +127,7 @@ const styles = StyleSheet.create({
   },
   signatureText: {
     fontFamily: 'Poppins_700Bold',
-    color: colors.coral,
+    color: colors.white,
     fontSize: 20,
     letterSpacing: 4,
     marginTop: spacing.lg,
@@ -151,6 +143,7 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 10,
     overflow: 'hidden',
+    backgroundColor: 'rgba(255, 255, 255, 0.35)',
   },
   progressBarFill: {
     height: '100%',
