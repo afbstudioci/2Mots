@@ -16,7 +16,7 @@
     },
     "android": {
       "package": "com.afbstudio.twomots",
-      "versionCode": 24,
+      "versionCode": 25,
       "supportsTablet": true,
       "permissions": [
         "com.android.vending.BILLING",
@@ -36,11 +36,9 @@
       "url": "https://u.expo.dev/b10e5217-af10-4e8a-a753-b7b2608af455",
       "enabled": true,
       "checkAutomatically": "ON_LOAD",
-      "fallbackToCacheTimeout": 0
+      "fallbackToCacheTimeout": 5000
     },
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.0",
     "plugins": [
       "expo-audio",
       [

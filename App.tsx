@@ -11,6 +11,7 @@ import { SettingsProvider } from './src/context/SettingsContext';
 import { DataProvider } from './src/context/DataContext';
 import { AudioProvider } from './src/context/AudioContext';
 import { SocketProvider } from './src/context/SocketContext';
+import { colors } from './src/theme/theme';
 
 import SplashScreen from './src/screens/SplashScreen';
 import LoginScreen from './src/screens/LoginScreen';
@@ -121,8 +122,8 @@ const AppContent = () => {
     ...(isDark ? NavDarkTheme : DefaultTheme),
     colors: {
       ...(isDark ? NavDarkTheme.colors : DefaultTheme.colors),
-      background: themeColors.background,
-      card: themeColors.background,
+      background: showSplash ? colors.coral : themeColors.background,
+      card: showSplash ? colors.coral : themeColors.background,
       text: themeColors.text,
       border: 'transparent',
       primary: themeColors.primary,
@@ -143,11 +144,13 @@ const AppContent = () => {
     },
   };
 
+  const rootBgColor = showSplash ? colors.coral : themeColors.background;
+
   return (
-    <SafeAreaProvider style={{ flex: 1, backgroundColor: themeColors.background }}>
-      <GestureHandlerRootView style={{ flex: 1, backgroundColor: themeColors.background }}>
+    <SafeAreaProvider style={{ flex: 1, backgroundColor: rootBgColor }}>
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: rootBgColor }}>
         <StatusBar 
-          style={isDark ? 'light' : 'dark'} 
+          style={showSplash ? 'light' : (isDark ? 'light' : 'dark')} 
           backgroundColor="transparent"
           translucent={true}
         />
