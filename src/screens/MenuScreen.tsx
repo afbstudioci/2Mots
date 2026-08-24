@@ -1,4 +1,4 @@
-﻿//src/screens/MenuScreen.tsx
+//src/screens/MenuScreen.tsx
 import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,7 +12,7 @@ import { RootStackParamList } from '../../App';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Menu'>;
 
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "1.0.3";
 
 const MENU_ITEMS = [
   { id: 'Profile', label: 'Mon Profil', icon: 'person-outline' },
