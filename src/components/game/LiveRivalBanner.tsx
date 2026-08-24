@@ -50,6 +50,13 @@ export default function LiveRivalBanner({ alert }: LiveRivalBannerProps) {
     tagText = 'DÉPASSÉ !';
     mainText = `@${alert.rivalPseudo}`;
     subText = alert.rivalRank ? `Tu es #${alert.rivalRank} Mondial` : 'Tu le doubles !';
+  } else if (alert.type === 'threat_overtake') {
+    accentColor = colors.error;
+    iconName = 'trending-down';
+    iconBg = 'rgba(239, 68, 68, 0.2)';
+    tagText = 'RANG PERDU';
+    mainText = `@${alert.rivalPseudo}`;
+    subText = alert.myRank ? `Te dépasse (#${alert.myRank})` : 'T\'a dépassé !';
   } else if (alert.type === 'danger') {
     accentColor = '#F59E0B';
     iconName = 'warning-outline';
@@ -63,7 +70,7 @@ export default function LiveRivalBanner({ alert }: LiveRivalBannerProps) {
     iconBg = 'rgba(255, 127, 80, 0.2)';
     tagText = 'CIBLE EN VUE';
     mainText = `@${alert.rivalPseudo}`;
-    subText = alert.rivalRank ? `Rang #${alert.rivalRank}` : 'À portée !';
+    subText = alert.rivalScore ? `${alert.rivalScore} mot${alert.rivalScore > 1 ? 's' : ''} restant${alert.rivalScore > 1 ? 's' : ''}` : (alert.rivalRank ? `Rang #${alert.rivalRank}` : 'À portée !');
   }
 
   return (

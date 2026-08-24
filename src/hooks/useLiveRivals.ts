@@ -10,7 +10,7 @@ export interface LiveRival {
 }
 
 export interface RivalAlertData {
-  type: 'approach' | 'overtake' | 'danger';
+  type: 'approach' | 'overtake' | 'danger' | 'threat_overtake';
   rivalPseudo: string;
   rivalScore?: number;
   rivalRank?: number;
@@ -28,17 +28,39 @@ export const useLiveRivals = (initialRivals: LiveRival[] = []) => {
   const overtakenSetRef = useRef<Set<string>>(new Set());
   const approachedSetRef = useRef<Set<string>>(new Set());
   const alertedThreatRef = useRef<boolean>(false);
+  const alertedThreatOvertakeRef = useRef<boolean>(false);
   const dismissTimerRef = useRef<any>(null);
+
+  const showAlert = useCallback((alert: RivalAlertData, durationMs = 4500) => {
+    if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+    setActiveAlert(alert);
+    dismissTimerRef.current = setTimeout(() => {
+      setActiveAlert(null);
+    }, durationMs);
+  }, []);
 
   const setRivalData = useCallback((rivals: LiveRival[], threat: LiveRival | null = null, userRank: number = 1) => {
     const sorted = [...(rivals || [])].sort((a, b) => a.score - b.score);
+    
+    // Détection État 2 : Le poursuivant vient de nous dépasser au classement
+    if (threatBehindRef.current && userRank > baseRankRef.current && !alertedThreatOvertakeRef.current) {
+      alertedThreatOvertakeRef.current = true;
+      try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); } catch {}
+      showAlert({
+        type: 'threat_overtake',
+        rivalPseudo: threatBehindRef.current.pseudo,
+        rivalRank: userRank - 1,
+        myRank: userRank
+      });
+    }
+
     rivalsRef.current = sorted;
     threatBehindRef.current = threat;
     baseRankRef.current = Math.max(1, userRank);
     overtakenSetRef.current.clear();
     approachedSetRef.current.clear();
     alertedThreatRef.current = false;
-  }, []);
+  }, [showAlert]);
 
   const setRivals = useCallback((list: LiveRival[]) => {
     setRivalData(list, null, 1);
@@ -50,18 +72,10 @@ export const useLiveRivals = (initialRivals: LiveRival[] = []) => {
     }
   }, [initialRivals, setRivals]);
 
-  const showAlert = (alert: RivalAlertData, durationMs = 4500) => {
-    if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
-    setActiveAlert(alert);
-    dismissTimerRef.current = setTimeout(() => {
-      setActiveAlert(null);
-    }, durationMs);
-  };
-
   const onScoreUpdated = useCallback((currentScore: number) => {
     if (currentScore <= 0) return;
 
-    // 1. Alerte DÉPASSEMENT (Priorité 1) : Détecte si on franchit le score d'un rival
+    // 1. Alerte ÉTAT 4 : DÉPASSEMENT CIBLE DEVANT (Priorité 1)
     const rivals = rivalsRef.current;
     for (const rival of rivals) {
       if (currentScore >= rival.score && !overtakenSetRef.current.has(rival.pseudo)) {
@@ -83,7 +97,7 @@ export const useLiveRivals = (initialRivals: LiveRival[] = []) => {
       }
     }
 
-    // 2. Alerte APPROCHE (Priorité 2) : Détecte si on est à 1 ou 2 mots de doubler le prochain rival
+    // 2. Alerte ÉTAT 3 : APPROCHE / TALONNAGE CIBLE DEVANT (Priorité 2)
     for (const rival of rivals) {
       const remaining = rival.score - currentScore;
       if (remaining > 0 && remaining <= 2 && !approachedSetRef.current.has(rival.pseudo) && !overtakenSetRef.current.has(rival.pseudo)) {
@@ -101,7 +115,7 @@ export const useLiveRivals = (initialRivals: LiveRival[] = []) => {
       }
     }
 
-    // 3. Alerte DANGER (Poursuivant direct) : Affiché uniquement au tout début (mot 2) si quelqu'un talonne
+    // 3. Alerte ÉTAT 1 : DANGER / POURSUIVANT DERRIÈRE (Affiché au début, mot 2)
     if (currentScore === 2 && threatBehindRef.current && !alertedThreatRef.current) {
       alertedThreatRef.current = true;
       const threat = threatBehindRef.current;
@@ -114,7 +128,19 @@ export const useLiveRivals = (initialRivals: LiveRival[] = []) => {
         myRank: baseRankRef.current
       });
     }
-  }, []);
+  }, [showAlert]);
+
+  const triggerThreatOvertake = useCallback((threatPseudo: string, newRank: number) => {
+    if (alertedThreatOvertakeRef.current) return;
+    alertedThreatOvertakeRef.current = true;
+    try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); } catch {}
+    showAlert({
+      type: 'threat_overtake',
+      rivalPseudo: threatPseudo,
+      rivalRank: newRank - 1,
+      myRank: newRank
+    });
+  }, [showAlert]);
 
   const resetRivals = useCallback(() => {
     if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
@@ -122,6 +148,7 @@ export const useLiveRivals = (initialRivals: LiveRival[] = []) => {
     overtakenSetRef.current.clear();
     approachedSetRef.current.clear();
     alertedThreatRef.current = false;
+    alertedThreatOvertakeRef.current = false;
   }, []);
 
   return {
@@ -129,6 +156,7 @@ export const useLiveRivals = (initialRivals: LiveRival[] = []) => {
     setRivals,
     setRivalData,
     onScoreUpdated,
+    triggerThreatOvertake,
     resetRivals,
   };
 };
