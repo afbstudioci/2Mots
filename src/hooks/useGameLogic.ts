@@ -86,7 +86,7 @@ export const useGameLogic = () => {
     isFetchingNextBatch.current = true;
     try {
       const excludeParam = playedWordIdsRef.current.slice(-20).join(',');
-      const res = await api.get(`/game/batch?exclude=${excludeParam}`, { timeout: 3500 });
+      const res = await api.get(`/game/batch?exclude=${excludeParam}`, { timeout: 60000 });
       const d = res.data?.data;
       let fresh: any[] = [];
       if (d && Array.isArray(d) && d.length > 0) {
@@ -120,7 +120,7 @@ export const useGameLogic = () => {
   const loadInitialBatch = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await api.get('/game/batch', { timeout: 3500 });
+      const res = await api.get('/game/batch', { timeout: 90000 });
       const d = res.data?.data;
       const s = res.data?.userStats;
       const rivals = res.data?.rivals;
