@@ -92,13 +92,16 @@ export const getLocalGameBatch = (count = 15, userLevel = 1, excludeIds: string[
   const pool = matched.length >= count ? matched : available;
 
   const shuffled = shuffleArray(pool).slice(0, count);
+  const shouldSpawnKey = Math.random() < 0.25;
+  const keyPosition = shouldSpawnKey ? (Math.floor(Math.random() * (shuffled.length - 6)) + 3) : -1;
+
   return shuffled.map((p, idx) => {
     const correct = p.exactMatch[0];
     const opts = shuffleArray([correct, p.distractors[0], p.distractors[1]]);
     return {
       ...p,
       options: opts,
-      hasKey: idx === 17
+      hasKey: idx === keyPosition
     };
   });
 };
