@@ -23,10 +23,10 @@ export interface RivalAlertData {
 export const useLiveRivals = (initialRivals: LiveRival[] = []) => {
   const rivalsRef = useRef<LiveRival[]>([]);
   const threatBehindRef = useRef<LiveRival | null>(null);
-  const myRankRef = useRef<number>(1);
+  const baseRankRef = useRef<number>(1);
   const [activeAlert, setActiveAlert] = useState<RivalAlertData | null>(null);
-  const alertedApproachesRef = useRef<Set<number>>(new Set());
-  const alertedOvertakesRef = useRef<Set<number>>(new Set());
+  const overtakenSetRef = useRef<Set<string>>(new Set());
+  const approachedSetRef = useRef<Set<string>>(new Set());
   const alertedThreatRef = useRef<boolean>(false);
   const dismissTimerRef = useRef<any>(null);
 
@@ -34,9 +34,9 @@ export const useLiveRivals = (initialRivals: LiveRival[] = []) => {
     const sorted = [...(rivals || [])].sort((a, b) => a.score - b.score);
     rivalsRef.current = sorted;
     threatBehindRef.current = threat;
-    myRankRef.current = userRank;
-    alertedApproachesRef.current.clear();
-    alertedOvertakesRef.current.clear();
+    baseRankRef.current = Math.max(1, userRank);
+    overtakenSetRef.current.clear();
+    approachedSetRef.current.clear();
     alertedThreatRef.current = false;
   }, []);
 
@@ -50,83 +50,77 @@ export const useLiveRivals = (initialRivals: LiveRival[] = []) => {
     }
   }, [initialRivals, setRivals]);
 
+  const showAlert = (alert: RivalAlertData, durationMs = 4500) => {
+    if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+    setActiveAlert(alert);
+    dismissTimerRef.current = setTimeout(() => {
+      setActiveAlert(null);
+    }, durationMs);
+  };
+
   const onScoreUpdated = useCallback((currentScore: number) => {
     if (currentScore <= 0) return;
 
-    // Cas 1 : Alerte "En Danger / Poursuivant" dès le 1er mot trouvé
-    if (currentScore === 1 && threatBehindRef.current && !alertedThreatRef.current) {
+    // 1. Alerte DÉPASSEMENT (Priorité 1) : Détecte si on franchit le score d'un rival
+    const rivals = rivalsRef.current;
+    for (const rival of rivals) {
+      if (currentScore >= rival.score && !overtakenSetRef.current.has(rival.pseudo)) {
+        overtakenSetRef.current.add(rival.pseudo);
+
+        const currentOvertakes = overtakenSetRef.current.size;
+        const newRank = Math.max(1, baseRankRef.current - currentOvertakes);
+
+        try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); } catch {}
+
+        showAlert({
+          type: 'overtake',
+          rivalPseudo: rival.pseudo,
+          rivalScore: rival.score,
+          rivalRank: newRank,
+          myRank: newRank
+        });
+        return;
+      }
+    }
+
+    // 2. Alerte APPROCHE (Priorité 2) : Détecte si on est à 1 ou 2 mots de doubler le prochain rival
+    for (const rival of rivals) {
+      const remaining = rival.score - currentScore;
+      if (remaining > 0 && remaining <= 2 && !approachedSetRef.current.has(rival.pseudo) && !overtakenSetRef.current.has(rival.pseudo)) {
+        approachedSetRef.current.add(rival.pseudo);
+
+        try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+
+        showAlert({
+          type: 'approach',
+          rivalPseudo: rival.pseudo,
+          rivalScore: remaining,
+          rivalRank: rival.rank || Math.max(1, baseRankRef.current - 1)
+        });
+        return;
+      }
+    }
+
+    // 3. Alerte DANGER (Poursuivant direct) : Affiché uniquement au tout début (mot 2) si quelqu'un talonne
+    if (currentScore === 2 && threatBehindRef.current && !alertedThreatRef.current) {
       alertedThreatRef.current = true;
       const threat = threatBehindRef.current;
-      try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
-
-      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
-      setActiveAlert({
-        type: 'danger',
-        rivalPseudo: threat.pseudo,
-        rivalRank: threat.rank,
-        myRank: myRankRef.current,
-      });
-
-      dismissTimerRef.current = setTimeout(() => {
-        setActiveAlert(null);
-      }, 5000);
-      return;
-    }
-
-    if (rivalsRef.current.length === 0) return;
-
-    const list = rivalsRef.current;
-    const targetIdx = list.findIndex(r => r.score >= currentScore);
-    if (targetIdx === -1) return;
-
-    const target = list[targetIdx];
-    const nextTarget = list[targetIdx + 1] || null;
-
-    // Cas 2 : Dépassement de rang mondial (currentScore === target.score)
-    if (currentScore === target.score && !alertedOvertakesRef.current.has(target.score)) {
-      alertedOvertakesRef.current.add(target.score);
       try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
 
-      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
-      setActiveAlert({
-        type: 'overtake',
-        rivalPseudo: target.pseudo,
-        rivalScore: target.score,
-        rivalRank: target.rank,
-        nextRivalPseudo: nextTarget ? nextTarget.pseudo : undefined,
-        nextRivalScore: nextTarget ? nextTarget.score : undefined,
-        nextRivalRank: nextTarget ? nextTarget.rank : undefined,
+      showAlert({
+        type: 'danger',
+        rivalPseudo: threat.pseudo,
+        rivalRank: threat.rank || (baseRankRef.current + 1),
+        myRank: baseRankRef.current
       });
-
-      dismissTimerRef.current = setTimeout(() => {
-        setActiveAlert(null);
-      }, 5000);
-      return;
-    }
-
-    // Cas 3 : Approche d'une place supérieure (currentScore === target.score - 1)
-    if (currentScore === target.score - 1 && target.score >= 3 && !alertedApproachesRef.current.has(target.score)) {
-      alertedApproachesRef.current.add(target.score);
-
-      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
-      setActiveAlert({
-        type: 'approach',
-        rivalPseudo: target.pseudo,
-        rivalScore: target.score,
-        rivalRank: target.rank,
-      });
-
-      dismissTimerRef.current = setTimeout(() => {
-        setActiveAlert(null);
-      }, 5000);
     }
   }, []);
 
   const resetRivals = useCallback(() => {
     if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
     setActiveAlert(null);
-    alertedApproachesRef.current.clear();
-    alertedOvertakesRef.current.clear();
+    overtakenSetRef.current.clear();
+    approachedSetRef.current.clear();
     alertedThreatRef.current = false;
   }, []);
 

@@ -10,8 +10,7 @@ import { getLocalGameBatch, shuffleArray } from '../services/offlineVault';
 import { EnrichedWordPair, GameAnswer } from '../types/gameTypes';
 import * as Haptics from 'expo-haptics';
 
-const normalizeStr = (str: string) =>
-  (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+const normalizeStr = (s: string) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
 export const useGameLogic = () => {
   const { user } = useAuth();
@@ -19,39 +18,39 @@ export const useGameLogic = () => {
   const liveRivals = useLiveRivals();
 
   const [wordPairs, setWordPairs] = useState<EnrichedWordPair[]>([]);
-  const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [correctChoice, setCorrectChoice] = useState<string | null>(null);
   const [isCorrectState, setIsCorrectState] = useState<boolean | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isChecking, setIsChecking] = useState<boolean>(false);
-  const [userLevel, setUserLevel] = useState<number>(user?.level || 1);
-  const [currentXp, setCurrentXp] = useState<number>(user?.xp || 0);
-  const [xpNeeded, setXpNeeded] = useState<number>(3 + (user?.level || 1) * 2);
-  const [userKevs, setUserKevs] = useState<number>(user?.kevs || 0);
-  const [kevyKeys, setKevyKeys] = useState<number>(user?.kevyKeys || 0);
-  const [showKevyChest, setShowKevyChest] = useState<boolean>(false);
-  const [isFeverMode, setIsFeverMode] = useState<boolean>(false);
-  const [successTrigger, setSuccessTrigger] = useState<number>(0);
-  const [lastAccuracy, setLastAccuracy] = useState<number>(100);
-  const [showLevelUpModal, setShowLevelUpModal] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isChecking, setIsChecking] = useState(false);
+  const [userLevel, setUserLevel] = useState(user?.level || 1);
+  const [currentXp, setCurrentXp] = useState(user?.xp || 0);
+  const [xpNeeded, setXpNeeded] = useState(3 + (user?.level || 1) * 2);
+  const [userKevs, setUserKevs] = useState(user?.kevs || 0);
+  const [kevyKeys, setKevyKeys] = useState(user?.kevyKeys || 0);
+  const [showKevyChest, setShowKevyChest] = useState(false);
+  const [isFeverMode, setIsFeverMode] = useState(false);
+  const [successTrigger, setSuccessTrigger] = useState(0);
+  const [lastAccuracy, setLastAccuracy] = useState(100);
+  const [showLevelUpModal, setShowLevelUpModal] = useState(false);
   const [errorLimitData, setErrorLimitData] = useState<{ visible: boolean; count: number; reason: string } | null>(null);
-  const [isFastCombo, setIsFastCombo] = useState<boolean>(false);
+  const [isFastCombo, setIsFastCombo] = useState(false);
 
-  const feverStreakRef = useRef<number>(0);
-  const kevyKeysRef = useRef<number>(user?.kevyKeys || 0);
-  const consecutiveErrorsRef = useRef<number>(0);
-  const totalErrorsRef = useRef<number>(0);
+  const feverStreakRef = useRef(0);
+  const kevyKeysRef = useRef(user?.kevyKeys || 0);
+  const consecutiveErrorsRef = useRef(0);
+  const totalErrorsRef = useRef(0);
   const playedWordIdsRef = useRef<string[]>([]);
   const sessionAnswersRef = useRef<GameAnswer[]>([]);
   const playedPairsHistoryRef = useRef<Map<string, any>>(new Map());
-  const isFetchingNextBatch = useRef<boolean>(false);
+  const isFetchingNextBatch = useRef(false);
 
-  const userLevelRef = useRef<number>(userLevel);
+  const userLevelRef = useRef(userLevel);
   userLevelRef.current = userLevel;
-  const currentXpRef = useRef<number>(currentXp);
+  const currentXpRef = useRef(currentXp);
   currentXpRef.current = currentXp;
-  const userKevsRef = useRef<number>(userKevs);
+  const userKevsRef = useRef(userKevs);
   userKevsRef.current = userKevs;
 
   const currentPairRef = useRef<EnrichedWordPair | null>(null);
@@ -59,8 +58,8 @@ export const useGameLogic = () => {
 
   const timer = useGameTimer({
     isLoading, showLevelUpModal, showKevyChest, errorLimitData, userLevel,
-    userLevelRef, currentXpRef, userKevsRef,
-    currentPairRef, sessionAnswersRef, playedPairsHistoryRef, kevyKeysRef, stopBgm, playDanger,
+    userLevelRef, currentXpRef, userKevsRef, currentPairRef, sessionAnswersRef,
+    playedPairsHistoryRef, kevyKeysRef, stopBgm, playDanger,
   });
 
   const boosters = useGameBoosters({
@@ -88,30 +87,22 @@ export const useGameLogic = () => {
       const excludeParam = playedWordIdsRef.current.slice(-20).join(',');
       const res = await api.get(`/game/batch?exclude=${excludeParam}`, { timeout: 60000 });
       const d = res.data?.data;
-      let fresh: any[] = [];
-      if (d && Array.isArray(d) && d.length > 0) {
-        const recent = new Set(playedWordIdsRef.current.slice(-15));
-        fresh = d.filter((p: any) => !recent.has(p._id));
-        if (fresh.length === 0) fresh = d;
-      }
-      if (fresh.length === 0) {
-        const local = getLocalGameBatch(30, userLevel, playedWordIdsRef.current.slice(-20));
-        fresh = local as any;
-      }
-      if (fresh.length > 0) {
-        const enriched = fresh.map((p: any, idx: number) => ({
+      const { rivals, threatBehind, userRank } = res.data || {};
+      if (rivals?.length) liveRivals.setRivalData(rivals, threatBehind, userRank || 1);
+
+      let fresh = Array.isArray(d) ? d.filter((p: any) => !new Set(playedWordIdsRef.current.slice(-15)).has(p._id)) : [];
+      if (!fresh.length) fresh = d || getLocalGameBatch(30, userLevel, playedWordIdsRef.current.slice(-20));
+
+      if (fresh.length) {
+        setWordPairs((prev) => [...prev, ...fresh.map((p: any, idx: number) => ({
           ...p,
           options: shuffleArray(p.options || []),
           hasKey: typeof p.hasKey === 'boolean' ? p.hasKey : (idx === 17)
-        }));
-        setWordPairs((prev) => [...prev, ...enriched]);
+        }))]);
       }
     } catch {
       const local = getLocalGameBatch(30, userLevel, playedWordIdsRef.current.slice(-20));
-      if (local.length > 0) {
-        const enriched = (local as any).map((p: any, idx: number) => ({ ...p, hasKey: idx === 17 }));
-        setWordPairs((prev) => [...prev, ...enriched]);
-      }
+      if (local.length) setWordPairs((prev) => [...prev, ...(local as any).map((p: any, idx: number) => ({ ...p, hasKey: idx === 17 }))]);
     } finally {
       isFetchingNextBatch.current = false;
     }
@@ -121,28 +112,16 @@ export const useGameLogic = () => {
     setIsLoading(true);
     try {
       const res = await api.get('/game/batch', { timeout: 90000 });
-      const d = res.data?.data;
-      const s = res.data?.userStats;
-      const rivals = res.data?.rivals;
-      const threatBehind = res.data?.threatBehind;
-      const userRank = res.data?.userRank || 1;
-      if (rivals && Array.isArray(rivals)) {
-        liveRivals.setRivalData(rivals, threatBehind, userRank);
-      }
-      if (d?.length > 0) {
-        setWordPairs(d.map((p: any, idx: number) => ({
-          ...p,
-          options: shuffleArray(p.options || []),
-          hasKey: typeof p.hasKey === 'boolean' ? p.hasKey : (idx === 17)
-        })));
+      const { data: d, userStats: s, rivals, threatBehind, userRank } = res.data || {};
+      if (rivals?.length) liveRivals.setRivalData(rivals, threatBehind, userRank || 1);
+      if (d?.length) {
+        setWordPairs(d.map((p: any, idx: number) => ({ ...p, options: shuffleArray(p.options || []), hasKey: typeof p.hasKey === 'boolean' ? p.hasKey : (idx === 17) })));
         if (s) {
-          setUserLevel(s.level || 1);
-          setCurrentXp(s.xp || 0);
-          setXpNeeded(s.xpNeeded || 3 + (s.level || 1) * 2);
-          setUserKevs(s.kevs || 0);
+          setUserLevel(s.level || 1); setCurrentXp(s.xp || 0);
+          setXpNeeded(s.xpNeeded || 3 + (s.level || 1) * 2); setUserKevs(s.kevs || 0);
           if (typeof s.kevyKeys === 'number') { setKevyKeys(s.kevyKeys); kevyKeysRef.current = s.kevyKeys; }
         }
-      } else { throw new Error('Batch initial vide'); }
+      } else { throw new Error('Vide'); }
     } catch {
       const local = getLocalGameBatch(30, 1, []);
       setWordPairs((local as any).map((p: any, idx: number) => ({ ...p, hasKey: idx === 17 })));
@@ -152,16 +131,8 @@ export const useGameLogic = () => {
     }
   }, []);
 
-  useEffect(() => {
-    loadInitialBatch();
-    boosters.syncInventory();
-  }, []);
-
-  useEffect(() => {
-    if (wordPairs.length > 0 && currentIndex >= wordPairs.length - 4) {
-      fetchNextBatch();
-    }
-  }, [currentIndex, wordPairs.length, fetchNextBatch]);
+  useEffect(() => { loadInitialBatch(); boosters.syncInventory(); }, []);
+  useEffect(() => { if (wordPairs.length && currentIndex >= wordPairs.length - 4) fetchNextBatch(); }, [currentIndex, wordPairs.length, fetchNextBatch]);
 
   const selectChoice = (choice: string, onSuccessTransition: () => void) => {
     if (isChecking || selectedChoice !== null || timer.hasTriggeredGameOver || showKevyChest) return;
@@ -170,13 +141,12 @@ export const useGameLogic = () => {
 
     setSelectedChoice(choice);
     setIsChecking(true);
-    const maxT = timer.maxTime || 30;
-    const timeSpent = Math.max(1, maxT - timer.timeLeft);
-    const officialSolution = pair.exactMatch?.[0] || pair.options[0];
-    const isCorrect = pair.exactMatch?.some((m: string) => normalizeStr(m) === normalizeStr(choice)) ?? (normalizeStr(officialSolution) === normalizeStr(choice));
+    const timeSpent = Math.max(1, (timer.maxTime || 30) - timer.timeLeft);
+    const solution = pair.exactMatch?.[0] || pair.options[0];
+    const isCorrect = pair.exactMatch?.some((m: string) => normalizeStr(m) === normalizeStr(choice)) ?? (normalizeStr(solution) === normalizeStr(choice));
 
     setIsCorrectState(isCorrect);
-    setCorrectChoice(officialSolution);
+    setCorrectChoice(solution);
     playedPairsHistoryRef.current.set(pair._id, pair);
     sessionAnswersRef.current.push({ wordPairId: pair._id, answer: choice, isCorrect, timeSpent, accuracy: isCorrect ? 100 : 0 });
     playedWordIdsRef.current.push(pair._id);
@@ -195,15 +165,10 @@ export const useGameLogic = () => {
 
       const isFast = timeSpent <= 3.5 && !boosters.isHintUsed;
       setIsFastCombo(isFast);
-
       if (isFast) {
         feverStreakRef.current += 1;
-        if (feverStreakRef.current >= 3 && !isFeverMode) {
-          setIsFeverMode(true);
-        }
-      } else if (!isFeverMode) {
-        feverStreakRef.current = 0;
-      }
+        if (feverStreakRef.current >= 3 && !isFeverMode) setIsFeverMode(true);
+      } else if (!isFeverMode) { feverStreakRef.current = 0; }
 
       if (pair.hasKey) {
         setKevyKeys((prev) => {
@@ -216,37 +181,31 @@ export const useGameLogic = () => {
         });
       }
 
-      const kevsToAdd = isFeverMode ? 3 : (isFast ? 3 : 1);
+      const kevsToAdd = isFeverMode || isFast ? 3 : 1;
       const xpToAdd = isFeverMode ? 3 : (isFast ? 2 : 1);
-      const bonusTimeMs = isFeverMode ? 12000 : (isFast ? 10000 : 8000);
+      const bonusMs = isFeverMode ? 12000 : (isFast ? 10000 : 8000);
 
       setUserKevs((prev) => prev + kevsToAdd);
       if (user) user.kevs = (user.kevs || 0) + kevsToAdd;
-      timer.setTimeWon(Math.floor(bonusTimeMs / 1000));
-      timer.addTimeMs(bonusTimeMs);
+      timer.setTimeWon(Math.floor(bonusMs / 1000));
+      timer.addTimeMs(bonusMs);
 
       setCurrentXp((prev) => {
         const next = prev + xpToAdd;
         const needed = 3 + userLevel * 2;
         if (next >= needed) {
           const nextLvl = userLevel + 1;
-          const updatedKevs = (userKevs || 0) + 5;
-          setUserLevel(nextLvl);
-          setXpNeeded(3 + nextLvl * 2);
-          setShowLevelUpModal(true);
-          playLevelUp();
+          setUserLevel(nextLvl); setXpNeeded(3 + nextLvl * 2);
+          setShowLevelUpModal(true); playLevelUp();
           if (user) { user.level = nextLvl; user.xp = 0; user.kevs = (user.kevs || 0) + 5; }
-          api.post('/game/sync-level', { level: nextLvl, xp: 0, kevs: updatedKevs }, { timeout: 3000 }).catch(() => {});
+          api.post('/game/sync-level', { level: nextLvl, xp: 0, kevs: (userKevs || 0) + 5 }, { timeout: 3000 }).catch(() => {});
           return 0;
         }
         return next;
       });
     } else {
-      setIsFastCombo(false);
-      setIsFeverMode(false);
-      feverStreakRef.current = 0;
-      consecutiveErrorsRef.current += 1;
-      totalErrorsRef.current += 1;
+      setIsFastCombo(false); setIsFeverMode(false); feverStreakRef.current = 0;
+      consecutiveErrorsRef.current += 1; totalErrorsRef.current += 1;
       try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch {}
       playError();
       if (consecutiveErrorsRef.current >= 3) {
@@ -264,12 +223,8 @@ export const useGameLogic = () => {
     }
 
     setTimeout(() => {
-      setSelectedChoice(null);
-      setCorrectChoice(null);
-      setIsCorrectState(null);
-      setIsFastCombo(false);
-      boosters.resetBoosterState();
-      setIsChecking(false);
+      setSelectedChoice(null); setCorrectChoice(null); setIsCorrectState(null);
+      setIsFastCombo(false); boosters.resetBoosterState(); setIsChecking(false);
       if (!showLevelUpModal && !showKevyChest && !timer.hasTriggeredGameOver && !errorLimitData?.visible) {
         onSuccessTransition();
       }
@@ -277,11 +232,8 @@ export const useGameLogic = () => {
   };
 
   const handleCloseLevelUp = () => { setShowLevelUpModal(false); timer.resetTimer(); };
-
   const handleCloseKevyChest = (gains: { kevs: number; freeze: number; hint: number; shield: number }) => {
-    setShowKevyChest(false);
-    setKevyKeys(0);
-    kevyKeysRef.current = 0;
+    setShowKevyChest(false); setKevyKeys(0); kevyKeysRef.current = 0;
     if (user) { user.kevyKeys = 0; if (gains.kevs > 0) user.kevs = (user.kevs || 0) + gains.kevs; }
     if (gains.kevs > 0) setUserKevs((prev) => prev + gains.kevs);
     if (gains.freeze > 0) boosters.addBooster('freeze', gains.freeze);
@@ -301,8 +253,7 @@ export const useGameLogic = () => {
     superClueCount: boosters.superClueCount, secondChanceCount: boosters.secondChanceCount,
     showNoKevsModal: boosters.showNoKevsModal, setShowNoKevsModal: boosters.setShowNoKevsModal,
     userLevel, currentXp, xpNeeded, userKevs, kevyKeys, showKevyChest, handleCloseKevyChest,
-    activeRivalAlert: liveRivals.activeAlert,
-    timeWon: timer.timeWon, setTimeWon: timer.setTimeWon,
+    activeRivalAlert: liveRivals.activeAlert, timeWon: timer.timeWon, setTimeWon: timer.setTimeWon,
     successTrigger, lastAccuracy, selectChoice, showLevelUpModal, setShowLevelUpModal,
     handleCloseLevelUp, errorLimitData, setErrorLimitData, triggerGameOver: timer.triggerGameOver,
   };
