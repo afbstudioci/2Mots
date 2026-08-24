@@ -17,6 +17,7 @@
     "android": {
       "package": "com.afbstudio.twomots",
       "versionCode": 24,
+      "supportsTablet": true,
       "permissions": [
         "com.android.vending.BILLING",
         "android.permission.RECORD_AUDIO",
