@@ -1,4 +1,4 @@
-﻿//src/context/DataContext.tsx
+//src/context/DataContext.tsx
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import api from '../services/api';
 import { useSocket } from '../hooks/useSocket';
@@ -102,7 +102,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateLeaderboard = useCallback(async () => {
     if (!user) { setLeaderboard([]); return; }
     try {
-      const response = await api.get('/leaderboard');
+      const response = await api.get('/leaderboard', { params: { t: Date.now() } });
       setLeaderboard(response.data?.data || []);
     } catch {}
   }, [user]);

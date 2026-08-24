@@ -28,8 +28,11 @@ export default function GameOverScreen() {
   const { updateLeaderboard } = useData();
 
   useEffect(() => {
-    refreshProfile();
-    updateLeaderboard();
+    const timer = setTimeout(() => {
+      refreshProfile();
+      updateLeaderboard();
+    }, 400);
+    return () => clearTimeout(timer);
   }, []);
 
   const { score, reason, stats, enigmasSummary = [], corrections = [], details = [] } = route.params || {};

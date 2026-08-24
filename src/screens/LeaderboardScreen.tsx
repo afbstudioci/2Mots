@@ -32,7 +32,7 @@ export default function LeaderboardScreen() {
 
   const fetchLiveLeaderboard = useCallback(async () => {
     try {
-      const res = await api.get('/leaderboard', { timeout: 4000 });
+      const res = await api.get('/leaderboard', { params: { t: Date.now() }, timeout: 5000 });
       const data = res.data?.data;
       if (Array.isArray(data) && data.length > 0) {
         setLeaderboardData(data);
