@@ -60,13 +60,19 @@ export default function GameChoicesArea({
   const normalizeChoice = (text: string) =>
     (text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
-  const displayQuestion = clue && clue.trim().length > 0
-    ? clue
-    : 'Quel point commun les relie ?';
+  const formatClueTypography = (text?: string | null) => {
+    if (!text || text.trim().length === 0) return 'Quel point commun les relie ?';
+    return text
+      .replace(/\b([ldscnjm]|qu)\s+([aeiouyhéèêëàâîïôûù])/gi, "$1'$2")
+      .replace(/(\w)'\s+(\w)/g, "$1'$2")
+      .trim();
+  };
+
+  const displayQuestion = formatClueTypography(clue);
 
   return (
     <View style={styles.container}>
-      {/* Bulle d'indice complète sans aucune troncature */}
+      {/* Bulle d'indice complète avec typographie française soignée */}
       <View style={[styles.questionCard, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
         <Ionicons name="help-circle-outline" size={16} color={colors.coral} style={styles.questionIcon} />
         <Text style={[styles.questionText, { color: themeColors.text }]}>
