@@ -181,12 +181,15 @@ export const useGameLogic = () => {
         });
       }
 
-      const kevsToAdd = isFeverMode || isFast ? 3 : 1;
+      const correctCount = sessionAnswersRef.current.filter((a) => a.isCorrect).length;
+      const kevsToAdd = (isFeverMode || isFast) ? 1 : (correctCount % 2 === 0 ? 1 : 0);
       const xpToAdd = isFeverMode ? 3 : (isFast ? 2 : 1);
       const bonusMs = isFeverMode ? 12000 : (isFast ? 10000 : 8000);
 
-      setUserKevs((prev) => prev + kevsToAdd);
-      if (user) user.kevs = (user.kevs || 0) + kevsToAdd;
+      if (kevsToAdd > 0) {
+        setUserKevs((prev) => prev + kevsToAdd);
+        if (user) user.kevs = (user.kevs || 0) + kevsToAdd;
+      }
       timer.setTimeWon(Math.floor(bonusMs / 1000));
       timer.addTimeMs(bonusMs);
 
