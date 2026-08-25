@@ -1,8 +1,9 @@
 //src/screens/SplashScreen.tsx
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors, spacing } from '../theme/theme';
+import api from '../services/api';
 
 interface SplashScreenProps {
   onFinish?: () => void;
@@ -10,11 +11,17 @@ interface SplashScreenProps {
 
 export default function SplashScreen({ onFinish }: SplashScreenProps) {
   const [progress, setProgress] = useState(0);
+  const [showStatus, setShowStatus] = useState(false);
+  const [dotsCount, setDotsCount] = useState(1);
+  const [isReady, setIsReady] = useState(false);
 
   const containerFadeAnim = useRef(new Animated.Value(1)).current;
   const contentFadeAnim = useRef(new Animated.Value(1)).current;
+  const statusFadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
+
   const hasFinished = useRef(false);
+  const serverResponded = useRef(false);
 
   const completeSplash = () => {
     if (hasFinished.current) return;
@@ -30,32 +37,77 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
   };
 
   useEffect(() => {
-    const progressInterval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(progressInterval);
-          return 100;
-        }
-        return Math.min(100, prev + 15);
-      });
-    }, 100);
+    let progressInterval: any = null;
+    let dotsInterval: any = null;
+    const startTime = Date.now();
 
-    const animTimer = setTimeout(() => {
-      setProgress(100);
-      clearInterval(progressInterval);
-      completeSplash();
+    // 1. Lancement immédiat de la requête de réveil au backend
+    const pingBackend = async () => {
+      try {
+        await api.get('/health', { timeout: 60000 });
+      } catch {
+        // En cas d'erreur ou hors-ligne, on continue quand même
+      } finally {
+        serverResponded.current = true;
+        setIsReady(true);
+      }
+    };
+
+    pingBackend();
+
+    // 2. Progression fluide initiale (jusqu'à 85% max si le serveur dort)
+    progressInterval = setInterval(() => {
+      setProgress((prev) => {
+        if (serverResponded.current) {
+          if (prev >= 100) {
+            clearInterval(progressInterval);
+            setTimeout(completeSplash, 250);
+            return 100;
+          }
+          return Math.min(100, prev + 12);
+        }
+
+        // Si le serveur dort encore, on plafonne doucement à 85%
+        if (prev < 85) {
+          return prev + 6;
+        }
+        return 85;
+      });
+    }, 80);
+
+    // 3. Si après 1.4s le serveur n'a pas répondu, on affiche le message de réveil
+    const wakeUpTimer = setTimeout(() => {
+      if (!serverResponded.current) {
+        setShowStatus(true);
+        Animated.timing(statusFadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
+
+        dotsInterval = setInterval(() => {
+          setDotsCount((d) => (d >= 3 ? 1 : d + 1));
+        }, 450);
+      }
     }, 1400);
 
+    // 4. Failsafe absolu (au cas où le réseau met trop de temps)
     const failsafeTimer = setTimeout(() => {
-      completeSplash();
-    }, 2000);
+      serverResponded.current = true;
+      setIsReady(true);
+      setProgress(100);
+      setTimeout(completeSplash, 200);
+    }, 45000);
 
     return () => {
-      clearTimeout(animTimer);
-      clearTimeout(failsafeTimer);
       clearInterval(progressInterval);
+      clearInterval(dotsInterval);
+      clearTimeout(wakeUpTimer);
+      clearTimeout(failsafeTimer);
     };
   }, []);
+
+  const dotsString = '.'.repeat(dotsCount);
 
   return (
     <Animated.View
@@ -92,6 +144,14 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
         </Animated.View>
 
         <Animated.View style={styles.bottomBlock}>
+          {showStatus && (
+            <Animated.View style={[styles.statusContainer, { opacity: statusFadeAnim }]}>
+              <Text style={styles.statusText}>
+                {isReady ? 'Serveur prêt !' : `Démarrage du serveur ${dotsString}`}
+              </Text>
+            </Animated.View>
+          )}
+
           <Animated.View style={styles.progressBarBackground}>
             <Animated.View
               style={[
@@ -137,6 +197,18 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     paddingBottom: spacing.xl,
+  },
+  statusContainer: {
+    marginBottom: spacing.sm,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statusText: {
+    fontFamily: 'Poppins_600SemiBold',
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 11,
+    letterSpacing: 0.5,
   },
   progressBarBackground: {
     width: 110,

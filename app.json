@@ -16,7 +16,7 @@
     },
     "android": {
       "package": "com.afbstudio.twomots",
-      "versionCode": 26,
+      "versionCode": 27,
       "supportsTablet": true,
       "permissions": [
         "com.android.vending.BILLING",
@@ -34,11 +34,15 @@
     },
     "updates": {
       "url": "https://u.expo.dev/b10e5217-af10-4e8a-a753-b7b2608af455",
-      "enabled": true,
-      "checkAutomatically": "ON_LOAD",
-      "fallbackToCacheTimeout": 5000
+      "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "ON_ERROR_RECOVERY",
+      "requestHeaders": {
+        "expo-channel-name": "production"
+      }
     },
-    "runtimeVersion": "1.0.3",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "plugins": [
       "expo-audio",
       [
