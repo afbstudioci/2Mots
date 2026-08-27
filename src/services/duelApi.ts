@@ -80,3 +80,8 @@ export const getDuelDetails = async (duelId: string): Promise<DuelSessionData> =
   const response = await api.get(`/duel/${duelId}`);
   return response.data?.data;
 };
+
+export const cancelDuelInvite = async (duelId: string): Promise<any> => {
+  const response = await api.post('/duel/cancel', { duelId });
+  return response.data?.data;
+};

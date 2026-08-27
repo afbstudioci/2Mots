@@ -33,7 +33,8 @@ import DuelLobbyScreen from './src/screens/DuelLobbyScreen';
 import DuelGameScreen from './src/screens/DuelGameScreen';
 import MainTabNavigator from './src/components/navigation/MainTabNavigator';
 import UpdateModal from './src/components/common/UpdateModal';
-import { registerForPushNotificationsAsync } from './src/services/notificationService';
+import { navigationRef } from './src/navigation/navigationRef';
+import { usePushNotifications } from './src/hooks/usePushNotifications';
 import { useAppStartup } from './src/hooks/useAppStartup';
 import { useAppUpdates } from './src/hooks/useAppUpdates';
 
@@ -119,10 +120,10 @@ const AppNavigator = () => {
 };
 
 const AppContent = () => {
-  const { isDark, themeColors } = useTheme();
-  const [showSplash, setShowSplash] = React.useState(true);
-  useAppStartup();
+  const { themeColors, isDark } = useTheme();
+  const { showSplash, setShowSplash } = useAppStartup();
   const { updateState, handleApplyUpdate, handleDismiss } = useAppUpdates();
+  usePushNotifications();
 
   const navigationTheme = {
     ...(isDark ? NavDarkTheme : DefaultTheme),
@@ -160,7 +161,7 @@ const AppContent = () => {
           backgroundColor="transparent"
           translucent={true}
         />
-        <NavigationContainer theme={navigationTheme} linking={linking as any}>
+        <NavigationContainer ref={navigationRef} theme={navigationTheme} linking={linking as any}>
           <AppNavigator />
         </NavigationContainer>
 

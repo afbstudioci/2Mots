@@ -1,6 +1,6 @@
 //src/components/duel/DuelButton.tsx
-import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../context/ThemeContext';
@@ -15,113 +15,104 @@ interface DuelButtonProps {
 export const DuelButton: React.FC<DuelButtonProps> = ({
   onPress,
   pendingCount = 0,
-  userLevel
+  userLevel,
 }) => {
   const { themeColors, isDark } = useTheme();
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const scalePressAnim = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    if (userLevel >= 5) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 1.03, duration: 1200, useNativeDriver: true }),
-          Animated.timing(pulseAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
-        ])
-      ).start();
-    }
-  }, [userLevel]);
+  const [imageError, setImageError] = useState(false);
 
   if (userLevel < 5) return null;
 
-  const handlePressIn = () => {
-    Animated.spring(scalePressAnim, { toValue: 0.96, useNativeDriver: true }).start();
-  };
-
-  const handlePressOut = () => {
+  const handlePress = () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch {}
-    Animated.spring(scalePressAnim, { toValue: 1, friction: 4, tension: 40, useNativeDriver: true }).start();
     onPress();
   };
 
   return (
-    <Animated.View
-      style={[
-        styles.container,
+    <Pressable
+      onPress={handlePress}
+      style={({ pressed }) => [
+        styles.card,
         {
-          transform: [{ scale: Animated.multiply(pulseAnim, scalePressAnim) }],
+          backgroundColor: themeColors.card,
+          borderColor: themeColors.border,
+          transform: [{ scale: pressed ? 0.98 : 1 }],
         },
+        shadows.soft(isDark),
       ]}
     >
-      <Pressable
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        style={[
-          styles.button,
-          {
-            backgroundColor: themeColors.card,
-            borderColor: colors.coral,
-          },
-          shadows.soft(isDark),
-        ]}
-      >
-        <View style={[styles.iconContainer, { backgroundColor: 'rgba(255, 127, 80, 0.15)' }]}>
-          <Ionicons name="flash" size={20} color={colors.coral} />
+      <View style={styles.leftContainer}>
+        <View style={[styles.iconWrapper, { backgroundColor: themeColors.overlayLight }]}>
+          {!imageError ? (
+            <Image
+              source={require('../../../assets/duelicon.png')}
+              style={styles.iconImage}
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <Ionicons name="flash" size={20} color={colors.coral} />
+          )}
         </View>
 
-        <View style={styles.textContainer}>
-          <View style={styles.titleRow}>
-            <Text style={[styles.title, { color: themeColors.text }]}>ARÈNE DUEL 1v1</Text>
-            {pendingCount > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{pendingCount}</Text>
-              </View>
-            )}
-          </View>
+        <View style={styles.textWrapper}>
+          <Text style={[styles.title, { color: themeColors.text }]}>ARÈNE DUEL 1v1</Text>
           <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-            Défiez des joueurs et misez des Kevs
+            Défiez des joueurs et gagnez leurs Kevs
           </Text>
         </View>
+      </View>
 
-        <Ionicons name="chevron-forward" size={20} color={colors.coral} />
-      </Pressable>
-    </Animated.View>
+      <View style={styles.rightContainer}>
+        {pendingCount > 0 && (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{pendingCount}</Text>
+          </View>
+        )}
+        <Ionicons name="chevron-forward" size={18} color={themeColors.textSecondary} />
+      </View>
+    </Pressable>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  card: {
     width: '100%',
-    marginVertical: spacing.sm,
-  },
-  button: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.sm + 4,
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm + 2,
     paddingHorizontal: spacing.md,
     borderRadius: borderRadius.md,
-    borderWidth: 1.5,
+    borderWidth: 1,
+    marginTop: spacing.md,
   },
-  iconContainer: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+  leftContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  iconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.sm + 4,
+    overflow: 'hidden',
   },
-  textContainer: {
+  iconImage: {
+    width: 28,
+    height: 28,
+    resizeMode: 'contain',
+  },
+  textWrapper: {
     flex: 1,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   title: {
     fontFamily: 'Poppins_700Bold',
-    fontSize: 14,
+    fontSize: 13,
     letterSpacing: 0.5,
   },
   subtitle: {
@@ -129,12 +120,16 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 1,
   },
+  rightContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   badge: {
     backgroundColor: colors.error,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
     borderRadius: 10,
-    marginLeft: spacing.xs,
   },
   badgeText: {
     color: '#FFFFFF',

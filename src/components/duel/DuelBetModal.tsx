@@ -1,6 +1,6 @@
 //src/components/duel/DuelBetModal.tsx
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, Pressable, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Modal, Pressable, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../context/ThemeContext';
@@ -40,6 +40,7 @@ export const DuelBetModal: React.FC<DuelBetModalProps> = ({
   };
 
   const handleConfirm = () => {
+    if (isLoading || userKevs < selectedBet) return;
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch {}
@@ -62,7 +63,7 @@ export const DuelBetModal: React.FC<DuelBetModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          <Text style={[styles.opponentText, { color: themeColors.textSecondary }]}>
+          <Text style={[styles.opponentText, { color: themeColors.textSecondary }]} numberOfLines={1} ellipsizeMode="tail">
             Adversaire : <Text style={{ color: colors.coral, fontFamily: 'Poppins_700Bold' }}>{opponent.login}</Text> (Niveau {opponent.level})
           </Text>
 
@@ -83,7 +84,7 @@ export const DuelBetModal: React.FC<DuelBetModalProps> = ({
                 <TouchableOpacity
                   key={amount}
                   onPress={() => handleSelectBet(amount)}
-                  disabled={!isAvailable}
+                  disabled={!isAvailable || isLoading}
                   style={[
                     styles.betButton,
                     {
@@ -121,13 +122,17 @@ export const DuelBetModal: React.FC<DuelBetModalProps> = ({
               styles.confirmButton,
               {
                 backgroundColor: canAfford ? colors.coral : themeColors.border,
-                opacity: isLoading ? 0.7 : 1,
+                opacity: isLoading ? 0.8 : 1,
               },
             ]}
           >
-            <Text style={styles.confirmButtonText}>
-              {isLoading ? 'Envoi du défi...' : canAfford ? 'LANCER LE DÉFI' : 'SOLDE INSUFFISANT'}
-            </Text>
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.confirmButtonText}>
+                {canAfford ? 'LANCER LE DÉFI' : 'SOLDE INSUFFISANT'}
+              </Text>
+            )}
           </TouchableOpacity>
         </Pressable>
       </Pressable>

@@ -65,14 +65,14 @@ export default function DuelGameScreen() {
       {/* DUEL VERSUS BAR */}
       <View style={[styles.versusContainer, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
         <View style={styles.playerBlock}>
-          <Text style={[styles.playerName, { color: colors.coral }]}>{user?.login}</Text>
+          <Text style={[styles.playerName, { color: colors.coral }]} numberOfLines={1}>{user?.login}</Text>
           <Text style={[styles.playerScore, { color: themeColors.text }]}>{myScore} pts</Text>
         </View>
         <View style={styles.vsBadge}>
           <Text style={styles.vsText}>VS</Text>
         </View>
         <View style={styles.playerBlock}>
-          <Text style={[styles.playerName, { color: themeColors.textSecondary }]}>{opponentUser?.login || 'Adversaire'}</Text>
+          <Text style={[styles.playerName, { color: themeColors.textSecondary }]} numberOfLines={1}>{opponentUser?.login || 'Adversaire'}</Text>
           <Text style={[styles.playerScore, { color: themeColors.text }]}>{opponentScore} pts</Text>
         </View>
       </View>

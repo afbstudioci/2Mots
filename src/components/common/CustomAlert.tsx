@@ -1,6 +1,6 @@
-﻿//src/components/common/CustomAlert.tsx
 import React, { useEffect, useRef } from 'react';
 import { Modal, View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, shadows, spacing } from '../../theme/theme';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -22,7 +22,7 @@ export default function CustomAlert({
   onClose,
   onConfirm,
   type = 'info',
-  buttonText = 'Annuler',
+  buttonText = 'Fermer',
   confirmText = 'Confirmer',
 }: CustomAlertProps) {
   const { themeColors, isDark } = useTheme();
@@ -60,6 +60,17 @@ export default function CustomAlert({
     return colors.coral;
   };
 
+  const renderIcon = () => {
+    switch (type) {
+      case 'success':
+        return <Ionicons name="checkmark-circle" size={44} color={colors.mint} style={{ marginBottom: spacing.xs }} />;
+      case 'error':
+        return <Ionicons name="alert-circle" size={44} color={colors.error} style={{ marginBottom: spacing.xs }} />;
+      default:
+        return <Ionicons name="information-circle" size={44} color={colors.coral} style={{ marginBottom: spacing.xs }} />;
+    }
+  };
+
   return (
     <Modal transparent visible={visible} animationType="none" onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -70,6 +81,8 @@ export default function CustomAlert({
           ]}
         >
           <View style={[styles.indicator, { backgroundColor: getIndicatorColor() }]} />
+
+          {renderIcon()}
 
           <Text style={[styles.title, { color: themeColors.text }]}>{title}</Text>
           <Text style={[styles.message, { color: themeColors.textSecondary }]}>{message}</Text>
@@ -112,7 +125,7 @@ export default function CustomAlert({
               <TouchableOpacity
                 style={[
                   styles.button,
-                  { backgroundColor: type === 'error' ? colors.error : colors.coral },
+                  { backgroundColor: getConfirmBgColor() },
                 ]}
                 onPress={onClose}
                 activeOpacity={0.85}
