@@ -35,7 +35,7 @@ export const useAppUpdates = () => {
       return Number(Constants.expoConfig.android.versionCode);
     }
     // 3. Repli de securite
-    return Platform.OS === 'android' ? 28 : 1;
+    return Platform.OS === 'android' ? 29 : 1;
   };
 
   const localVersionCode = getLocalVersionCode();

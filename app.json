@@ -16,7 +16,7 @@
     },
     "android": {
       "package": "com.afbstudio.twomots",
-      "versionCode": 28,
+      "versionCode": 29,
       "supportsTablet": true,
       "permissions": [
         "com.android.vending.BILLING",
