@@ -1,5 +1,5 @@
 //src/screens/DuelGameScreen.tsx
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -41,11 +41,15 @@ export default function DuelGameScreen() {
   const opponentScore = isChallenger ? scores.opponent : scores.challenger;
   const opponentUser = isChallenger ? duel?.opponent : duel?.challenger;
 
+  const handleExitGame = useCallback(() => {
+    navigation.replace('DuelLobby');
+  }, [navigation]);
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
       {/* HEADER TOP BAR */}
       <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeBtn}>
+        <TouchableOpacity onPress={handleExitGame} style={styles.closeBtn}>
           <Ionicons name="close" size={24} color={themeColors.textSecondary} />
         </TouchableOpacity>
 
@@ -172,7 +176,7 @@ export default function DuelGameScreen() {
         visible={isGameOver}
         duel={duel}
         currentUserId={currentUserId}
-        onClose={() => navigation.navigate('DuelLobby')}
+        onClose={handleExitGame}
       />
     </SafeAreaView>
   );

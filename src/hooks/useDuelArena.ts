@@ -8,14 +8,13 @@ import { getDuelDetails, DuelSessionData, DuelEnigma } from '../services/duelApi
 export type BuzzerState = 'free' | 'my_turn' | 'opponent_turn' | 'expired';
 
 export const useDuelArena = (duelId: string, currentUserId: string) => {
-  const { socket, emit, subscribe, isConnected } = useSocketContext();
+  const { emit, subscribe, isConnected } = useSocketContext();
   const { playBgm, stopBgm, playSuccess, playError, playGameOver } = useAudioContext();
 
   const [duel, setDuel] = useState<DuelSessionData | null>(null);
   const [currentEnigma, setCurrentEnigma] = useState<DuelEnigma | null>(null);
   const [scores, setScores] = useState<{ challenger: number; opponent: number }>({ challenger: 0, opponent: 0 });
   const [isWaitingForOpponent, setIsWaitingForOpponent] = useState<boolean>(true);
-  const [startCountdown, setStartCountdown] = useState<number | null>(null);
 
   const [buzzerState, setBuzzerState] = useState<BuzzerState>('free');
   const [activeBuzzerUserId, setActiveBuzzerUserId] = useState<string | null>(null);
@@ -32,7 +31,6 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
   // 1. Initialisation et connexion à la room
   useEffect(() => {
     let isMounted = true;
-    playBgm();
 
     const loadSession = async () => {
       try {
@@ -45,6 +43,7 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
           }
           if (data.status === 'in_progress' && data.startedAt) {
             setIsWaitingForOpponent(false);
+            playBgm();
           }
           emit('duel_join', { duelId, userId: currentUserId });
         }
@@ -62,7 +61,7 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
       if (globalTimerRef.current) clearInterval(globalTimerRef.current);
       if (buzzerTimerRef.current) clearInterval(buzzerTimerRef.current);
     };
-  }, [duelId, currentUserId, emit, isConnected]);
+  }, [duelId, currentUserId, emit, isConnected, playBgm, stopBgm]);
 
   // 2. Synchronisation du chronomètre global
   useEffect(() => {
@@ -99,6 +98,7 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
 
     const unsubStart = subscribe('duel_start', (data: any) => {
       setIsWaitingForOpponent(false);
+      playBgm();
       if (data?.duel) {
         setDuel(data.duel);
         setScores(data.duel.scores || { challenger: 0, opponent: 0 });
@@ -188,7 +188,7 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
       unsubGameOver();
       unsubSkipped();
     };
-  }, [subscribe, currentUserId, playSuccess, playError, playGameOver, stopBgm]);
+  }, [subscribe, currentUserId, playSuccess, playError, playGameOver, playBgm, stopBgm]);
 
   const pressBuzzer = useCallback(() => {
     if (buzzerState !== 'free' || isGameOver || isWaitingForOpponent) return;

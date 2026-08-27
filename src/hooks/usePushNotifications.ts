@@ -56,13 +56,24 @@ export const usePushNotifications = () => {
           let token: string | undefined;
           try {
             const tokenData = await Notifications.getDevicePushTokenAsync();
-            token = tokenData?.data;
-          } catch {
-            const expoToken = await Notifications.getExpoPushTokenAsync();
-            token = expoToken?.data;
+            token = typeof tokenData?.data === 'string' ? tokenData.data : String(tokenData?.data || '');
+          } catch (devErr) {
+            console.warn('[PUSH] Fallback vers getExpoPushTokenAsync:', devErr);
+          }
+
+          if (!token) {
+            try {
+              const expoToken = await Notifications.getExpoPushTokenAsync({
+                projectId: 'b10e5217-af10-4e8a-a753-b7b2608af455',
+              });
+              token = expoToken?.data;
+            } catch (expoErr) {
+              console.warn('[PUSH] Erreur getExpoPushTokenAsync:', expoErr);
+            }
           }
 
           if (token) {
+            console.log('[PUSH] Token synchronisé avec succès:', token);
             await api.post('/auth/fcm-token', { fcmToken: token });
           }
         } catch (err) {

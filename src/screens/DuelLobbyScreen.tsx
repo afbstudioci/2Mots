@@ -29,7 +29,7 @@ export default function DuelLobbyScreen() {
   const navigation = useNavigation<any>();
   const { themeColors } = useTheme();
   const { user, refreshProfile } = useAuth();
-  const { subscribe } = useSocketContext();
+  const { emit, subscribe } = useSocketContext();
 
   const [activeTab, setActiveTab] = useState<'opponents' | 'received' | 'sent'>('opponents');
   const [opponents, setOpponents] = useState<Opponent[]>([]);
@@ -107,7 +107,13 @@ export default function DuelLobbyScreen() {
     if (!selectedOpponent) return;
     try {
       setIsSendingInvite(true);
-      await sendDuelInvite(selectedOpponent._id, betAmount);
+      const res = await sendDuelInvite(selectedOpponent._id, betAmount);
+      emit('duel_send_invite', {
+        opponentId: String(selectedOpponent._id),
+        challengerName: user?.login,
+        betAmount,
+        duelId: String(res?._id || ''),
+      });
       setSelectedOpponent(null);
       setAlertConfig({
         visible: true,
@@ -139,6 +145,13 @@ export default function DuelLobbyScreen() {
         received: prev.received.filter((i) => i._id !== duelId),
       }));
 
+      emit('duel_respond_invite', {
+        challengerId: String(res?.challenger?._id || res?.challenger || ''),
+        opponentName: user?.login,
+        accept,
+        duelId,
+      });
+
       if (accept) {
         await refreshProfile();
         navigation.navigate('DuelGame', { duelId: res?._id || duelId });
@@ -158,11 +171,14 @@ export default function DuelLobbyScreen() {
     }
   };
 
-  const handleCancelInvite = async (duelId: string) => {
+  const handleCancelInvite = async (duelId: string, opponentId?: string) => {
     try {
       setCancellingInviteId(duelId);
       try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
       await cancelDuelInvite(duelId);
+      if (opponentId) {
+        emit('duel_cancel_invite', { opponentId: String(opponentId), duelId });
+      }
       setInvites((prev) => ({
         ...prev,
         sent: prev.sent.filter((i) => i._id !== duelId),
@@ -191,7 +207,7 @@ export default function DuelLobbyScreen() {
       confirmText: 'Oui, annuler',
       onConfirm: async () => {
         setAlertConfig((prev) => ({ ...prev, visible: false }));
-        await handleCancelInvite(invite._id);
+        await handleCancelInvite(invite._id, invite.opponent?._id);
       },
     });
   };
