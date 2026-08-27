@@ -121,7 +121,8 @@ const AppNavigator = () => {
 
 const AppContent = () => {
   const { themeColors, isDark } = useTheme();
-  const { showSplash, setShowSplash } = useAppStartup();
+  const [showSplash, setShowSplash] = React.useState(true);
+  useAppStartup();
   const { updateState, handleApplyUpdate, handleDismiss } = useAppUpdates();
   usePushNotifications();
 
