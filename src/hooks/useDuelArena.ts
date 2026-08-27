@@ -133,15 +133,40 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
       setIsGameOver(true);
     });
 
+    const unsubSkipped = subscribe('duel_enigma_skipped', (data: any) => {
+      if (buzzerTimerRef.current) clearInterval(buzzerTimerRef.current);
+      setActiveBuzzerUserId(null);
+      setBuzzerSecondsLeft(0);
+      if (data?.nextEnigma) {
+        setCurrentEnigma(data.nextEnigma);
+      }
+    });
+
     return () => {
       unsubReady();
       unsubBuzz();
       unsubAnswer();
       unsubGameOver();
+      unsubSkipped();
       if (globalTimerRef.current) clearInterval(globalTimerRef.current);
       if (buzzerTimerRef.current) clearInterval(buzzerTimerRef.current);
     };
   }, [subscribe]);
+
+  // 4. Timer d'inactivité par énigme (12s sans buzzer -> passage à l'énigme suivante)
+  useEffect(() => {
+    if (isLoading || isGameOver || activeBuzzerUserId) return;
+
+    const inactivityTimeout = setTimeout(() => {
+      if (!activeBuzzerUserId && !isGameOver && socket) {
+        socket.emit('duel_skip_enigma', { duelId });
+      }
+    }, 12000);
+
+    return () => {
+      clearTimeout(inactivityTimeout);
+    };
+  }, [currentEnigma, activeBuzzerUserId, isLoading, isGameOver, socket, duelId]);
 
   // 4. Actions joueur
   const pressBuzzer = useCallback(() => {
