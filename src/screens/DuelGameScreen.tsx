@@ -35,7 +35,8 @@ export default function DuelGameScreen() {
     submitAnswer,
   } = useDuelArena(duelId, currentUserId);
 
-  const isChallenger = String(currentUserId) === String(duel?.challenger?._id);
+  const challengerId = duel?.challenger?._id ? String(duel.challenger._id) : String(duel?.challenger || '');
+  const isChallenger = String(currentUserId) === challengerId;
   const myScore = isChallenger ? scores.challenger : scores.opponent;
   const opponentScore = isChallenger ? scores.opponent : scores.challenger;
   const opponentUser = isChallenger ? duel?.opponent : duel?.challenger;

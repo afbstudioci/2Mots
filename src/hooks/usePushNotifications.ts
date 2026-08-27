@@ -33,6 +33,11 @@ export const usePushNotifications = () => {
           vibrationPattern: [0, 250, 250, 250],
           lightColor: '#FF7F50',
           sound: 'default',
+          enableLights: true,
+          enableVibrate: true,
+          showBadge: true,
+          lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+          bypassDnd: false,
         });
       }
 

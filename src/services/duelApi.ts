@@ -54,6 +54,8 @@ export interface DuelSessionData {
   winner?: { _id: string; login: string; avatar?: string; level: number };
   isDraw?: boolean;
   duration: number;
+  startedAt?: string;
+  endedAt?: string;
 }
 
 export const getEligibleOpponents = async (): Promise<Opponent[]> => {

@@ -43,6 +43,8 @@ export default function DuelLobbyScreen() {
     opponentName: '',
     duelId: '',
   });
+  const [respondingInviteId, setRespondingInviteId] = useState<string | null>(null);
+  const [cancellingInviteId, setCancellingInviteId] = useState<string | null>(null);
   const [alertConfig, setAlertConfig] = useState<{
     visible: boolean;
     title: string;
@@ -128,7 +130,13 @@ export default function DuelLobbyScreen() {
 
   const handleRespond = async (duelId: string, accept: boolean) => {
     try {
+      setRespondingInviteId(duelId);
       try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+      setInvites((prev) => ({
+        ...prev,
+        received: prev.received.filter((i) => i._id !== duelId),
+      }));
+
       const res = await respondDuelInvite(duelId, accept);
       if (accept) {
         await refreshProfile();
@@ -137,27 +145,38 @@ export default function DuelLobbyScreen() {
         loadData();
       }
     } catch (e: any) {
+      loadData();
       setAlertConfig({
         visible: true,
         title: 'Erreur',
         message: e?.response?.data?.message || e.message || 'Action impossible.',
         type: 'error',
       });
+    } finally {
+      setRespondingInviteId(null);
     }
   };
 
   const handleCancelInvite = async (duelId: string) => {
     try {
+      setCancellingInviteId(duelId);
       try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+      setInvites((prev) => ({
+        ...prev,
+        sent: prev.sent.filter((i) => i._id !== duelId),
+      }));
       await cancelDuelInvite(duelId);
       loadData();
     } catch (e: any) {
+      loadData();
       setAlertConfig({
         visible: true,
         title: 'Erreur',
         message: e?.response?.data?.message || e.message || 'Impossible d\'annuler.',
         type: 'error',
       });
+    } finally {
+      setCancellingInviteId(null);
     }
   };
 
@@ -233,9 +252,19 @@ export default function DuelLobbyScreen() {
                 onSelect={setSelectedOpponent}
               />
             ) : activeTab === 'received' ? (
-              <ReceivedInviteItem item={item} themeColors={themeColors} onRespond={handleRespond} />
+              <ReceivedInviteItem
+                item={item}
+                themeColors={themeColors}
+                onRespond={handleRespond}
+                isResponding={respondingInviteId === item._id}
+              />
             ) : (
-              <SentInviteItem item={item} themeColors={themeColors} onCancel={handlePromptCancelInvite} />
+              <SentInviteItem
+                item={item}
+                themeColors={themeColors}
+                onCancel={handlePromptCancelInvite}
+                isCancelling={cancellingInviteId === item._id}
+              />
             )
           }
           contentContainerStyle={styles.listContent}

@@ -33,6 +33,7 @@ import DuelLobbyScreen from './src/screens/DuelLobbyScreen';
 import DuelGameScreen from './src/screens/DuelGameScreen';
 import MainTabNavigator from './src/components/navigation/MainTabNavigator';
 import UpdateModal from './src/components/common/UpdateModal';
+import { InAppNotificationBanner } from './src/components/common/InAppNotificationBanner';
 import { navigationRef } from './src/navigation/navigationRef';
 import { usePushNotifications } from './src/hooks/usePushNotifications';
 import { useAppStartup } from './src/hooks/useAppStartup';
@@ -154,6 +155,8 @@ const AppContent = () => {
         <NavigationContainer ref={navigationRef} theme={navigationTheme} linking={linking as any}>
           <AppNavigator />
         </NavigationContainer>
+
+        <InAppNotificationBanner />
 
         {showSplash && (
           <SplashScreen onFinish={() => setShowSplash(false)} />

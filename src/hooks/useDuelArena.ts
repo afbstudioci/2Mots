@@ -2,10 +2,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as Haptics from 'expo-haptics';
 import { useSocketContext } from '../context/SocketContext';
+import { useAudioContext } from '../context/AudioContext';
 import { getDuelDetails, DuelSessionData, DuelEnigma } from '../services/duelApi';
 
 export const useDuelArena = (duelId: string, currentUserId: string) => {
   const { socket, subscribe } = useSocketContext();
+  const { playBgm, stopBgm, playSuccess, playError, playGameOver } = useAudioContext();
 
   const [duel, setDuel] = useState<DuelSessionData | null>(null);
   const [currentEnigma, setCurrentEnigma] = useState<DuelEnigma | null>(null);
@@ -20,9 +22,10 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
   const globalTimerRef = useRef<any>(null);
   const buzzerTimerRef = useRef<any>(null);
 
-  // 1. Initialisation de la session et connexion à la room
+  // 1. Initialisation de la session et musique de fond
   useEffect(() => {
     let isMounted = true;
+    playBgm();
 
     const loadSession = async () => {
       try {
@@ -47,30 +50,38 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
     loadSession();
     return () => {
       isMounted = false;
+      stopBgm();
+      if (globalTimerRef.current) clearInterval(globalTimerRef.current);
+      if (buzzerTimerRef.current) clearInterval(buzzerTimerRef.current);
     };
   }, [duelId, currentUserId, socket]);
 
-  // 2. Gestion du chronomètre global de 60 secondes
+  // 2. Chronomètre global synchronisé avec l'heure de début serveur
   useEffect(() => {
     if (isLoading || isGameOver) return;
 
-    globalTimerRef.current = setInterval(() => {
-      setGlobalSecondsLeft((prev) => {
-        if (prev <= 1) {
-          if (globalTimerRef.current) clearInterval(globalTimerRef.current);
-          if (socket) {
-            socket.emit('duel_finish', { duelId });
-          }
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    const tick = () => {
+      if (!duel?.startedAt) return;
+      const startTime = new Date(duel.startedAt).getTime();
+      const now = Date.now();
+      const elapsed = Math.floor((now - startTime) / 1000);
+      const duration = duel.duration || 60;
+      const remaining = Math.max(0, duration - elapsed);
+      setGlobalSecondsLeft(remaining);
+
+      if (remaining <= 0) {
+        if (globalTimerRef.current) clearInterval(globalTimerRef.current);
+        if (socket) socket.emit('duel_finish', { duelId });
+      }
+    };
+
+    tick();
+    globalTimerRef.current = setInterval(tick, 1000);
 
     return () => {
       if (globalTimerRef.current) clearInterval(globalTimerRef.current);
     };
-  }, [isLoading, isGameOver, duelId, socket]);
+  }, [isLoading, isGameOver, duel?.startedAt, duel?.duration, duelId, socket]);
 
   // 3. Écouteurs d'événements Socket temps réel
   useEffect(() => {
@@ -85,12 +96,10 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
     });
 
     const unsubBuzz = subscribe('duel_buzzer_locked', (data: any) => {
-      setActiveBuzzerUserId(data.userId);
+      setActiveBuzzerUserId(String(data.userId));
       setBuzzerSecondsLeft(3);
 
-      try {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-      } catch {}
+      try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); } catch {}
 
       if (buzzerTimerRef.current) clearInterval(buzzerTimerRef.current);
       buzzerTimerRef.current = setInterval(() => {
@@ -114,12 +123,14 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
 
       if (data.isCorrect) {
         setLastAnswerStatus('correct');
+        playSuccess();
         try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
         if (data.nextEnigma) {
           setCurrentEnigma(data.nextEnigma);
         }
       } else {
         setLastAnswerStatus('wrong');
+        playError();
         try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch {}
       }
 
@@ -131,6 +142,8 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
       if (buzzerTimerRef.current) clearInterval(buzzerTimerRef.current);
       if (data?.duel) setDuel(data.duel);
       setIsGameOver(true);
+      stopBgm();
+      playGameOver(true);
     });
 
     const unsubSkipped = subscribe('duel_enigma_skipped', (data: any) => {
@@ -148,8 +161,6 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
       unsubAnswer();
       unsubGameOver();
       unsubSkipped();
-      if (globalTimerRef.current) clearInterval(globalTimerRef.current);
-      if (buzzerTimerRef.current) clearInterval(buzzerTimerRef.current);
     };
   }, [subscribe]);
 
@@ -168,12 +179,9 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
     };
   }, [currentEnigma, activeBuzzerUserId, isLoading, isGameOver, socket, duelId]);
 
-  // 4. Actions joueur
   const pressBuzzer = useCallback(() => {
     if (activeBuzzerUserId || isGameOver || !socket) return;
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    } catch {}
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); } catch {}
     socket.emit('duel_buzz', { duelId, userId: currentUserId });
   }, [activeBuzzerUserId, isGameOver, socket, duelId, currentUserId]);
 

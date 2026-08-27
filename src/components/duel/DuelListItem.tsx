@@ -1,6 +1,6 @@
 //src/components/duel/DuelListItem.tsx
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius } from '../../theme/theme';
 import KevIcon from '../common/KevIcon';
@@ -45,9 +45,10 @@ interface ReceivedInviteProps {
   item: DuelInvite;
   themeColors: any;
   onRespond: (id: string, accept: boolean) => void;
+  isResponding?: boolean;
 }
 
-export const ReceivedInviteItem: React.FC<ReceivedInviteProps> = ({ item, themeColors, onRespond }) => (
+export const ReceivedInviteItem: React.FC<ReceivedInviteProps> = ({ item, themeColors, onRespond, isResponding = false }) => (
   <View style={[styles.card, { backgroundColor: themeColors.card, borderColor: colors.coral }]}>
     <View style={styles.userInfo}>
       <Text style={[styles.userName, { color: themeColors.text }]} numberOfLines={1}>Défi de {item.challenger.login}</Text>
@@ -58,10 +59,22 @@ export const ReceivedInviteItem: React.FC<ReceivedInviteProps> = ({ item, themeC
       </View>
     </View>
     <View style={styles.actionButtons}>
-      <TouchableOpacity onPress={() => onRespond(item._id, true)} style={[styles.acceptBtn, { backgroundColor: colors.mint }]}>
-        <Text style={styles.btnActionText}>ACCEPTER</Text>
+      <TouchableOpacity
+        disabled={isResponding}
+        onPress={() => onRespond(item._id, true)}
+        style={[styles.acceptBtn, { backgroundColor: colors.mint, opacity: isResponding ? 0.7 : 1 }]}
+      >
+        {isResponding ? (
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        ) : (
+          <Text style={styles.btnActionText}>ACCEPTER</Text>
+        )}
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => onRespond(item._id, false)} style={[styles.rejectBtn, { backgroundColor: themeColors.overlayLight }]}>
+      <TouchableOpacity
+        disabled={isResponding}
+        onPress={() => onRespond(item._id, false)}
+        style={[styles.rejectBtn, { backgroundColor: themeColors.overlayLight, opacity: isResponding ? 0.5 : 1 }]}
+      >
         <Text style={[styles.btnActionText, { color: themeColors.textSecondary }]}>REFUSER</Text>
       </TouchableOpacity>
     </View>
@@ -72,9 +85,10 @@ interface SentInviteProps {
   item: DuelInvite;
   themeColors: any;
   onCancel: (invite: DuelInvite) => void;
+  isCancelling?: boolean;
 }
 
-export const SentInviteItem: React.FC<SentInviteProps> = ({ item, themeColors, onCancel }) => (
+export const SentInviteItem: React.FC<SentInviteProps> = ({ item, themeColors, onCancel, isCancelling = false }) => (
   <View style={[styles.card, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
     <View style={styles.userInfo}>
       <Text style={[styles.userName, { color: themeColors.text }]} numberOfLines={1}>Défi à {item.opponent?.login || 'Joueur'}</Text>
@@ -84,8 +98,16 @@ export const SentInviteItem: React.FC<SentInviteProps> = ({ item, themeColors, o
         <Text style={[styles.betText, { color: colors.coral }]}>{item.betAmount} Kevs</Text>
       </View>
     </View>
-    <TouchableOpacity onPress={() => onCancel(item)} style={[styles.cancelSentBtn, { borderColor: colors.error }]}>
-      <Text style={[styles.cancelSentBtnText, { color: colors.error }]}>ANNULER</Text>
+    <TouchableOpacity
+      disabled={isCancelling}
+      onPress={() => onCancel(item)}
+      style={[styles.cancelSentBtn, { borderColor: colors.error, opacity: isCancelling ? 0.5 : 1 }]}
+    >
+      {isCancelling ? (
+        <ActivityIndicator size="small" color={colors.error} />
+      ) : (
+        <Text style={[styles.cancelSentBtnText, { color: colors.error }]}>ANNULER</Text>
+      )}
     </TouchableOpacity>
   </View>
 );
