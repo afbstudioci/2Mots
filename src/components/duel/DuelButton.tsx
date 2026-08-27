@@ -56,7 +56,7 @@ export const DuelButton: React.FC<DuelButtonProps> = ({
         </View>
 
         <View style={styles.textWrapper}>
-          <Text style={[styles.title, { color: themeColors.text }]}>ARÈNE DUEL 1v1</Text>
+          <Text style={[styles.title, { color: themeColors.text }]}>ARÈNE DUEL 1V1</Text>
           <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
             Défiez des joueurs et gagnez leurs Kevs
           </Text>
@@ -111,9 +111,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontFamily: 'Poppins_700Bold',
-    fontSize: 13,
-    letterSpacing: 0.5,
+    fontFamily: 'Poppins_800ExtraBold',
+    fontSize: 14,
+    letterSpacing: 0.8,
   },
   subtitle: {
     fontFamily: 'Poppins_400Regular',

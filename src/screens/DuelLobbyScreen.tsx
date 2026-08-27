@@ -1,6 +1,6 @@
 //src/screens/DuelLobbyScreen.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -12,6 +12,7 @@ import { colors, spacing, borderRadius } from '../theme/theme';
 import { DuelBetModal } from '../components/duel/DuelBetModal';
 import { DuelSkeleton } from '../components/duel/DuelSkeleton';
 import { DuelAcceptModal } from '../components/duel/DuelAcceptModal';
+import { OpponentItem, ReceivedInviteItem, SentInviteItem } from '../components/duel/DuelListItem';
 import CustomAlert from '../components/common/CustomAlert';
 import KevIcon from '../components/common/KevIcon';
 import {
@@ -42,7 +43,15 @@ export default function DuelLobbyScreen() {
     opponentName: '',
     duelId: '',
   });
-  const [alertConfig, setAlertConfig] = useState<{ visible: boolean; title: string; message: string; type?: 'info' | 'error' | 'success' }>({
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type?: 'info' | 'error' | 'success';
+    buttonText?: string;
+    confirmText?: string;
+    onConfirm?: () => void;
+  }>({
     visible: false,
     title: '',
     message: '',
@@ -152,75 +161,22 @@ export default function DuelLobbyScreen() {
     }
   };
 
-  const pendingSentOpponentIds = invites.sent.map((i) => String(i.opponent?._id));
-
-  const renderOpponentItem = ({ item }: { item: Opponent }) => {
-    const isAlreadyInvited = pendingSentOpponentIds.includes(String(item._id));
-    return (
-      <View style={[styles.card, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
-        <View style={styles.userRow}>
-          <View style={[styles.avatarBox, { backgroundColor: themeColors.overlayLight }]}>
-            {item.avatar ? (
-              <Image source={{ uri: item.avatar }} style={styles.avatarImg} />
-            ) : (
-              <Text style={[styles.avatarPlaceholder, { color: colors.coral }]}>{item.login[0].toUpperCase()}</Text>
-            )}
-          </View>
-          <View style={styles.userInfo}>
-            <Text style={[styles.userName, { color: themeColors.text }]} numberOfLines={1}>{item.login}</Text>
-            <Text style={[styles.userLevel, { color: themeColors.textSecondary }]}>
-              Niveau {item.level} {item.isFriend ? '• Ami' : ''}
-            </Text>
-          </View>
-        </View>
-        <TouchableOpacity
-          disabled={isAlreadyInvited}
-          onPress={() => setSelectedOpponent(item)}
-          style={[styles.challengeBtn, { backgroundColor: isAlreadyInvited ? colors.mint : colors.coral }]}
-        >
-          <Ionicons name={isAlreadyInvited ? 'checkmark-circle' : 'flash'} size={14} color="#FFFFFF" />
-          <Text style={styles.challengeBtnText}>{isAlreadyInvited ? 'INVITÉ' : 'DÉFIER'}</Text>
-        </TouchableOpacity>
-      </View>
-    );
+  const handlePromptCancelInvite = (invite: DuelInvite) => {
+    setAlertConfig({
+      visible: true,
+      title: 'Annuler l\'invitation ?',
+      message: `Voulez-vous vraiment annuler votre défi de ${invite.betAmount} Kevs transmis à ${invite.opponent?.login || 'ce joueur'} ?`,
+      type: 'info',
+      buttonText: 'Non',
+      confirmText: 'Oui, annuler',
+      onConfirm: async () => {
+        setAlertConfig((prev) => ({ ...prev, visible: false }));
+        await handleCancelInvite(invite._id);
+      },
+    });
   };
 
-  const renderReceivedItem = ({ item }: { item: DuelInvite }) => (
-    <View style={[styles.card, { backgroundColor: themeColors.card, borderColor: colors.coral }]}>
-      <View style={styles.userInfo}>
-        <Text style={[styles.userName, { color: themeColors.text }]} numberOfLines={1}>Défi de {item.challenger.login}</Text>
-        <View style={styles.betRow}>
-          <Text style={[styles.userLevel, { color: themeColors.textSecondary }]}>Mise : </Text>
-          <KevIcon size={14} />
-          <Text style={[styles.betText, { color: colors.coral }]}>{item.betAmount} Kevs</Text>
-        </View>
-      </View>
-      <View style={styles.actionButtons}>
-        <TouchableOpacity onPress={() => handleRespond(item._id, true)} style={[styles.acceptBtn, { backgroundColor: colors.mint }]}>
-          <Text style={styles.btnActionText}>ACCEPTER</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => handleRespond(item._id, false)} style={[styles.rejectBtn, { backgroundColor: themeColors.overlayLight }]}>
-          <Text style={[styles.btnActionText, { color: themeColors.textSecondary }]}>REFUSER</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  const renderSentItem = ({ item }: { item: DuelInvite }) => (
-    <View style={[styles.card, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
-      <View style={styles.userInfo}>
-        <Text style={[styles.userName, { color: themeColors.text }]} numberOfLines={1}>Défi à {item.opponent.login}</Text>
-        <View style={styles.betRow}>
-          <Text style={[styles.userLevel, { color: themeColors.textSecondary }]}>Mise : </Text>
-          <KevIcon size={14} />
-          <Text style={[styles.betText, { color: colors.coral }]}>{item.betAmount} Kevs</Text>
-        </View>
-      </View>
-      <TouchableOpacity onPress={() => handleCancelInvite(item._id)} style={[styles.cancelSentBtn, { borderColor: colors.error }]}>
-        <Text style={[styles.cancelSentBtnText, { color: colors.error }]}>ANNULER</Text>
-      </TouchableOpacity>
-    </View>
-  );
+  const pendingSentOpponentIds = invites.sent.map((i) => String(i.opponent?._id));
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
@@ -228,7 +184,7 @@ export default function DuelLobbyScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={themeColors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: themeColors.text }]}>ARÈNE DUEL 1v1</Text>
+        <Text style={[styles.headerTitle, { color: themeColors.text }]}>ARÈNE DUEL 1V1</Text>
         <View style={styles.balanceTag}>
           <KevIcon size={16} />
           <Text style={[styles.balanceText, { color: themeColors.text }]}>{user?.kevs || 0}</Text>
@@ -268,7 +224,20 @@ export default function DuelLobbyScreen() {
         <FlatList<any>
           data={activeTab === 'opponents' ? opponents : activeTab === 'received' ? invites.received : invites.sent}
           keyExtractor={(item) => item._id}
-          renderItem={activeTab === 'opponents' ? renderOpponentItem : activeTab === 'received' ? renderReceivedItem : (renderSentItem as any)}
+          renderItem={({ item }) =>
+            activeTab === 'opponents' ? (
+              <OpponentItem
+                item={item}
+                isAlreadyInvited={pendingSentOpponentIds.includes(String(item._id))}
+                themeColors={themeColors}
+                onSelect={setSelectedOpponent}
+              />
+            ) : activeTab === 'received' ? (
+              <ReceivedInviteItem item={item} themeColors={themeColors} onRespond={handleRespond} />
+            ) : (
+              <SentInviteItem item={item} themeColors={themeColors} onCancel={handlePromptCancelInvite} />
+            )
+          }
           contentContainerStyle={styles.listContent}
           refreshControl={<RefreshControl refreshing={isLoading} onRefresh={loadData} tintColor={colors.coral} />}
           ListEmptyComponent={
@@ -307,7 +276,9 @@ export default function DuelLobbyScreen() {
         title={alertConfig.title}
         message={alertConfig.message}
         type={alertConfig.type}
-        buttonText="Fermer"
+        buttonText={alertConfig.buttonText || "Fermer"}
+        confirmText={alertConfig.confirmText}
+        onConfirm={alertConfig.onConfirm}
         onClose={() => setAlertConfig((prev) => ({ ...prev, visible: false }))}
       />
     </SafeAreaView>
@@ -326,24 +297,6 @@ const styles = StyleSheet.create({
   activeTab: { borderBottomColor: colors.coral, borderBottomWidth: 3 },
   tabText: { fontFamily: 'Poppins_700Bold', fontSize: 12 },
   listContent: { padding: spacing.lg, gap: spacing.md },
-  card: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.md, borderRadius: borderRadius.md, borderWidth: 1 },
-  userRow: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  avatarBox: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
-  avatarImg: { width: '100%', height: '100%' },
-  avatarPlaceholder: { fontFamily: 'Poppins_700Bold', fontSize: 18 },
-  userInfo: { flex: 1, marginRight: 8 },
-  userName: { fontFamily: 'Poppins_700Bold', fontSize: 14 },
-  userLevel: { fontFamily: 'Poppins_400Regular', fontSize: 11 },
-  challengeBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 8, paddingHorizontal: 12, borderRadius: borderRadius.sm },
-  challengeBtnText: { color: '#FFFFFF', fontFamily: 'Poppins_700Bold', fontSize: 11 },
-  betRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  betText: { fontFamily: 'Poppins_700Bold', fontSize: 12 },
-  actionButtons: { flexDirection: 'row', gap: 6 },
-  acceptBtn: { paddingVertical: 7, paddingHorizontal: 10, borderRadius: borderRadius.sm },
-  rejectBtn: { paddingVertical: 7, paddingHorizontal: 10, borderRadius: borderRadius.sm },
-  btnActionText: { color: '#FFFFFF', fontFamily: 'Poppins_700Bold', fontSize: 11 },
-  cancelSentBtn: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: borderRadius.sm, borderWidth: 1 },
-  cancelSentBtnText: { fontFamily: 'Poppins_700Bold', fontSize: 11 },
   emptyText: { textAlign: 'center', fontFamily: 'Poppins_400Regular', fontSize: 13, marginTop: 40 },
   offlineBox: { alignItems: 'center', justifyContent: 'center', padding: spacing.xl, marginTop: 40 },
   offlineTitle: { fontFamily: 'Poppins_700Bold', fontSize: 16, marginTop: 12 },
