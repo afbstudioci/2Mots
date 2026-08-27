@@ -17,8 +17,8 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [lastAnswerStatus, setLastAnswerStatus] = useState<'correct' | 'wrong' | null>(null);
 
-  const globalTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const buzzerTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const globalTimerRef = useRef<any>(null);
+  const buzzerTimerRef = useRef<any>(null);
 
   // 1. Initialisation de la session et connexion à la room
   useEffect(() => {
@@ -57,7 +57,7 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
     globalTimerRef.current = setInterval(() => {
       setGlobalSecondsLeft((prev) => {
         if (prev <= 1) {
-          clearInterval(globalTimerRef.current as NodeJS.Timeout);
+          if (globalTimerRef.current) clearInterval(globalTimerRef.current);
           if (socket) {
             socket.emit('duel_finish', { duelId });
           }
@@ -96,7 +96,7 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
       buzzerTimerRef.current = setInterval(() => {
         setBuzzerSecondsLeft((prev) => {
           if (prev <= 1) {
-            clearInterval(buzzerTimerRef.current as NodeJS.Timeout);
+            if (buzzerTimerRef.current) clearInterval(buzzerTimerRef.current);
             setActiveBuzzerUserId(null);
             return 0;
           }
