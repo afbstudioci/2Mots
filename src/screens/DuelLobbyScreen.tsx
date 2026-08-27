@@ -265,7 +265,7 @@ export default function DuelLobbyScreen() {
           </TouchableOpacity>
         </View>
       ) : (
-        <FlatList
+        <FlatList<any>
           data={activeTab === 'opponents' ? opponents : activeTab === 'received' ? invites.received : invites.sent}
           keyExtractor={(item) => item._id}
           renderItem={activeTab === 'opponents' ? renderOpponentItem : activeTab === 'received' ? renderReceivedItem : (renderSentItem as any)}

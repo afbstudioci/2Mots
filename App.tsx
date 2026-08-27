@@ -69,17 +69,6 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const AppNavigator = () => {
   const { user } = useAuth();
   const { themeColors } = useTheme();
-  const pushRegistered = useRef(false);
-
-  useEffect(() => {
-    if (user && !pushRegistered.current) {
-      pushRegistered.current = true;
-      registerForPushNotificationsAsync().catch(() => {});
-    }
-    if (!user) {
-      pushRegistered.current = false;
-    }
-  }, [user]);
 
   return (
     <Stack.Navigator

@@ -170,8 +170,8 @@ export const useGameLogic = () => {
         if (feverStreakRef.current >= 3 && !isFeverMode) setIsFeverMode(true);
       } else if (!isFeverMode) { feverStreakRef.current = 0; }
 
-      if (pair.hasKey) {
-        setKevyKeys((prev) => {
+      if ((pair as any)?.hasKey) {
+        setKevyKeys((prev: number) => {
           const next = Math.min(3, prev + 1);
           kevyKeysRef.current = next;
           if (user) user.kevyKeys = next;
@@ -187,13 +187,13 @@ export const useGameLogic = () => {
       const bonusMs = isFeverMode ? 12000 : (isFast ? 10000 : 8000);
 
       if (kevsToAdd > 0) {
-        setUserKevs((prev) => prev + kevsToAdd);
+        setUserKevs((prev: number) => prev + kevsToAdd);
         if (user) user.kevs = (user.kevs || 0) + kevsToAdd;
       }
       timer.setTimeWon(Math.floor(bonusMs / 1000));
       timer.addTimeMs(bonusMs);
 
-      setCurrentXp((prev) => {
+      setCurrentXp((prev: number) => {
         const next = prev + xpToAdd;
         const needed = 3 + userLevel * 2;
         if (next >= needed) {
@@ -211,6 +211,7 @@ export const useGameLogic = () => {
       consecutiveErrorsRef.current += 1; totalErrorsRef.current += 1;
       try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch {}
       playError();
+      timer.addTimeMs(-4000);
       if (consecutiveErrorsRef.current >= 3) {
         setTimeout(() => setErrorLimitData({ visible: true, count: 3, reason: '3 erreurs consecutives' }), 150);
         return;
@@ -238,7 +239,7 @@ export const useGameLogic = () => {
   const handleCloseKevyChest = (gains: { kevs: number; freeze: number; hint: number; shield: number }) => {
     setShowKevyChest(false); setKevyKeys(0); kevyKeysRef.current = 0;
     if (user) { user.kevyKeys = 0; if (gains.kevs > 0) user.kevs = (user.kevs || 0) + gains.kevs; }
-    if (gains.kevs > 0) setUserKevs((prev) => prev + gains.kevs);
+    if (gains.kevs > 0) setUserKevs((prev: number) => prev + gains.kevs);
     if (gains.freeze > 0) boosters.addBooster('freeze', gains.freeze);
     if (gains.hint > 0) boosters.addBooster('hint', gains.hint);
     if (gains.shield > 0) boosters.addBooster('shield', gains.shield);

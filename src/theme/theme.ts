@@ -42,6 +42,7 @@ export const borderRadius = {
     md: 20,
     lg: 32,
     xl: 50,
+    full: 9999,
 };
 
 export const shadows = {
