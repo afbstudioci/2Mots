@@ -16,7 +16,7 @@
     },
     "android": {
       "package": "com.afbstudio.twomots",
-      "versionCode": 27,
+      "versionCode": 28,
       "supportsTablet": true,
       "permissions": [
         "com.android.vending.BILLING",
@@ -34,8 +34,8 @@
     },
     "updates": {
       "url": "https://u.expo.dev/b10e5217-af10-4e8a-a753-b7b2608af455",
-      "fallbackToCacheTimeout": 0,
-      "checkAutomatically": "ON_ERROR_RECOVERY",
+      "fallbackToCacheTimeout": 3000,
+      "checkAutomatically": "ON_LOAD",
       "requestHeaders": {
         "expo-channel-name": "production"
       }

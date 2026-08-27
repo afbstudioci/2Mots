@@ -24,9 +24,21 @@ export const useAppUpdates = () => {
   const isChecking = useRef(false);
   const otaDownloaded = useRef(false);
 
-  const localVersionCode =
-    Constants.expoConfig?.android?.versionCode ||
-    (Platform.OS === 'android' ? 11 : 1);
+  const getLocalVersionCode = (): number => {
+    // 1. Priorite au build natif compile (Play Store / APK standalone)
+    if (Constants.nativeBuildVersion) {
+      const parsed = parseInt(Constants.nativeBuildVersion, 10);
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+    // 2. Configuration Expo Config (Expo Go / EAS)
+    if (Constants.expoConfig?.android?.versionCode) {
+      return Number(Constants.expoConfig.android.versionCode);
+    }
+    // 3. Repli de securite
+    return Platform.OS === 'android' ? 28 : 1;
+  };
+
+  const localVersionCode = getLocalVersionCode();
 
   const checkOTAUpdates = async (): Promise<boolean> => {
     if (__DEV__ || !Updates.isEnabled) return false;
