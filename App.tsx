@@ -29,6 +29,8 @@ import ContactScreen from './src/screens/ContactScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import RulesScreen from './src/screens/RulesScreen';
 import PrivacyScreen from './src/screens/PrivacyScreen';
+import DuelLobbyScreen from './src/screens/DuelLobbyScreen';
+import DuelGameScreen from './src/screens/DuelGameScreen';
 import MainTabNavigator from './src/components/navigation/MainTabNavigator';
 import UpdateModal from './src/components/common/UpdateModal';
 import { registerForPushNotificationsAsync } from './src/services/notificationService';
@@ -54,6 +56,8 @@ export type RootStackParamList = {
   Missions: undefined;
   Friends: undefined;
   Chat: { friendId: string; friendName: string; friendAvatar?: string };
+  DuelLobby: undefined;
+  DuelGame: { duelId: string };
   Contact: undefined;
   Rules: undefined;
   Privacy: undefined;
@@ -101,6 +105,8 @@ const AppNavigator = () => {
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="Friends" component={FriendsScreen} />
           <Stack.Screen name="Chat" component={ChatScreen} />
+          <Stack.Screen name="DuelLobby" component={DuelLobbyScreen} />
+          <Stack.Screen name="DuelGame" component={DuelGameScreen} />
           <Stack.Screen name="Settings" component={SettingsScreen} />
           <Stack.Screen name="Shop" component={ShopScreen} />
           <Stack.Screen name="Contact" component={ContactScreen} />

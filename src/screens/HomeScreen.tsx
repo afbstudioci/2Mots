@@ -1,4 +1,4 @@
-﻿//src/screens/HomeScreen.tsx
+//src/screens/HomeScreen.tsx
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated, Image, TouchableOpacity } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,6 +14,8 @@ import { colors, spacing, borderRadius, shadows } from '../theme/theme';
 import { RootStackParamList } from '../../App';
 import KevIcon from '../components/common/KevIcon';
 import ReferralCelebration from '../components/common/ReferralCelebration';
+import { DuelButton } from '../components/duel/DuelButton';
+import { getPendingInvites } from '../services/duelApi';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -25,6 +27,7 @@ const HomeScreen = () => {
   const { user, refreshProfile } = useAuth();
   const { themeColors, isDark } = useTheme();
   const [showCelebration, setShowCelebration] = useState(false);
+  const [pendingDuelCount, setPendingDuelCount] = useState(0);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
@@ -43,7 +46,12 @@ const HomeScreen = () => {
   useFocusEffect(
     useCallback(() => {
       refreshProfile();
-    }, [refreshProfile])
+      if (user?.level && user.level >= 5) {
+        getPendingInvites()
+          .then((res) => setPendingDuelCount(res.received.length))
+          .catch(() => {});
+      }
+    }, [refreshProfile, user?.level])
   );
 
   useEffect(() => {
@@ -258,6 +266,13 @@ const HomeScreen = () => {
               </Pressable>
             </Animated.View>
           </Animated.View>
+
+          {/* BOUTON DUEL 1v1 (Visible uniquement si niveau >= 5) */}
+          <DuelButton
+            userLevel={user?.level || 1}
+            pendingCount={pendingDuelCount}
+            onPress={() => navigation.navigate('DuelLobby')}
+          />
         </View>
       </View>
 
@@ -298,7 +313,7 @@ const styles = StyleSheet.create({
   avatarPlaceholder: { fontFamily: 'Poppins_700Bold', fontSize: 20 },
   greetingText: { fontFamily: 'Poppins_500Medium', fontSize: 15, letterSpacing: 1 },
   userNameText: { fontFamily: 'Poppins_800ExtraBold', fontSize: 28, letterSpacing: 0.5, flexShrink: 1 },
-  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' },
   statsContainer: {
     flexDirection: 'row',
     gap: spacing.md,
