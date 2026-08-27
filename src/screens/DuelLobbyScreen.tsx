@@ -132,15 +132,16 @@ export default function DuelLobbyScreen() {
     try {
       setRespondingInviteId(duelId);
       try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+
+      const res = await respondDuelInvite(duelId, accept);
       setInvites((prev) => ({
         ...prev,
         received: prev.received.filter((i) => i._id !== duelId),
       }));
 
-      const res = await respondDuelInvite(duelId, accept);
       if (accept) {
         await refreshProfile();
-        navigation.navigate('DuelGame', { duelId: res._id || duelId });
+        navigation.navigate('DuelGame', { duelId: res?._id || duelId });
       } else {
         loadData();
       }
@@ -161,11 +162,11 @@ export default function DuelLobbyScreen() {
     try {
       setCancellingInviteId(duelId);
       try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+      await cancelDuelInvite(duelId);
       setInvites((prev) => ({
         ...prev,
         sent: prev.sent.filter((i) => i._id !== duelId),
       }));
-      await cancelDuelInvite(duelId);
       loadData();
     } catch (e: any) {
       loadData();
@@ -211,21 +212,18 @@ export default function DuelLobbyScreen() {
       </View>
 
       <View style={styles.tabContainer}>
-        <TouchableOpacity onPress={() => setActiveTab('opponents')} style={[styles.tabButton, activeTab === 'opponents' && styles.activeTab]}>
-          <Text style={[styles.tabText, { color: activeTab === 'opponents' ? colors.coral : themeColors.textSecondary }]}>
-            ADVERSAIRES ({opponents.length})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => setActiveTab('received')} style={[styles.tabButton, activeTab === 'received' && styles.activeTab]}>
-          <Text style={[styles.tabText, { color: activeTab === 'received' ? colors.coral : themeColors.textSecondary }]}>
-            REÇUS ({invites.received.length})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => setActiveTab('sent')} style={[styles.tabButton, activeTab === 'sent' && styles.activeTab]}>
-          <Text style={[styles.tabText, { color: activeTab === 'sent' ? colors.coral : themeColors.textSecondary }]}>
-            ATTENTES ({invites.sent.length})
-          </Text>
-        </TouchableOpacity>
+        {(['opponents', 'received', 'sent'] as const).map((tabKey) => {
+          const count = tabKey === 'opponents' ? opponents.length : tabKey === 'received' ? invites.received.length : invites.sent.length;
+          const label = tabKey === 'opponents' ? 'ADVERSAIRES' : tabKey === 'received' ? 'REÇUS' : 'ATTENTES';
+          const isActive = activeTab === tabKey;
+          return (
+            <TouchableOpacity key={tabKey} onPress={() => setActiveTab(tabKey)} style={[styles.tabButton, isActive && styles.activeTab]}>
+              <Text style={[styles.tabText, { color: isActive ? colors.coral : themeColors.textSecondary }]}>
+                {label} ({count})
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {isLoading ? (

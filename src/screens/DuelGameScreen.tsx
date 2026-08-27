@@ -1,10 +1,9 @@
 //src/screens/DuelGameScreen.tsx
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Pressable, Animated } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import * as Haptics from 'expo-haptics';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { colors, spacing, borderRadius } from '../theme/theme';
@@ -17,7 +16,7 @@ export default function DuelGameScreen() {
   const navigation = useNavigation<any>();
   const { duelId } = route.params;
   const { user } = useAuth();
-  const { themeColors, isDark } = useTheme();
+  const { themeColors } = useTheme();
 
   const currentUserId = user?._id || user?.id || '';
   const {
@@ -26,11 +25,12 @@ export default function DuelGameScreen() {
     scores,
     globalSecondsLeft,
     buzzerSecondsLeft,
+    buzzerState,
+    activeBuzzerUserName,
+    isWaitingForOpponent,
     isMyBuzzer,
     isOpponentBuzzer,
     isGameOver,
-    isLoading,
-    lastAnswerStatus,
     pressBuzzer,
     submitAnswer,
   } = useDuelArena(duelId, currentUserId);
@@ -49,11 +49,10 @@ export default function DuelGameScreen() {
           <Ionicons name="close" size={24} color={themeColors.textSecondary} />
         </TouchableOpacity>
 
-        {/* CHRONOMÈTRE GLOBAL */}
         <View style={[styles.timerBadge, { backgroundColor: themeColors.overlayLight, borderColor: globalSecondsLeft < 15 ? colors.error : colors.coral }]}>
           <Ionicons name="time-outline" size={16} color={globalSecondsLeft < 15 ? colors.error : colors.coral} />
           <Text style={[styles.timerText, { color: globalSecondsLeft < 15 ? colors.error : themeColors.text }]}>
-            {globalSecondsLeft}s
+            {isWaitingForOpponent ? '--' : `${globalSecondsLeft}s`}
           </Text>
         </View>
 
@@ -61,6 +60,31 @@ export default function DuelGameScreen() {
           <KevIcon size={14} />
           <Text style={[styles.potText, { color: '#FFB84D' }]}>{duel?.totalPot || 0}</Text>
         </View>
+      </View>
+
+      {/* BANDEAU D'ÉTAT TEMPS RÉEL (TOAST DU HAUT) */}
+      <View style={styles.statusBarContainer}>
+        {isWaitingForOpponent ? (
+          <View style={[styles.statusToast, { backgroundColor: 'rgba(255, 127, 80, 0.15)', borderColor: colors.coral }]}>
+            <ActivityIndicator size="small" color={colors.coral} />
+            <Text style={[styles.statusToastText, { color: colors.coral }]}>En attente de l'adversaire...</Text>
+          </View>
+        ) : buzzerState === 'my_turn' ? (
+          <View style={[styles.statusToast, { backgroundColor: 'rgba(74, 222, 128, 0.15)', borderColor: colors.mint }]}>
+            <Ionicons name="hand-right" size={16} color={colors.mint} />
+            <Text style={[styles.statusToastText, { color: colors.mint }]}>Vous avez la parole ! ({buzzerSecondsLeft}s)</Text>
+          </View>
+        ) : buzzerState === 'opponent_turn' ? (
+          <View style={[styles.statusToast, { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: colors.error }]}>
+            <Ionicons name="lock-closed" size={16} color={colors.error} />
+            <Text style={[styles.statusToastText, { color: colors.error }]}>{activeBuzzerUserName || 'Adversaire'} a la parole... ({buzzerSecondsLeft}s)</Text>
+          </View>
+        ) : (
+          <View style={[styles.statusToast, { backgroundColor: themeColors.overlayLight, borderColor: themeColors.border }]}>
+            <Ionicons name="radio-outline" size={16} color={colors.coral} />
+            <Text style={[styles.statusToastText, { color: themeColors.text }]}>Parole libre — Buzzez pour répondre !</Text>
+          </View>
+        )}
       </View>
 
       {/* DUEL VERSUS BAR */}
@@ -118,15 +142,20 @@ export default function DuelGameScreen() {
 
       {/* ZONE BUZZER & ÉTAT */}
       <View style={styles.buzzerSection}>
-        {isMyBuzzer ? (
+        {isWaitingForOpponent ? (
+          <View style={styles.waitingContainer}>
+            <ActivityIndicator size="large" color={colors.coral} />
+            <Text style={[styles.waitingText, { color: themeColors.textSecondary }]}>Connexion du deuxième joueur...</Text>
+          </View>
+        ) : isMyBuzzer ? (
           <View style={styles.buzzerActiveBox}>
-            <Text style={[styles.buzzerCountText, { color: colors.coral }]}>À VOUS ! {buzzerSecondsLeft}s</Text>
-            <Text style={[styles.buzzerSubtext, { color: themeColors.textSecondary }]}>Sélectionnez vite une proposition ci-dessus</Text>
+            <Text style={[styles.buzzerCountText, { color: colors.mint }]}>À VOUS ! {buzzerSecondsLeft}s</Text>
+            <Text style={[styles.buzzerSubtext, { color: themeColors.textSecondary }]}>Choisissez votre réponse ci-dessus</Text>
           </View>
         ) : isOpponentBuzzer ? (
           <View style={[styles.buzzerLockBox, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
             <Ionicons name="lock-closed" size={24} color={colors.error} />
-            <Text style={[styles.buzzerLockText, { color: colors.error }]}>L'adversaire répond... ({buzzerSecondsLeft}s)</Text>
+            <Text style={[styles.buzzerLockText, { color: colors.error }]}>{activeBuzzerUserName || 'L\'adversaire'} répond... ({buzzerSecondsLeft}s)</Text>
           </View>
         ) : (
           <Pressable onPress={pressBuzzer} style={styles.buzzerButton}>
@@ -157,25 +186,30 @@ const styles = StyleSheet.create({
   timerText: { fontFamily: 'Poppins_700Bold', fontSize: 14 },
   potTag: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   potText: { fontFamily: 'Poppins_700Bold', fontSize: 14 },
-  versusContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', paddingVertical: spacing.md, borderRadius: borderRadius.md, borderWidth: 1, marginVertical: spacing.sm },
+  statusBarContainer: { marginVertical: spacing.xs },
+  statusToast: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 8, paddingHorizontal: 12, borderRadius: borderRadius.md, borderWidth: 1 },
+  statusToastText: { fontFamily: 'Poppins_700Bold', fontSize: 12 },
+  versusContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', paddingVertical: spacing.md, borderRadius: borderRadius.md, borderWidth: 1, marginVertical: spacing.xs },
   playerBlock: { alignItems: 'center', flex: 1 },
   playerName: { fontFamily: 'Poppins_700Bold', fontSize: 13 },
   playerScore: { fontFamily: 'Poppins_800ExtraBold', fontSize: 18, marginTop: 2 },
   vsBadge: { backgroundColor: 'rgba(255, 127, 80, 0.15)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: borderRadius.sm },
   vsText: { fontFamily: 'Poppins_900Black', fontSize: 12, color: colors.coral },
-  enigmaCard: { alignItems: 'center', padding: spacing.lg, borderRadius: borderRadius.lg, borderWidth: 2, marginVertical: spacing.sm },
-  enigmaLabel: { fontFamily: 'Poppins_700Bold', fontSize: 11, letterSpacing: 1, marginBottom: spacing.sm },
+  enigmaCard: { alignItems: 'center', padding: spacing.md, borderRadius: borderRadius.lg, borderWidth: 2, marginVertical: spacing.xs },
+  enigmaLabel: { fontFamily: 'Poppins_700Bold', fontSize: 11, letterSpacing: 1, marginBottom: spacing.xs },
   wordsRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: spacing.xs },
   wordBubble: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: borderRadius.sm },
   wordText: { fontFamily: 'Poppins_800ExtraBold', fontSize: 17 },
   plusSign: { fontFamily: 'Poppins_900Black', fontSize: 18 },
   clueText: { fontFamily: 'Poppins_400Regular', fontSize: 12, textAlign: 'center', marginTop: 4 },
-  propositionsContainer: { gap: 8, marginVertical: spacing.sm },
-  propButton: { paddingVertical: 12, borderRadius: borderRadius.md, borderWidth: 1.5, alignItems: 'center' },
+  propositionsContainer: { gap: 8, marginVertical: spacing.xs },
+  propButton: { paddingVertical: 11, borderRadius: borderRadius.md, borderWidth: 1.5, alignItems: 'center' },
   propText: { fontFamily: 'Poppins_700Bold', fontSize: 15 },
-  buzzerSection: { flex: 1, justifyContent: 'center', alignItems: 'center', marginVertical: spacing.md },
-  buzzerButton: { width: 140, height: 140, borderRadius: 70, elevation: 12, shadowColor: colors.coral, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.5, shadowRadius: 15 },
-  buzzerInner: { width: '100%', height: '100%', borderRadius: 70, justifyContent: 'center', alignItems: 'center' },
+  buzzerSection: { flex: 1, justifyContent: 'center', alignItems: 'center', marginVertical: spacing.sm },
+  waitingContainer: { alignItems: 'center', gap: 10 },
+  waitingText: { fontFamily: 'Poppins_500Medium', fontSize: 13 },
+  buzzerButton: { width: 130, height: 130, borderRadius: 65, elevation: 12, shadowColor: colors.coral, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.5, shadowRadius: 15 },
+  buzzerInner: { width: '100%', height: '100%', borderRadius: 65, justifyContent: 'center', alignItems: 'center' },
   buzzerText: { color: '#FFFFFF', fontFamily: 'Poppins_900Black', fontSize: 16, marginTop: 2 },
   buzzerActiveBox: { alignItems: 'center' },
   buzzerCountText: { fontFamily: 'Poppins_900Black', fontSize: 24 },

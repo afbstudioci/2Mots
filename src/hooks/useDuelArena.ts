@@ -5,14 +5,21 @@ import { useSocketContext } from '../context/SocketContext';
 import { useAudioContext } from '../context/AudioContext';
 import { getDuelDetails, DuelSessionData, DuelEnigma } from '../services/duelApi';
 
+export type BuzzerState = 'free' | 'my_turn' | 'opponent_turn' | 'expired';
+
 export const useDuelArena = (duelId: string, currentUserId: string) => {
-  const { socket, subscribe } = useSocketContext();
+  const { socket, emit, subscribe, isConnected } = useSocketContext();
   const { playBgm, stopBgm, playSuccess, playError, playGameOver } = useAudioContext();
 
   const [duel, setDuel] = useState<DuelSessionData | null>(null);
   const [currentEnigma, setCurrentEnigma] = useState<DuelEnigma | null>(null);
   const [scores, setScores] = useState<{ challenger: number; opponent: number }>({ challenger: 0, opponent: 0 });
+  const [isWaitingForOpponent, setIsWaitingForOpponent] = useState<boolean>(true);
+  const [startCountdown, setStartCountdown] = useState<number | null>(null);
+
+  const [buzzerState, setBuzzerState] = useState<BuzzerState>('free');
   const [activeBuzzerUserId, setActiveBuzzerUserId] = useState<string | null>(null);
+  const [activeBuzzerUserName, setActiveBuzzerUserName] = useState<string | null>(null);
   const [buzzerSecondsLeft, setBuzzerSecondsLeft] = useState<number>(0);
   const [globalSecondsLeft, setGlobalSecondsLeft] = useState<number>(60);
   const [isGameOver, setIsGameOver] = useState<boolean>(false);
@@ -22,7 +29,7 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
   const globalTimerRef = useRef<any>(null);
   const buzzerTimerRef = useRef<any>(null);
 
-  // 1. Initialisation de la session et musique de fond
+  // 1. Initialisation et connexion à la room
   useEffect(() => {
     let isMounted = true;
     playBgm();
@@ -36,9 +43,10 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
           if (data.enigmas && data.enigmas[data.currentEnigmaIndex]) {
             setCurrentEnigma(data.enigmas[data.currentEnigmaIndex]);
           }
-          if (socket) {
-            socket.emit('duel_join', { duelId, userId: currentUserId });
+          if (data.status === 'in_progress' && data.startedAt) {
+            setIsWaitingForOpponent(false);
           }
+          emit('duel_join', { duelId, userId: currentUserId });
         }
       } catch (e) {
         console.error('[DUEL_ARENA] Erreur chargement duel:', e);
@@ -54,11 +62,11 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
       if (globalTimerRef.current) clearInterval(globalTimerRef.current);
       if (buzzerTimerRef.current) clearInterval(buzzerTimerRef.current);
     };
-  }, [duelId, currentUserId, socket]);
+  }, [duelId, currentUserId, emit, isConnected]);
 
-  // 2. Chronomètre global synchronisé avec l'heure de début serveur
+  // 2. Synchronisation du chronomètre global
   useEffect(() => {
-    if (isLoading || isGameOver) return;
+    if (isLoading || isGameOver || isWaitingForOpponent || !duel?.startedAt) return;
 
     const tick = () => {
       if (!duel?.startedAt) return;
@@ -71,7 +79,7 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
 
       if (remaining <= 0) {
         if (globalTimerRef.current) clearInterval(globalTimerRef.current);
-        if (socket) socket.emit('duel_finish', { duelId });
+        emit('duel_finish', { duelId });
       }
     };
 
@@ -81,22 +89,31 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
     return () => {
       if (globalTimerRef.current) clearInterval(globalTimerRef.current);
     };
-  }, [isLoading, isGameOver, duel?.startedAt, duel?.duration, duelId, socket]);
+  }, [isLoading, isGameOver, isWaitingForOpponent, duel?.startedAt, duel?.duration, duelId, emit]);
 
-  // 3. Écouteurs d'événements Socket temps réel
+  // 3. Écouteurs Socket temps réel
   useEffect(() => {
-    const unsubReady = subscribe('duel_player_ready', (data: any) => {
+    const unsubWaiting = subscribe('duel_waiting_opponent', () => {
+      setIsWaitingForOpponent(true);
+    });
+
+    const unsubStart = subscribe('duel_start', (data: any) => {
+      setIsWaitingForOpponent(false);
       if (data?.duel) {
         setDuel(data.duel);
-        setScores(data.duel.scores);
+        setScores(data.duel.scores || { challenger: 0, opponent: 0 });
         if (data.duel.enigmas && data.duel.enigmas[data.duel.currentEnigmaIndex]) {
           setCurrentEnigma(data.duel.enigmas[data.duel.currentEnigmaIndex]);
         }
       }
+      try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
     });
 
     const unsubBuzz = subscribe('duel_buzzer_locked', (data: any) => {
+      const isMine = String(data.userId) === String(currentUserId);
       setActiveBuzzerUserId(String(data.userId));
+      setActiveBuzzerUserName(data.userName || (isMine ? 'Vous' : 'Adversaire'));
+      setBuzzerState(isMine ? 'my_turn' : 'opponent_turn');
       setBuzzerSecondsLeft(3);
 
       try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); } catch {}
@@ -106,7 +123,6 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
         setBuzzerSecondsLeft((prev) => {
           if (prev <= 1) {
             if (buzzerTimerRef.current) clearInterval(buzzerTimerRef.current);
-            setActiveBuzzerUserId(null);
             return 0;
           }
           return prev - 1;
@@ -114,9 +130,19 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
       }, 1000);
     });
 
+    const unsubExpired = subscribe('duel_buzzer_expired', () => {
+      if (buzzerTimerRef.current) clearInterval(buzzerTimerRef.current);
+      setActiveBuzzerUserId(null);
+      setActiveBuzzerUserName(null);
+      setBuzzerState('free');
+      setBuzzerSecondsLeft(0);
+    });
+
     const unsubAnswer = subscribe('duel_answer_result', (data: any) => {
       if (buzzerTimerRef.current) clearInterval(buzzerTimerRef.current);
       setActiveBuzzerUserId(null);
+      setActiveBuzzerUserName(null);
+      setBuzzerState('free');
       setBuzzerSecondsLeft(0);
 
       if (data.scores) setScores(data.scores);
@@ -125,9 +151,7 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
         setLastAnswerStatus('correct');
         playSuccess();
         try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
-        if (data.nextEnigma) {
-          setCurrentEnigma(data.nextEnigma);
-        }
+        if (data.nextEnigma) setCurrentEnigma(data.nextEnigma);
       } else {
         setLastAnswerStatus('wrong');
         playError();
@@ -149,52 +173,36 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
     const unsubSkipped = subscribe('duel_enigma_skipped', (data: any) => {
       if (buzzerTimerRef.current) clearInterval(buzzerTimerRef.current);
       setActiveBuzzerUserId(null);
+      setActiveBuzzerUserName(null);
+      setBuzzerState('free');
       setBuzzerSecondsLeft(0);
-      if (data?.nextEnigma) {
-        setCurrentEnigma(data.nextEnigma);
-      }
+      if (data?.nextEnigma) setCurrentEnigma(data.nextEnigma);
     });
 
     return () => {
-      unsubReady();
+      unsubWaiting();
+      unsubStart();
       unsubBuzz();
+      unsubExpired();
       unsubAnswer();
       unsubGameOver();
       unsubSkipped();
     };
-  }, [subscribe]);
-
-  // 4. Timer d'inactivité par énigme (12s sans buzzer -> passage à l'énigme suivante)
-  useEffect(() => {
-    if (isLoading || isGameOver || activeBuzzerUserId) return;
-
-    const inactivityTimeout = setTimeout(() => {
-      if (!activeBuzzerUserId && !isGameOver && socket) {
-        socket.emit('duel_skip_enigma', { duelId });
-      }
-    }, 12000);
-
-    return () => {
-      clearTimeout(inactivityTimeout);
-    };
-  }, [currentEnigma, activeBuzzerUserId, isLoading, isGameOver, socket, duelId]);
+  }, [subscribe, currentUserId, playSuccess, playError, playGameOver, stopBgm]);
 
   const pressBuzzer = useCallback(() => {
-    if (activeBuzzerUserId || isGameOver || !socket) return;
+    if (buzzerState !== 'free' || isGameOver || isWaitingForOpponent) return;
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); } catch {}
-    socket.emit('duel_buzz', { duelId, userId: currentUserId });
-  }, [activeBuzzerUserId, isGameOver, socket, duelId, currentUserId]);
+    emit('duel_buzz', { duelId, userId: currentUserId });
+  }, [buzzerState, isGameOver, isWaitingForOpponent, emit, duelId, currentUserId]);
 
   const submitAnswer = useCallback(
     (answer: string) => {
-      if (!socket || String(activeBuzzerUserId) !== String(currentUserId)) return;
-      socket.emit('duel_submit_answer', { duelId, userId: currentUserId, answer });
+      if (buzzerState !== 'my_turn' || String(activeBuzzerUserId) !== String(currentUserId)) return;
+      emit('duel_submit_answer', { duelId, userId: currentUserId, answer });
     },
-    [socket, activeBuzzerUserId, currentUserId, duelId]
+    [emit, buzzerState, activeBuzzerUserId, currentUserId, duelId]
   );
-
-  const isMyBuzzer = activeBuzzerUserId ? String(activeBuzzerUserId) === String(currentUserId) : false;
-  const isOpponentBuzzer = activeBuzzerUserId ? String(activeBuzzerUserId) !== String(currentUserId) : false;
 
   return {
     duel,
@@ -202,8 +210,11 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
     scores,
     globalSecondsLeft,
     buzzerSecondsLeft,
-    isMyBuzzer,
-    isOpponentBuzzer,
+    buzzerState,
+    activeBuzzerUserName,
+    isWaitingForOpponent,
+    isMyBuzzer: buzzerState === 'my_turn',
+    isOpponentBuzzer: buzzerState === 'opponent_turn',
     isGameOver,
     isLoading,
     lastAnswerStatus,

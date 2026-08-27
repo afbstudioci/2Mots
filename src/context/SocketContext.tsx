@@ -1,5 +1,5 @@
-﻿//src/context/SocketContext.tsx
-import React, { createContext, useContext, useEffect, useMemo } from 'react';
+//src/context/SocketContext.tsx
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 import { Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import socketService from '../services/socketService';
@@ -7,6 +7,8 @@ import { getToken } from '../services/authStorage';
 
 interface SocketContextData {
   socket: Socket | null;
+  isConnected: boolean;
+  emit: (event: string, data: any) => void;
   sendMessage: (data: any) => void;
   startTyping: (recipientId: string) => void;
   stopTyping: (recipientId: string) => void;
@@ -22,6 +24,16 @@ const SocketContext = createContext<SocketContextData>({} as SocketContextData);
 export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const userId = user?._id || user?.id;
+  const [socketInstance, setSocketInstance] = useState<Socket | null>(socketService.getSocket());
+  const [isConnected, setIsConnected] = useState<boolean>(socketService.isSocketConnected());
+
+  useEffect(() => {
+    const unsubStatus = socketService.onStatusChange((connected) => {
+      setIsConnected(connected);
+      setSocketInstance(socketService.getSocket());
+    });
+    return unsubStatus;
+  }, []);
 
   useEffect(() => {
     if (!userId) {
@@ -32,39 +44,49 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const initSocket = async () => {
       const token = await getToken();
       socketService.connect(userId, token || undefined);
+      setSocketInstance(socketService.getSocket());
     };
 
     initSocket();
   }, [userId]);
 
-  const emitEvent = (event: string, data: any) => {
-    if (user) {
-      const uId = user._id || user.id;
-      socketService.emit(event, {
-        ...data,
-        userId: uId,
-        senderId: uId,
-        senderName: user.login,
-      });
-    }
-  };
+  const emit = useCallback((event: string, data: any) => {
+    socketService.emit(event, data);
+  }, []);
 
-  const sendMessage = (data: any) => emitEvent('send_message', data);
-  const startTyping = (recipientId: string) => emitEvent('typing_start', { recipientId });
-  const stopTyping = (recipientId: string) => emitEvent('typing_stop', { recipientId });
-  const editMessage = (data: any) => emitEvent('edit_message', data);
-  const deleteMessage = (data: any) => emitEvent('delete_message', data);
-  const toggleReaction = (data: any) => emitEvent('toggle_reaction', data);
-  const markAsRead = (friendId: string) => emitEvent('message_read', { friendId });
+  const emitUserEvent = useCallback(
+    (event: string, data: any) => {
+      if (user) {
+        const uId = user._id || user.id;
+        socketService.emit(event, {
+          ...data,
+          userId: uId,
+          senderId: uId,
+          senderName: user.login,
+        });
+      }
+    },
+    [user]
+  );
 
-  const subscribe = (event: string, callback: (data: any) => void): (() => void) => {
+  const sendMessage = useCallback((data: any) => emitUserEvent('send_message', data), [emitUserEvent]);
+  const startTyping = useCallback((recipientId: string) => emitUserEvent('typing_start', { recipientId }), [emitUserEvent]);
+  const stopTyping = useCallback((recipientId: string) => emitUserEvent('typing_stop', { recipientId }), [emitUserEvent]);
+  const editMessage = useCallback((data: any) => emitUserEvent('edit_message', data), [emitUserEvent]);
+  const deleteMessage = useCallback((data: any) => emitUserEvent('delete_message', data), [emitUserEvent]);
+  const toggleReaction = useCallback((data: any) => emitUserEvent('toggle_reaction', data), [emitUserEvent]);
+  const markAsRead = useCallback((friendId: string) => emitUserEvent('message_read', { friendId }), [emitUserEvent]);
+
+  const subscribe = useCallback((event: string, callback: (data: any) => void): (() => void) => {
     socketService.on(event, callback);
     return () => socketService.off(event, callback);
-  };
+  }, []);
 
   const contextValue = useMemo(
     () => ({
-      socket: socketService.getSocket(),
+      socket: socketInstance,
+      isConnected,
+      emit,
       sendMessage,
       startTyping,
       stopTyping,
@@ -74,7 +96,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       markAsRead,
       subscribe,
     }),
-    [userId]
+    [socketInstance, isConnected, emit, sendMessage, startTyping, stopTyping, editMessage, deleteMessage, toggleReaction, markAsRead, subscribe]
   );
 
   return <SocketContext.Provider value={contextValue}>{children}</SocketContext.Provider>;

@@ -1,5 +1,5 @@
 //src/components/common/InAppNotificationBanner.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -8,58 +8,106 @@ import { useTheme } from '../../context/ThemeContext';
 import { navigate } from '../../navigation/navigationRef';
 import { colors, spacing, borderRadius, shadows } from '../../theme/theme';
 
+interface BannerData {
+  type: 'invite' | 'accepted' | 'rejected' | 'cancelled';
+  title: string;
+  message: string;
+  duelId?: string;
+  buttonText?: string;
+  borderColor: string;
+}
+
 export const InAppNotificationBanner: React.FC = () => {
   const { subscribe } = useSocketContext();
   const { themeColors, isDark } = useTheme();
-  const [notification, setNotification] = useState<{
-    duelId: string;
-    challengerName: string;
-    betAmount: number;
-  } | null>(null);
+  const [notification, setNotification] = useState<BannerData | null>(null);
 
-  const translateY = useRef(new Animated.Value(-120)).current;
+  const translateY = useRef(new Animated.Value(-140)).current;
   const hideTimerRef = useRef<any>(null);
 
-  useEffect(() => {
-    const unsub = subscribe('duel_invite_received', (data: any) => {
-      try {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } catch {}
+  const showBanner = useCallback((data: BannerData, autoDismissMs = 6000) => {
+    setNotification(data);
+    Animated.spring(translateY, {
+      toValue: 0,
+      friction: 8,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
 
-      setNotification({
-        duelId: data.duelId,
-        challengerName: data.challengerName || 'Un joueur',
-        betAmount: data.betAmount || 25,
-      });
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = setTimeout(handleDismiss, autoDismissMs);
+  }, [translateY]);
 
-      Animated.spring(translateY, {
-        toValue: 0,
-        friction: 8,
-        tension: 40,
-        useNativeDriver: true,
-      }).start();
-
-      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-      hideTimerRef.current = setTimeout(handleDismiss, 6000);
-    });
-
-    return () => {
-      unsub();
-      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-    };
-  }, [subscribe]);
-
-  const handleDismiss = () => {
+  const handleDismiss = useCallback(() => {
     Animated.timing(translateY, {
-      toValue: -120,
+      toValue: -140,
       duration: 250,
       useNativeDriver: true,
     }).start(() => setNotification(null));
-  };
+  }, [translateY]);
+
+  useEffect(() => {
+    const unsubInvite = subscribe('duel_invite_received', (data: any) => {
+      try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+      showBanner({
+        type: 'invite',
+        title: 'DÉFI EN DUEL 1V1 !',
+        message: `${data?.challengerName || 'Un joueur'} vous défie (${data?.betAmount || 25} Kevs)`,
+        duelId: data?.duelId,
+        buttonText: 'VOIR',
+        borderColor: colors.coral,
+      }, 7000);
+    });
+
+    const unsubResponse = subscribe('duel_invite_response', (data: any) => {
+      if (data?.accept) {
+        try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+        showBanner({
+          type: 'accepted',
+          title: 'DÉFI ACCEPTÉ !',
+          message: `${data?.opponentName || 'L\'adversaire'} a accepté ! Le duel commence !`,
+          duelId: data?.duelId,
+          buttonText: 'JOUER',
+          borderColor: colors.mint,
+        }, 8000);
+      } else {
+        try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); } catch {}
+        showBanner({
+          type: 'rejected',
+          title: 'DÉFI REFUSÉ',
+          message: `${data?.opponentName || 'L\'adversaire'} a décliné votre invitation.`,
+          borderColor: colors.error,
+        }, 4000);
+      }
+    });
+
+    const unsubCancelled = subscribe('duel_invite_cancelled', () => {
+      showBanner({
+        type: 'cancelled',
+        title: 'DÉFI ANNULÉ',
+        message: 'L\'invitation de duel a été retirée.',
+        borderColor: themeColors.border,
+      }, 3500);
+    });
+
+    return () => {
+      unsubInvite();
+      unsubResponse();
+      unsubCancelled();
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    };
+  }, [subscribe, showBanner, themeColors.border]);
 
   const handlePress = () => {
+    const currentDuelId = notification?.duelId;
+    const currentType = notification?.type;
     handleDismiss();
-    navigate('DuelLobby');
+
+    if (currentType === 'accepted' && currentDuelId) {
+      navigate('DuelGame', { duelId: currentDuelId });
+    } else {
+      navigate('DuelLobby');
+    }
   };
 
   if (!notification) return null;
@@ -70,7 +118,7 @@ export const InAppNotificationBanner: React.FC = () => {
         styles.container,
         {
           backgroundColor: themeColors.card,
-          borderColor: colors.coral,
+          borderColor: notification.borderColor,
           transform: [{ translateY }],
         },
         shadows.float(isDark),
@@ -85,15 +133,17 @@ export const InAppNotificationBanner: React.FC = () => {
           />
         </View>
         <View style={styles.textContainer}>
-          <Text style={[styles.title, { color: colors.coral }]}>DÉFI EN DUEL 1V1 !</Text>
+          <Text style={[styles.title, { color: notification.borderColor }]}>{notification.title}</Text>
           <Text style={[styles.message, { color: themeColors.text }]} numberOfLines={1}>
-            <Text style={{ fontFamily: 'Poppins_700Bold' }}>{notification.challengerName}</Text> vous défie ({notification.betAmount} Kevs)
+            {notification.message}
           </Text>
         </View>
         <View style={styles.actions}>
-          <View style={[styles.viewBtn, { backgroundColor: colors.coral }]}>
-            <Text style={styles.viewBtnText}>VOIR</Text>
-          </View>
+          {notification.buttonText ? (
+            <View style={[styles.viewBtn, { backgroundColor: notification.borderColor }]}>
+              <Text style={styles.viewBtnText}>{notification.buttonText}</Text>
+            </View>
+          ) : null}
           <TouchableOpacity onPress={handleDismiss} style={styles.closeBtn}>
             <Ionicons name="close" size={18} color={themeColors.textSecondary} />
           </TouchableOpacity>
@@ -142,7 +192,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   message: {
-    fontFamily: 'Poppins_400Regular',
+    fontFamily: 'Poppins_500Medium',
     fontSize: 12,
     marginTop: 1,
   },
