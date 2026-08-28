@@ -9,7 +9,7 @@ export type BuzzerState = 'free' | 'my_turn' | 'opponent_turn' | 'expired';
 
 export const useDuelArena = (duelId: string, currentUserId: string) => {
   const { emit, subscribe, isConnected } = useSocketContext();
-  const { playBgm, stopBgm, playSuccess, playError, playGameOver } = useAudioContext();
+  const { playBgm, stopBgm, playSuccess, playError, playGameOver, playBuzzer } = useAudioContext();
 
   const [duel, setDuel] = useState<DuelSessionData | null>(null);
   const [currentEnigma, setCurrentEnigma] = useState<DuelEnigma | null>(null);
@@ -27,6 +27,7 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
 
   const globalTimerRef = useRef<any>(null);
   const buzzerTimerRef = useRef<any>(null);
+  const gameStartTimestampRef = useRef<number | null>(null);
 
   // 1. Initialisation et connexion à la room
   useEffect(() => {
@@ -43,6 +44,7 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
           }
           if (data.status === 'in_progress' && data.startedAt) {
             setIsWaitingForOpponent(false);
+            gameStartTimestampRef.current = new Date(data.startedAt).getTime();
             playBgm();
           }
           emit('duel_join', { duelId, userId: currentUserId });
@@ -65,14 +67,13 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
 
   // 2. Synchronisation du chronomètre global
   useEffect(() => {
-    if (isLoading || isGameOver || isWaitingForOpponent || !duel?.startedAt) return;
+    if (isLoading || isGameOver || isWaitingForOpponent || !gameStartTimestampRef.current) return;
 
     const tick = () => {
-      if (!duel?.startedAt) return;
-      const startTime = new Date(duel.startedAt).getTime();
+      if (!gameStartTimestampRef.current) return;
       const now = Date.now();
-      const elapsed = Math.floor((now - startTime) / 1000);
-      const duration = duel.duration || 60;
+      const elapsed = Math.floor((now - gameStartTimestampRef.current) / 1000);
+      const duration = duel?.duration || 60;
       const remaining = Math.max(0, duration - elapsed);
       setGlobalSecondsLeft(remaining);
 
@@ -88,7 +89,7 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
     return () => {
       if (globalTimerRef.current) clearInterval(globalTimerRef.current);
     };
-  }, [isLoading, isGameOver, isWaitingForOpponent, duel?.startedAt, duel?.duration, duelId, emit]);
+  }, [isLoading, isGameOver, isWaitingForOpponent, duel?.duration, duelId, emit]);
 
   // 3. Écouteurs Socket temps réel
   useEffect(() => {
@@ -98,6 +99,8 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
 
     const unsubStart = subscribe('duel_start', (data: any) => {
       setIsWaitingForOpponent(false);
+      gameStartTimestampRef.current = Date.now();
+      setGlobalSecondsLeft(data?.duration || 60);
       playBgm();
       if (data?.duel) {
         setDuel(data.duel);
@@ -116,6 +119,7 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
       setBuzzerState(isMine ? 'my_turn' : 'opponent_turn');
       setBuzzerSecondsLeft(3);
 
+      playBuzzer();
       try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); } catch {}
 
       if (buzzerTimerRef.current) clearInterval(buzzerTimerRef.current);
@@ -164,6 +168,7 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
     const unsubGameOver = subscribe('duel_game_over', (data: any) => {
       if (globalTimerRef.current) clearInterval(globalTimerRef.current);
       if (buzzerTimerRef.current) clearInterval(buzzerTimerRef.current);
+      setGlobalSecondsLeft(0);
       if (data?.duel) setDuel(data.duel);
       setIsGameOver(true);
       stopBgm();
@@ -188,7 +193,7 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
       unsubGameOver();
       unsubSkipped();
     };
-  }, [subscribe, currentUserId, playSuccess, playError, playGameOver, playBgm, stopBgm]);
+  }, [subscribe, currentUserId, playSuccess, playError, playGameOver, playBgm, stopBgm, playBuzzer]);
 
   const pressBuzzer = useCallback(() => {
     if (buzzerState !== 'free' || isGameOver || isWaitingForOpponent) return;

@@ -14,6 +14,7 @@ interface AudioContextData {
   stopGameOver: () => void;
   playHint: () => void;
   playChest: () => void;
+  playBuzzer: () => void;
 }
 
 const AudioContext = createContext<AudioContextData>({} as AudioContextData);
@@ -52,11 +53,12 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         gameover_score: require('../../assets/sounds/gameover_score.mp3'),
         hint: require('../../assets/sounds/hint.mp3'),
         chest: require('../../assets/sounds/chest.mp3'),
+        buzzer: require('../../assets/sounds/buzzer.mp3'),
       };
 
       for (const [key, asset] of Object.entries(effectAssets)) {
         const player = createAudioPlayer(asset);
-        player.volume = 0.9;
+        player.volume = 0.95;
         sfxPlayersRef.current[key] = player;
       }
     } catch (err) {
@@ -115,7 +117,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch (e) {}
   };
 
-  const playEffect = (name: string, vol = 0.9, duckDuration = 900) => {
+  const playEffect = (name: string, vol = 0.95, duckDuration = 900) => {
     if (!soundEnabled) return;
     duckBgm(duckDuration);
     const player = sfxPlayersRef.current[name];
@@ -138,6 +140,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         playDanger: () => playEffect('danger', 0.85, 900),
         playLevelUp: () => playEffect('levelup', 1.0, 1500),
         playHint: () => playEffect('hint', 0.95, 1000),
+        playBuzzer: () => playEffect('buzzer', 1.0, 700),
         playGameOver: (hasScore) => {
           stopBgm();
           playEffect(hasScore ? 'gameover_score' : 'gameover_zero', 1.0, 0);
