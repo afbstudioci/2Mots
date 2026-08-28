@@ -5,7 +5,8 @@ import { Platform } from 'react-native';
 import api from './api';
 import { getToken } from './authStorage';
 
-const CHANNEL_ID = 'twomots_alerts_v2';
+const DEFAULT_CHANNEL_ID = 'default';
+const LEGACY_CHANNEL_ID = 'twomots_alerts_v2';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -19,7 +20,22 @@ Notifications.setNotificationHandler({
 
 export const setupNotificationChannelsAsync = async () => {
   if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
+    // 1. Canal Maître Standard (Yély Grade)
+    await Notifications.setNotificationChannelAsync(DEFAULT_CHANNEL_ID, {
+      name: 'Notifications Générales & Duels',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#FF7F50',
+      sound: 'default',
+      enableLights: true,
+      enableVibrate: true,
+      showBadge: true,
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      bypassDnd: false,
+    });
+
+    // 2. Canal Secondaire Compatibilité
+    await Notifications.setNotificationChannelAsync(LEGACY_CHANNEL_ID, {
       name: 'Alertes & Duels 2Mots',
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
@@ -33,6 +49,11 @@ export const setupNotificationChannelsAsync = async () => {
     });
   }
 };
+
+// Initialisation immédiate des canaux au chargement du module
+setupNotificationChannelsAsync().catch((err) => {
+  console.warn('[PUSH] Erreur initialisation canaux Android:', err);
+});
 
 export const registerForPushNotificationsAsync = async () => {
   let token: string | undefined;
@@ -49,6 +70,7 @@ export const registerForPushNotificationsAsync = async () => {
     }
 
     if (finalStatus !== 'granted') {
+      console.warn('[PUSH] Permission de notification refusée par l\'utilisateur.');
       return undefined;
     }
 
@@ -61,14 +83,19 @@ export const registerForPushNotificationsAsync = async () => {
           projectId: 'b10e5217-af10-4e8a-a753-b7b2608af455',
         });
         token = expoToken?.data;
-      } catch {}
+      } catch (expoErr) {
+        console.warn('[PUSH] Erreur récupération Expo Push Token:', expoErr);
+      }
     }
 
     const authToken = await getToken();
     if (token && authToken) {
       try {
         await api.post('/auth/fcm-token', { fcmToken: token });
-      } catch {}
+        console.log('[PUSH] Token synchronisé avec le backend avec succès.');
+      } catch (syncErr: any) {
+        console.warn('[PUSH] Échec synchronisation token API:', syncErr.message);
+      }
     }
   }
 

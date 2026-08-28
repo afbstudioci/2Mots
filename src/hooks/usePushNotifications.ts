@@ -21,28 +21,37 @@ export const usePushNotifications = () => {
   const { user } = useAuth();
   const [pendingRouting, setPendingRouting] = useState<any>(null);
 
-  // 1. Initialisation des canaux Android haute priorité & Enregistrement Token FCM
+  // 1. Initialisation immédiate des canaux Android au montage de l'application
+  useEffect(() => {
+    setupNotificationChannelsAsync().catch((err) => {
+      console.warn('[PUSH] Erreur setup canaux au montage:', err);
+    });
+  }, []);
+
+  // 2. Demande de permissions & Enregistrement Token FCM dès qu'un utilisateur est actif
   useEffect(() => {
     if (!user) return;
 
+    let isMounted = true;
+
     const initPush = async () => {
-      await setupNotificationChannelsAsync();
+      try {
+        await setupNotificationChannelsAsync();
 
-      if (Device.isDevice) {
-        const { status: existingStatus } = await Notifications.getPermissionsAsync();
-        let finalStatus = existingStatus;
+        if (Device.isDevice) {
+          const { status: existingStatus } = await Notifications.getPermissionsAsync();
+          let finalStatus = existingStatus;
 
-        if (existingStatus !== 'granted') {
-          const { status } = await Notifications.requestPermissionsAsync();
-          finalStatus = status;
-        }
+          if (existingStatus !== 'granted') {
+            const { status } = await Notifications.requestPermissionsAsync();
+            finalStatus = status;
+          }
 
-        if (finalStatus !== 'granted') {
-          console.warn('[PUSH] Permission de notification refusée.');
-          return;
-        }
+          if (finalStatus !== 'granted') {
+            console.warn('[PUSH] Permission de notification refusée.');
+            return;
+          }
 
-        try {
           let token: string | undefined;
           try {
             const tokenData = await Notifications.getDevicePushTokenAsync();
@@ -62,17 +71,21 @@ export const usePushNotifications = () => {
             }
           }
 
-          if (token) {
+          if (token && isMounted) {
             console.log('[PUSH] Token FCM synchronisé:', token);
             await api.post('/auth/fcm-token', { fcmToken: token });
           }
-        } catch (err) {
-          console.warn('[PUSH] Erreur enregistrement token:', err);
         }
+      } catch (err: any) {
+        console.warn('[PUSH] Erreur enregistrement token push:', err.message);
       }
     };
 
     initPush();
+
+    return () => {
+      isMounted = false;
+    };
   }, [user]);
 
   // 2. Écouteurs de clics sur notification (Cold boot & Background)
