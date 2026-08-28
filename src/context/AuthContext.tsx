@@ -3,7 +3,6 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import { DeviceEventEmitter } from 'react-native';
 import api from '../services/api';
 import { saveTokens, saveUser, getToken, getUser, clearTokens } from '../services/authStorage';
-import { registerForPushNotificationsAsync } from '../services/notificationService';
 
 interface AuthContextData {
   user: any;
@@ -79,7 +78,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await saveTokens(accessToken, refreshToken);
       await saveUser(userData);
       setUser(userData);
-      registerForPushNotificationsAsync().catch(() => {});
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Erreur de connexion');
     }
@@ -93,7 +91,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await saveTokens(accessToken, refreshToken);
       await saveUser(userData);
       setUser(userData);
-      registerForPushNotificationsAsync().catch(() => {});
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Erreur lors de la connexion Google');
     }
@@ -107,7 +104,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await saveTokens(accessToken, refreshToken);
       await saveUser(newUserData);
       setUser(newUserData);
-      registerForPushNotificationsAsync().catch(() => {});
     } catch (error: any) {
       throw new Error(error.response?.data?.message || "Erreur lors de l'inscription");
     }

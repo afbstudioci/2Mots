@@ -107,8 +107,14 @@ export const usePushNotifications = () => {
       }
     });
 
+    // Écouteur de notifications reçues au premier plan (Foreground)
+    const receivedListener = Notifications.addNotificationReceivedListener((notification) => {
+      console.log('[PUSH] Notification reçue au premier plan:', notification.request.content.title);
+    });
+
     return () => {
       responseListener.remove();
+      receivedListener.remove();
     };
   }, []);
 
