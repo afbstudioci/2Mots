@@ -42,9 +42,9 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
           if (data.enigmas && data.enigmas[data.currentEnigmaIndex]) {
             setCurrentEnigma(data.enigmas[data.currentEnigmaIndex]);
           }
-          if (data.status === 'in_progress' && data.startedAt) {
+          if (data.status === 'in_progress' || (data.status === 'ready' && data.startedAt)) {
             setIsWaitingForOpponent(false);
-            gameStartTimestampRef.current = new Date(data.startedAt).getTime();
+            gameStartTimestampRef.current = data.startedAt ? new Date(data.startedAt).getTime() : Date.now();
             playBgm();
           }
           emit('duel_join', { duelId, userId: currentUserId });

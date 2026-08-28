@@ -31,13 +31,21 @@ import {
   DuelSessionData,
 } from '../services/duelApi';
 
-export default function DuelLobbyScreen() {
+export default function DuelLobbyScreen({ route }: any) {
   const navigation = useNavigation<any>();
   const { themeColors } = useTheme();
   const { user, refreshProfile } = useAuth();
   const { emit, subscribe } = useSocketContext();
 
-  const [activeTab, setActiveTab] = useState<'opponents' | 'received' | 'sent'>('opponents');
+  const [activeTab, setActiveTab] = useState<'opponents' | 'received' | 'sent'>(
+    route?.params?.initialTab || 'opponents'
+  );
+
+  useEffect(() => {
+    if (route?.params?.initialTab) {
+      setActiveTab(route.params.initialTab);
+    }
+  }, [route?.params?.initialTab]);
   const [opponents, setOpponents] = useState<Opponent[]>([]);
   const [invites, setInvites] = useState<{ received: DuelInvite[]; sent: DuelInvite[] }>({ received: [], sent: [] });
   const [activeDuel, setActiveDuel] = useState<DuelSessionData | null>(null);
@@ -124,11 +132,19 @@ export default function DuelLobbyScreen() {
       loadData(true);
     });
 
+    const unsubNotif = subscribe('notification_received', (data: any) => {
+      const type = data?.type;
+      if (type && type.startsWith('duel_')) {
+        loadData(true);
+      }
+    });
+
     return () => {
       subscription.remove();
       unsubInviteReceived();
       unsubInviteResponse();
       unsubCancelled();
+      unsubNotif();
     };
   }, [loadData, subscribe]);
 

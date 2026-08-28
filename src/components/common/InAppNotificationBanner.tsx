@@ -90,10 +90,39 @@ export const InAppNotificationBanner: React.FC = () => {
       }, 3500);
     });
 
+    const unsubNotif = subscribe('notification_received', (data: any) => {
+      const notifType = data?.type;
+      const notifData = data?.data || {};
+      const notifDuelId = notifData.duelId || notifData.id;
+
+      if (notifType === 'duel_invite') {
+        try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+        showBanner({
+          type: 'invite',
+          title: data.title || 'DÉFI EN DUEL 1V1 !',
+          message: data.body || 'Un joueur vous défie en duel !',
+          duelId: notifDuelId,
+          buttonText: 'VOIR',
+          borderColor: colors.coral,
+        }, 7000);
+      } else if (notifType === 'duel_accepted') {
+        try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+        showBanner({
+          type: 'accepted',
+          title: data.title || 'DÉFI ACCEPTÉ !',
+          message: data.body || 'Le duel commence !',
+          duelId: notifDuelId,
+          buttonText: 'JOUER',
+          borderColor: colors.mint,
+        }, 8000);
+      }
+    });
+
     return () => {
       unsubInvite();
       unsubResponse();
       unsubCancelled();
+      unsubNotif();
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     };
   }, [subscribe, showBanner, themeColors.border]);
@@ -105,6 +134,8 @@ export const InAppNotificationBanner: React.FC = () => {
 
     if (currentType === 'accepted' && currentDuelId) {
       navigate('DuelGame', { duelId: currentDuelId });
+    } else if (currentType === 'invite') {
+      navigate('DuelLobby', { initialTab: 'received' });
     } else {
       navigate('DuelLobby');
     }

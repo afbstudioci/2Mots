@@ -80,7 +80,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, [soundEnabled]);
 
-  const playBgm = () => {
+  const playBgm = React.useCallback(() => {
     shouldPlayBgm.current = true;
     if (!soundEnabled) return;
     if (bgmPlayerRef.current) {
@@ -91,9 +91,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       } catch (e) {}
     }
-  };
+  }, [soundEnabled]);
 
-  const stopBgm = () => {
+  const stopBgm = React.useCallback(() => {
     shouldPlayBgm.current = false;
     if (duckTimerRef.current) clearTimeout(duckTimerRef.current);
     if (bgmPlayerRef.current) {
@@ -102,9 +102,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         bgmPlayerRef.current.seekTo(0);
       } catch (e) {}
     }
-  };
+  }, []);
 
-  const duckBgm = (durationMs = 900) => {
+  const duckBgm = React.useCallback((durationMs = 900) => {
     if (!bgmPlayerRef.current || !soundEnabled || !shouldPlayBgm.current) return;
     try {
       if (duckTimerRef.current) clearTimeout(duckTimerRef.current);
@@ -115,9 +115,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       }, durationMs);
     } catch (e) {}
-  };
+  }, [soundEnabled]);
 
-  const playEffect = (name: string, vol = 0.95, duckDuration = 900) => {
+  const playEffect = React.useCallback((name: string, vol = 0.95, duckDuration = 900) => {
     if (!soundEnabled) return;
     duckBgm(duckDuration);
     const player = sfxPlayersRef.current[name];
@@ -128,32 +128,44 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         player.play();
       } catch (e) {}
     }
-  };
+  }, [soundEnabled, duckBgm]);
+
+  const playSuccess = React.useCallback(() => playEffect('success', 0.95, 800), [playEffect]);
+  const playError = React.useCallback(() => playEffect('danger', 0.85, 900), [playEffect]);
+  const playDanger = React.useCallback(() => playEffect('danger', 0.85, 900), [playEffect]);
+  const playLevelUp = React.useCallback(() => playEffect('levelup', 1.0, 1500), [playEffect]);
+  const playHint = React.useCallback(() => playEffect('hint', 0.95, 1000), [playEffect]);
+  const playBuzzer = React.useCallback(() => playEffect('buzzer', 1.0, 700), [playEffect]);
+  const playChest = React.useCallback(() => playEffect('chest', 1.0, 1500), [playEffect]);
+
+  const playGameOver = React.useCallback((hasScore: boolean) => {
+    stopBgm();
+    playEffect(hasScore ? 'gameover_score' : 'gameover_zero', 1.0, 0);
+  }, [stopBgm, playEffect]);
+
+  const stopGameOver = React.useCallback(() => {
+    try {
+      sfxPlayersRef.current.gameover_zero?.pause();
+      sfxPlayersRef.current.gameover_score?.pause();
+    } catch (e) {}
+  }, []);
+
+  const value = React.useMemo(() => ({
+    playBgm,
+    stopBgm,
+    playSuccess,
+    playError,
+    playDanger,
+    playLevelUp,
+    playHint,
+    playBuzzer,
+    playGameOver,
+    stopGameOver,
+    playChest,
+  }), [playBgm, stopBgm, playSuccess, playError, playDanger, playLevelUp, playHint, playBuzzer, playGameOver, stopGameOver, playChest]);
 
   return (
-    <AudioContext.Provider
-      value={{
-        playBgm,
-        stopBgm,
-        playSuccess: () => playEffect('success', 0.95, 800),
-        playError: () => playEffect('danger', 0.85, 900),
-        playDanger: () => playEffect('danger', 0.85, 900),
-        playLevelUp: () => playEffect('levelup', 1.0, 1500),
-        playHint: () => playEffect('hint', 0.95, 1000),
-        playBuzzer: () => playEffect('buzzer', 1.0, 700),
-        playGameOver: (hasScore) => {
-          stopBgm();
-          playEffect(hasScore ? 'gameover_score' : 'gameover_zero', 1.0, 0);
-        },
-        stopGameOver: () => {
-          try {
-            sfxPlayersRef.current.gameover_zero?.pause();
-            sfxPlayersRef.current.gameover_score?.pause();
-          } catch (e) {}
-        },
-        playChest: () => playEffect('chest', 1.0, 1500),
-      }}
-    >
+    <AudioContext.Provider value={value}>
       {children}
     </AudioContext.Provider>
   );
