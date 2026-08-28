@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { colors, spacing, borderRadius } from '../theme/theme';
 import { useDuelArena } from '../hooks/useDuelArena';
 import { DuelResultModal } from '../components/duel/DuelResultModal';
+import { DuelBuzzerButton } from '../components/duel/DuelBuzzerButton';
 import KevIcon from '../components/common/KevIcon';
 
 export default function DuelGameScreen() {
@@ -162,12 +163,7 @@ export default function DuelGameScreen() {
             <Text style={[styles.buzzerLockText, { color: colors.error }]}>{activeBuzzerUserName || 'L\'adversaire'} répond... ({buzzerSecondsLeft}s)</Text>
           </View>
         ) : (
-          <Pressable onPress={pressBuzzer} style={styles.buzzerButton}>
-            <View style={[styles.buzzerInner, { backgroundColor: colors.coral }]}>
-              <Ionicons name="flash" size={36} color="#FFFFFF" />
-              <Text style={styles.buzzerText}>BUZZER</Text>
-            </View>
-          </Pressable>
+          <DuelBuzzerButton onPress={pressBuzzer} />
         )}
       </View>
 
