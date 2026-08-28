@@ -1,4 +1,5 @@
 //src/services/duelApi.ts
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from './api';
 
 export interface Opponent {
@@ -58,14 +59,51 @@ export interface DuelSessionData {
   endedAt?: string;
 }
 
+const OPPONENTS_CACHE_KEY = '@cached_duel_opponents';
+const INVITES_CACHE_KEY = '@cached_duel_invites';
+
+export const getCachedOpponents = async (): Promise<Opponent[] | null> => {
+  try {
+    const raw = await AsyncStorage.getItem(OPPONENTS_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+export const setCachedOpponents = async (data: Opponent[]): Promise<void> => {
+  try {
+    await AsyncStorage.setItem(OPPONENTS_CACHE_KEY, JSON.stringify(data));
+  } catch {}
+};
+
+export const getCachedInvites = async (): Promise<{ received: DuelInvite[]; sent: DuelInvite[] } | null> => {
+  try {
+    const raw = await AsyncStorage.getItem(INVITES_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+export const setCachedInvites = async (data: { received: DuelInvite[]; sent: DuelInvite[] }): Promise<void> => {
+  try {
+    await AsyncStorage.setItem(INVITES_CACHE_KEY, JSON.stringify(data));
+  } catch {}
+};
+
 export const getEligibleOpponents = async (): Promise<Opponent[]> => {
   const response = await api.get('/duel/opponents');
-  return response.data?.data || [];
+  const data = response.data?.data || [];
+  setCachedOpponents(data).catch(() => {});
+  return data;
 };
 
 export const getPendingInvites = async (): Promise<{ received: DuelInvite[]; sent: DuelInvite[] }> => {
   const response = await api.get('/duel/invites');
-  return response.data?.data || { received: [], sent: [] };
+  const data = response.data?.data || { received: [], sent: [] };
+  setCachedInvites(data).catch(() => {});
+  return data;
 };
 
 export const sendDuelInvite = async (opponentId: string, betAmount: number): Promise<DuelInvite> => {

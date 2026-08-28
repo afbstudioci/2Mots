@@ -18,6 +18,8 @@ import KevIcon from '../components/common/KevIcon';
 import {
   getEligibleOpponents,
   getPendingInvites,
+  getCachedOpponents,
+  getCachedInvites,
   sendDuelInvite,
   respondDuelInvite,
   cancelDuelInvite,
@@ -35,6 +37,7 @@ export default function DuelLobbyScreen() {
   const [opponents, setOpponents] = useState<Opponent[]>([]);
   const [invites, setInvites] = useState<{ received: DuelInvite[]; sent: DuelInvite[] }>({ received: [], sent: [] });
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [isOffline, setIsOffline] = useState<boolean>(false);
   const [selectedOpponent, setSelectedOpponent] = useState<Opponent | null>(null);
   const [isSendingInvite, setIsSendingInvite] = useState<boolean>(false);
@@ -59,30 +62,40 @@ export default function DuelLobbyScreen() {
     message: '',
   });
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (forceRefresh = false) => {
     try {
-      setIsLoading(true);
-      setIsOffline(false);
+      if (!forceRefresh) {
+        const [cachedOpps, cachedInvs] = await Promise.all([getCachedOpponents(), getCachedInvites()]);
+        if (cachedOpps && cachedOpps.length > 0) {
+          setOpponents(cachedOpps);
+          setIsLoading(false);
+        }
+        if (cachedInvs) {
+          setInvites(cachedInvs);
+        }
+      }
       const [opps, invs] = await Promise.all([getEligibleOpponents(), getPendingInvites()]);
       setOpponents(opps);
       setInvites(invs);
+      setIsOffline(false);
     } catch (e: any) {
-      if (!e.response) setIsOffline(true);
+      if (!e.response && opponents.length === 0) setIsOffline(true);
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
-  }, []);
+  }, [opponents.length]);
 
   useEffect(() => {
-    loadData();
+    loadData(false);
 
     const unsubInviteReceived = subscribe('duel_invite_received', () => {
       try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
-      loadData();
+      loadData(true);
     });
 
     const unsubInviteResponse = subscribe('duel_invite_response', (data: any) => {
-      loadData();
+      loadData(true);
       if (data?.accept && data?.duelId) {
         setAcceptedDuelData({
           visible: true,
@@ -93,7 +106,7 @@ export default function DuelLobbyScreen() {
     });
 
     const unsubCancelled = subscribe('duel_invite_cancelled', () => {
-      loadData();
+      loadData(true);
     });
 
     return () => {
@@ -118,10 +131,10 @@ export default function DuelLobbyScreen() {
       setAlertConfig({
         visible: true,
         title: 'Défi envoyé !',
-        message: `Votre invitation de duel pour ${betAmount} Kevs a été transmise à ${selectedOpponent.login}.`,
+        message: `Votre invitation pour ${betAmount} Kevs a été transmise à ${selectedOpponent.login}.`,
         type: 'success',
       });
-      loadData();
+      loadData(true);
     } catch (e: any) {
       setAlertConfig({
         visible: true,
@@ -156,10 +169,10 @@ export default function DuelLobbyScreen() {
         await refreshProfile();
         navigation.navigate('DuelGame', { duelId: res?._id || duelId });
       } else {
-        loadData();
+        loadData(true);
       }
     } catch (e: any) {
-      loadData();
+      loadData(true);
       setAlertConfig({
         visible: true,
         title: 'Erreur',
@@ -183,9 +196,9 @@ export default function DuelLobbyScreen() {
         ...prev,
         sent: prev.sent.filter((i) => i._id !== duelId),
       }));
-      loadData();
+      loadData(true);
     } catch (e: any) {
-      loadData();
+      loadData(true);
       setAlertConfig({
         visible: true,
         title: 'Erreur',
@@ -242,14 +255,14 @@ export default function DuelLobbyScreen() {
         })}
       </View>
 
-      {isLoading ? (
+      {isLoading && opponents.length === 0 ? (
         <DuelSkeleton />
-      ) : isOffline ? (
+      ) : isOffline && opponents.length === 0 ? (
         <View style={styles.offlineBox}>
           <Ionicons name="cloud-offline" size={48} color={themeColors.textSecondary} />
           <Text style={[styles.offlineTitle, { color: themeColors.text }]}>Aucune connexion Internet</Text>
-          <Text style={[styles.offlineSub, { color: themeColors.textSecondary }]}>Veuillez vérifier votre réseau pour afficher les adversaires.</Text>
-          <TouchableOpacity onPress={loadData} style={[styles.retryBtn, { backgroundColor: colors.coral }]}>
+          <Text style={[styles.offlineSub, { color: themeColors.textSecondary }]}>Veuillez vérifier votre réseau.</Text>
+          <TouchableOpacity onPress={() => loadData(true)} style={[styles.retryBtn, { backgroundColor: colors.coral }]}>
             <Text style={styles.retryText}>RÉESSAYER</Text>
           </TouchableOpacity>
         </View>
@@ -282,7 +295,7 @@ export default function DuelLobbyScreen() {
             )
           }
           contentContainerStyle={styles.listContent}
-          refreshControl={<RefreshControl refreshing={isLoading} onRefresh={loadData} tintColor={colors.coral} />}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => { setIsRefreshing(true); loadData(true); }} tintColor={colors.coral} />}
           ListEmptyComponent={
             <Text style={[styles.emptyText, { color: themeColors.textSecondary }]}>
               {activeTab === 'opponents'

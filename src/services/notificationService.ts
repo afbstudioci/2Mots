@@ -18,6 +18,21 @@ Notifications.setNotificationHandler({
 export const registerForPushNotificationsAsync = async () => {
   let token: string | undefined;
 
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('default', {
+      name: 'Notifications 2Mots',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#FF7F50',
+      sound: 'default',
+      enableLights: true,
+      enableVibrate: true,
+      showBadge: true,
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      bypassDnd: false,
+    });
+  }
+
   if (Device.isDevice) {
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
@@ -33,11 +48,13 @@ export const registerForPushNotificationsAsync = async () => {
 
     try {
       const pushTokenData = await Notifications.getDevicePushTokenAsync();
-      token = pushTokenData.data;
+      token = typeof pushTokenData?.data === 'string' ? pushTokenData.data : String(pushTokenData?.data || '');
     } catch {
       try {
-        const expoToken = await Notifications.getExpoPushTokenAsync();
-        token = expoToken.data;
+        const expoToken = await Notifications.getExpoPushTokenAsync({
+          projectId: 'b10e5217-af10-4e8a-a753-b7b2608af455',
+        });
+        token = expoToken?.data;
       } catch {}
     }
 
@@ -47,15 +64,6 @@ export const registerForPushNotificationsAsync = async () => {
         await api.post('/auth/fcm-token', { fcmToken: token });
       } catch {}
     }
-  }
-
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'Notifications 2Mots',
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#FF7F50',
-    });
   }
 
   return token;
