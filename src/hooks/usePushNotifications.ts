@@ -1,7 +1,11 @@
-//src/hooks/usePushNotifications.ts
+// src/hooks/usePushNotifications.ts
+// GESTION FCM - Enregistrement, Synchronisation et Aiguillage Deep Link
+// CSCSM Level: Bank Grade (Strict <= 325 lignes)
+
 import { useEffect, useState } from 'react';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import * as Haptics from 'expo-haptics';
 import { useAuth } from '../context/AuthContext';
 import { navigate } from '../navigation/navigationRef';
 import api from '../services/api';
@@ -21,7 +25,7 @@ export const usePushNotifications = () => {
   const { user } = useAuth();
   const [pendingRouting, setPendingRouting] = useState<any>(null);
 
-  // 1. Initialisation immédiate des canaux Android au montage de l'application
+  // 1. Initialisation immédiate des canaux Android au montage
   useEffect(() => {
     setupNotificationChannelsAsync().catch((err) => {
       console.warn('[PUSH] Erreur setup canaux au montage:', err);
@@ -88,7 +92,7 @@ export const usePushNotifications = () => {
     };
   }, [user]);
 
-  // 2. Écouteurs de clics sur notification (Cold boot & Background)
+  // 3. Écouteurs de notifications (Foreground, Background & Cold boot)
   useEffect(() => {
     const checkColdBoot = async () => {
       try {
@@ -107,9 +111,11 @@ export const usePushNotifications = () => {
       }
     });
 
-    // Écouteur de notifications reçues au premier plan (Foreground)
     const receivedListener = Notifications.addNotificationReceivedListener((notification) => {
-      console.log('[PUSH] Notification reçue au premier plan:', notification.request.content.title);
+      try {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch {}
+      console.log('[PUSH] Notification reçue en direct:', notification.request.content.title);
     });
 
     return () => {
@@ -118,7 +124,7 @@ export const usePushNotifications = () => {
     };
   }, []);
 
-  // 3. Aiguillage et Deep Linking instantané
+  // 4. Aiguillage et Deep Linking instantané
   useEffect(() => {
     if (user && pendingRouting) {
       const timer = setTimeout(() => {

@@ -1,12 +1,15 @@
-//src/services/notificationService.ts
+// src/services/notificationService.ts
+// GESTION CANAUX ET ENREGISTREMENT PUSH - STANDARDS INDUSTRIELS
+// CSCSM Level: Bank Grade (Strict <= 325 lignes)
+
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import api from './api';
 import { getToken } from './authStorage';
 
-const DEFAULT_CHANNEL_ID = 'default';
-const LEGACY_CHANNEL_ID = 'twomots_alerts_v2';
+export const PRIMARY_CHANNEL_ID = 'twomots_alerts_v3';
+export const LEGACY_CHANNEL_ID = 'default';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -20,9 +23,9 @@ Notifications.setNotificationHandler({
 
 export const setupNotificationChannelsAsync = async () => {
   if (Platform.OS === 'android') {
-    // 1. Canal Maître Standard (Yély Grade)
-    await Notifications.setNotificationChannelAsync(DEFAULT_CHANNEL_ID, {
-      name: 'Notifications Générales & Duels',
+    // 1. Canal Maître Dédié Priorité MAX (Anti-Cache Android)
+    await Notifications.setNotificationChannelAsync(PRIMARY_CHANNEL_ID, {
+      name: 'Alertes & Duels 2Mots',
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#FF7F50',
@@ -36,7 +39,7 @@ export const setupNotificationChannelsAsync = async () => {
 
     // 2. Canal Secondaire Compatibilité
     await Notifications.setNotificationChannelAsync(LEGACY_CHANNEL_ID, {
-      name: 'Alertes & Duels 2Mots',
+      name: 'Notifications Générales',
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#FF7F50',
