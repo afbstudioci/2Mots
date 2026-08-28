@@ -1,6 +1,6 @@
 //src/screens/DuelLobbyScreen.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, AppState } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -12,19 +12,23 @@ import { colors, spacing, borderRadius } from '../theme/theme';
 import { DuelBetModal } from '../components/duel/DuelBetModal';
 import { DuelSkeleton } from '../components/duel/DuelSkeleton';
 import { DuelAcceptModal } from '../components/duel/DuelAcceptModal';
+import { ActiveDuelBanner } from '../components/duel/ActiveDuelBanner';
 import { OpponentItem, ReceivedInviteItem, SentInviteItem } from '../components/duel/DuelListItem';
 import CustomAlert from '../components/common/CustomAlert';
 import KevIcon from '../components/common/KevIcon';
 import {
   getEligibleOpponents,
   getPendingInvites,
+  getActiveDuel,
   getCachedOpponents,
   getCachedInvites,
   sendDuelInvite,
   respondDuelInvite,
   cancelDuelInvite,
+  cancelInactiveDuel,
   Opponent,
   DuelInvite,
+  DuelSessionData,
 } from '../services/duelApi';
 
 export default function DuelLobbyScreen() {
@@ -36,6 +40,7 @@ export default function DuelLobbyScreen() {
   const [activeTab, setActiveTab] = useState<'opponents' | 'received' | 'sent'>('opponents');
   const [opponents, setOpponents] = useState<Opponent[]>([]);
   const [invites, setInvites] = useState<{ received: DuelInvite[]; sent: DuelInvite[] }>({ received: [], sent: [] });
+  const [activeDuel, setActiveDuel] = useState<DuelSessionData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [isOffline, setIsOffline] = useState<boolean>(false);
@@ -66,17 +71,17 @@ export default function DuelLobbyScreen() {
     try {
       if (!forceRefresh) {
         const [cachedOpps, cachedInvs] = await Promise.all([getCachedOpponents(), getCachedInvites()]);
-        if (cachedOpps && cachedOpps.length > 0) {
-          setOpponents(cachedOpps);
-          setIsLoading(false);
-        }
-        if (cachedInvs) {
-          setInvites(cachedInvs);
-        }
+        if (cachedOpps && cachedOpps.length > 0) setOpponents(cachedOpps);
+        if (cachedInvs) setInvites(cachedInvs);
       }
-      const [opps, invs] = await Promise.all([getEligibleOpponents(), getPendingInvites()]);
+      const [opps, invs, active] = await Promise.all([
+        getEligibleOpponents(),
+        getPendingInvites(),
+        getActiveDuel(),
+      ]);
       setOpponents(opps);
       setInvites(invs);
+      setActiveDuel(active);
       setIsOffline(false);
     } catch (e: any) {
       if (!e.response && opponents.length === 0) setIsOffline(true);
@@ -88,6 +93,12 @@ export default function DuelLobbyScreen() {
 
   useEffect(() => {
     loadData(false);
+
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        loadData(true);
+      }
+    });
 
     const unsubInviteReceived = subscribe('duel_invite_received', () => {
       try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
@@ -110,6 +121,7 @@ export default function DuelLobbyScreen() {
     });
 
     return () => {
+      subscription.remove();
       unsubInviteReceived();
       unsubInviteResponse();
       unsubCancelled();
@@ -202,7 +214,7 @@ export default function DuelLobbyScreen() {
       setAlertConfig({
         visible: true,
         title: 'Erreur',
-        message: e?.response?.data?.message || e.message || 'Impossible d\'annuler.',
+        message: e?.response?.data?.message || e.message || "Impossible d'annuler.",
         type: 'error',
       });
     } finally {
@@ -210,22 +222,32 @@ export default function DuelLobbyScreen() {
     }
   };
 
-  const handlePromptCancelInvite = (invite: DuelInvite) => {
-    setAlertConfig({
-      visible: true,
-      title: 'Annuler l\'invitation ?',
-      message: `Voulez-vous vraiment annuler votre défi de ${invite.betAmount} Kevs transmis à ${invite.opponent?.login || 'ce joueur'} ?`,
-      type: 'info',
-      buttonText: 'Non',
-      confirmText: 'Oui, annuler',
-      onConfirm: async () => {
-        setAlertConfig((prev) => ({ ...prev, visible: false }));
-        await handleCancelInvite(invite._id, invite.opponent?._id);
-      },
-    });
+  const handleCancelActiveDuel = async (duelId: string) => {
+    try {
+      await cancelInactiveDuel(duelId);
+      await refreshProfile();
+      setActiveDuel(null);
+      loadData(true);
+      setAlertConfig({
+        visible: true,
+        title: 'Duel annulé',
+        message: 'Le duel a été annulé et vos Kevs ont été remboursés.',
+        type: 'success',
+      });
+    } catch (e: any) {
+      setAlertConfig({
+        visible: true,
+        title: 'Erreur',
+        message: e?.response?.data?.message || e.message || "Impossible d'annuler.",
+        type: 'error',
+      });
+    }
   };
 
   const pendingSentOpponentIds = invites.sent.map((i) => String(i.opponent?._id));
+  const activeOpponentId = activeDuel
+    ? String(activeDuel.challenger?._id === user?._id ? activeDuel.opponent?._id : activeDuel.challenger?._id)
+    : null;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
@@ -239,6 +261,16 @@ export default function DuelLobbyScreen() {
           <Text style={[styles.balanceText, { color: themeColors.text }]}>{user?.kevs || 0}</Text>
         </View>
       </View>
+
+      {activeDuel && (
+        <ActiveDuelBanner
+          duel={activeDuel}
+          currentUserId={user?._id || ''}
+          themeColors={themeColors}
+          onJoin={(duelId) => navigation.navigate('DuelGame', { duelId })}
+          onCancel={handleCancelActiveDuel}
+        />
+      )}
 
       <View style={styles.tabContainer}>
         {(['opponents', 'received', 'sent'] as const).map((tabKey) => {
@@ -274,7 +306,7 @@ export default function DuelLobbyScreen() {
             activeTab === 'opponents' ? (
               <OpponentItem
                 item={item}
-                isAlreadyInvited={pendingSentOpponentIds.includes(String(item._id))}
+                isAlreadyInvited={pendingSentOpponentIds.includes(String(item._id)) || activeOpponentId === String(item._id)}
                 themeColors={themeColors}
                 onSelect={setSelectedOpponent}
               />
@@ -289,7 +321,7 @@ export default function DuelLobbyScreen() {
               <SentInviteItem
                 item={item}
                 themeColors={themeColors}
-                onCancel={handlePromptCancelInvite}
+                onCancel={(invite) => handleCancelInvite(invite._id, invite.opponent?._id)}
                 isCancelling={cancellingInviteId === item._id}
               />
             )
@@ -332,7 +364,7 @@ export default function DuelLobbyScreen() {
         title={alertConfig.title}
         message={alertConfig.message}
         type={alertConfig.type}
-        buttonText={alertConfig.buttonText || "Fermer"}
+        buttonText={alertConfig.buttonText || 'Fermer'}
         confirmText={alertConfig.confirmText}
         onConfirm={alertConfig.onConfirm}
         onClose={() => setAlertConfig((prev) => ({ ...prev, visible: false }))}

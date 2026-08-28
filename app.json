@@ -21,7 +21,10 @@
       "permissions": [
         "com.android.vending.BILLING",
         "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS"
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "WAKE_LOCK"
       ],
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {

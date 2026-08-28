@@ -28,7 +28,7 @@ export interface DuelInvite {
     level: number;
   };
   betAmount: number;
-  status: 'pending' | 'accepted' | 'rejected' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'pending' | 'accepted' | 'rejected' | 'in_progress' | 'completed' | 'cancelled' | 'ready';
   createdAt: string;
 }
 
@@ -106,6 +106,15 @@ export const getPendingInvites = async (): Promise<{ received: DuelInvite[]; sen
   return data;
 };
 
+export const getActiveDuel = async (): Promise<DuelSessionData | null> => {
+  try {
+    const response = await api.get('/duel/active');
+    return response.data?.data || null;
+  } catch {
+    return null;
+  }
+};
+
 export const sendDuelInvite = async (opponentId: string, betAmount: number): Promise<DuelInvite> => {
   const response = await api.post('/duel/invite', { opponentId, betAmount });
   return response.data?.data;
@@ -123,5 +132,10 @@ export const getDuelDetails = async (duelId: string): Promise<DuelSessionData> =
 
 export const cancelDuelInvite = async (duelId: string): Promise<any> => {
   const response = await api.post('/duel/cancel', { duelId });
+  return response.data?.data;
+};
+
+export const cancelInactiveDuel = async (duelId: string): Promise<any> => {
+  const response = await api.post('/duel/cancel-inactive', { duelId });
   return response.data?.data;
 };

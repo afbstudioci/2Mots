@@ -5,6 +5,8 @@ import { Platform } from 'react-native';
 import api from './api';
 import { getToken } from './authStorage';
 
+const CHANNEL_ID = 'twomots_alerts_v2';
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -15,12 +17,10 @@ Notifications.setNotificationHandler({
   }),
 });
 
-export const registerForPushNotificationsAsync = async () => {
-  let token: string | undefined;
-
+export const setupNotificationChannelsAsync = async () => {
   if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'Notifications 2Mots',
+    await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
+      name: 'Alertes & Duels 2Mots',
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#FF7F50',
@@ -32,6 +32,12 @@ export const registerForPushNotificationsAsync = async () => {
       bypassDnd: false,
     });
   }
+};
+
+export const registerForPushNotificationsAsync = async () => {
+  let token: string | undefined;
+
+  await setupNotificationChannelsAsync();
 
   if (Device.isDevice) {
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -43,7 +49,7 @@ export const registerForPushNotificationsAsync = async () => {
     }
 
     if (finalStatus !== 'granted') {
-      return;
+      return undefined;
     }
 
     try {

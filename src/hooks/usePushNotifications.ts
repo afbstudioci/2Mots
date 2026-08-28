@@ -1,11 +1,11 @@
 //src/hooks/usePushNotifications.ts
 import { useEffect, useState } from 'react';
-import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { useAuth } from '../context/AuthContext';
 import { navigate } from '../navigation/navigationRef';
 import api from '../services/api';
+import { setupNotificationChannelsAsync } from '../services/notificationService';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -21,25 +21,12 @@ export const usePushNotifications = () => {
   const { user } = useAuth();
   const [pendingRouting, setPendingRouting] = useState<any>(null);
 
-  // 1. Enregistrement du Token natif FCM & Canaux Android
+  // 1. Initialisation des canaux Android haute priorité & Enregistrement Token FCM
   useEffect(() => {
     if (!user) return;
 
     const initPush = async () => {
-      if (Platform.OS === 'android') {
-        await Notifications.setNotificationChannelAsync('default', {
-          name: 'Notifications 2Mots',
-          importance: Notifications.AndroidImportance.MAX,
-          vibrationPattern: [0, 250, 250, 250],
-          lightColor: '#FF7F50',
-          sound: 'default',
-          enableLights: true,
-          enableVibrate: true,
-          showBadge: true,
-          lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-          bypassDnd: false,
-        });
-      }
+      await setupNotificationChannelsAsync();
 
       if (Device.isDevice) {
         const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -50,7 +37,10 @@ export const usePushNotifications = () => {
           finalStatus = status;
         }
 
-        if (finalStatus !== 'granted') return;
+        if (finalStatus !== 'granted') {
+          console.warn('[PUSH] Permission de notification refusée.');
+          return;
+        }
 
         try {
           let token: string | undefined;
@@ -73,7 +63,7 @@ export const usePushNotifications = () => {
           }
 
           if (token) {
-            console.log('[PUSH] Token synchronisé avec succès:', token);
+            console.log('[PUSH] Token FCM synchronisé:', token);
             await api.post('/auth/fcm-token', { fcmToken: token });
           }
         } catch (err) {
@@ -85,7 +75,7 @@ export const usePushNotifications = () => {
     initPush();
   }, [user]);
 
-  // 2. Gestion des clics sur notification (Cold Boot & Background)
+  // 2. Écouteurs de clics sur notification (Cold boot & Background)
   useEffect(() => {
     const checkColdBoot = async () => {
       try {
@@ -109,7 +99,7 @@ export const usePushNotifications = () => {
     };
   }, []);
 
-  // 3. Aiguillage et Deep Linking avec temporisation de 400ms
+  // 3. Aiguillage et Deep Linking instantané
   useEffect(() => {
     if (user && pendingRouting) {
       const timer = setTimeout(() => {
@@ -143,7 +133,7 @@ export const usePushNotifications = () => {
         }
 
         setPendingRouting(null);
-      }, 400);
+      }, 350);
 
       return () => clearTimeout(timer);
     }
