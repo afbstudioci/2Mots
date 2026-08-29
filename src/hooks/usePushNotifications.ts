@@ -1,10 +1,11 @@
 // src/hooks/usePushNotifications.ts
 // GESTION FCM - Enregistrement, Synchronisation et Aiguillage Deep Link
-// CSCSM Level: Bank Grade (Strict <= 270 lignes)
+// Architecture : getDevicePushTokenAsync uniquement — pas de token Expo
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import { Platform } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { navigate } from '../navigation/navigationRef';
 import api from '../services/api';
@@ -13,64 +14,95 @@ import { setupNotificationChannelsAsync } from '../services/notificationService'
 export const usePushNotifications = () => {
   const { user } = useAuth();
   const [pendingRouting, setPendingRouting] = useState<any>(null);
+  const tokenSyncedForUser = useRef<string | null>(null);
 
-  // 1. Initialisation immediate des canaux Android au montage
+  // 1. Creation des canaux Android (MAX priority) au montage, une seule fois
   useEffect(() => {
     setupNotificationChannelsAsync().catch((err) => {
-      console.warn('[PUSH] Erreur setup canaux au montage:', err);
+      console.warn('[PUSH] Erreur setup canaux Android:', err);
     });
   }, []);
 
-  // 2. Demande de permissions & Enregistrement Token FCM des qu'un utilisateur est connecte
+  // 2. Demande permissions & enregistrement du token FCM natif quand user connecte
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      tokenSyncedForUser.current = null;
+      return;
+    }
+
+    // Evite de re-synchroniser si on est deja synced pour ce user
+    if (tokenSyncedForUser.current === String(user._id)) return;
 
     let isMounted = true;
 
     const initPush = async () => {
       try {
+        // Les canaux doivent etre crees AVANT toute reception de notif
         await setupNotificationChannelsAsync();
 
-        if (Device.isDevice) {
-          const { status: existingStatus } = await Notifications.getPermissionsAsync();
-          let finalStatus = existingStatus;
+        if (!Device.isDevice) {
+          console.warn('[PUSH] Simulateur detecte — les push FCM ne fonctionnent pas sur simulateur.');
+          return;
+        }
 
-          if (existingStatus !== 'granted') {
-            const { status } = await Notifications.requestPermissionsAsync();
-            finalStatus = status;
-          }
+        // Demande de permissions (Android 13+ et iOS)
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
 
-          if (finalStatus !== 'granted') {
-            console.warn('[PUSH] Permission de notification refusee.');
+        if (existingStatus !== 'granted') {
+          const { status } = await Notifications.requestPermissionsAsync();
+          finalStatus = status;
+        }
+
+        if (finalStatus !== 'granted') {
+          console.warn('[PUSH] Permission de notification refusee par l\'utilisateur.');
+          return;
+        }
+
+        // CRITIQUE : getDevicePushTokenAsync = vrai token FCM natif Google
+        // Ne JAMAIS utiliser getExpoPushTokenAsync ici, car notre backend
+        // utilise Firebase Admin SDK directement et ne comprend que les tokens FCM natifs.
+        if (Platform.OS !== 'android' && Platform.OS !== 'ios') {
+          console.warn('[PUSH] Plateforme non supportee pour les push:', Platform.OS);
+          return;
+        }
+
+        let token: string | undefined;
+
+        try {
+          const tokenData = await Notifications.getDevicePushTokenAsync();
+          token = typeof tokenData?.data === 'string' ? tokenData.data : undefined;
+
+          if (!token) {
+            console.error('[PUSH] getDevicePushTokenAsync a retourne un token vide ou invalide.');
             return;
           }
 
-          let token: string | undefined;
+          // Verification de securite : le token FCM natif ne commence jamais par ExponentPushToken
+          if (token.startsWith('ExponentPushToken') || token.startsWith('ExpoPushToken')) {
+            console.error('[PUSH] ERREUR : token au format Expo recu alors qu\'on attend un token FCM natif.');
+            console.error('[PUSH] Verifiez que google-services.json est correctement configure.');
+            return;
+          }
+
+          console.log(`[PUSH] Token FCM natif obtenu (${token.substring(0, 20)}...)`);
+        } catch (tokenErr: any) {
+          console.error('[PUSH] Impossible d\'obtenir le token FCM natif:', tokenErr.message);
+          console.error('[PUSH] Verifiez que google-services.json est present et que google_app_id est correct.');
+          return;
+        }
+
+        if (isMounted && token) {
           try {
-            const tokenData = await Notifications.getDevicePushTokenAsync();
-            token = typeof tokenData?.data === 'string' ? tokenData.data : String(tokenData?.data || '');
-          } catch (devErr) {
-            console.warn('[PUSH] Fallback vers getExpoPushTokenAsync:', devErr);
-          }
-
-          if (!token) {
-            try {
-              const expoToken = await Notifications.getExpoPushTokenAsync({
-                projectId: 'b10e5217-af10-4e8a-a753-b7b2608af455',
-              });
-              token = expoToken?.data;
-            } catch (expoErr) {
-              console.warn('[PUSH] Erreur getExpoPushTokenAsync:', expoErr);
-            }
-          }
-
-          if (token && isMounted) {
-            console.log('[PUSH] Token FCM synchronise:', token);
             await api.post('/auth/fcm-token', { fcmToken: token });
+            tokenSyncedForUser.current = String(user._id);
+            console.log(`[PUSH] Token FCM synchronise avec le backend pour l'utilisateur ${user._id}`);
+          } catch (apiErr: any) {
+            console.warn('[PUSH] Erreur synchronisation token avec le backend:', apiErr.message);
           }
         }
       } catch (err: any) {
-        console.warn('[PUSH] Erreur enregistrement token push:', err.message);
+        console.error('[PUSH] Erreur generale enregistrement push:', err.message);
       }
     };
 
@@ -81,7 +113,7 @@ export const usePushNotifications = () => {
     };
   }, [user]);
 
-  // 3. Ecouteurs de clics sur notification (Cold boot & Background)
+  // 3. Ecouteurs de clics sur notification (Cold Boot & Background)
   useEffect(() => {
     const checkColdBoot = async () => {
       try {
@@ -91,13 +123,12 @@ export const usePushNotifications = () => {
         }
       } catch {}
     };
+
     checkColdBoot();
 
     const responseListener = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data;
-      if (data) {
-        setPendingRouting(data);
-      }
+      if (data) setPendingRouting(data);
     });
 
     return () => {
@@ -105,43 +136,37 @@ export const usePushNotifications = () => {
     };
   }, []);
 
-  // 4. Aiguillage et Deep Linking instantane
+  // 4. Aiguillage Deep Linking instantane
   useEffect(() => {
-    if (user && pendingRouting) {
-      const timer = setTimeout(() => {
-        const { type, duelId, friendId, friendName, friendAvatar } = pendingRouting;
+    if (!user || !pendingRouting) return;
 
-        switch (type) {
-          case 'duel_invite':
-            navigate('DuelLobby', { initialTab: 'received' });
-            break;
-          case 'duel_accepted':
-            if (duelId) {
-              navigate('DuelGame', { duelId });
-            } else {
-              navigate('DuelLobby');
-            }
-            break;
-          case 'duel_rejected':
-            navigate('DuelLobby');
-            break;
-          case 'chat_message':
-            if (friendId) {
-              navigate('Chat', { friendId, friendName: friendName || 'Ami', friendAvatar });
-            }
-            break;
-          case 'friend_request':
-          case 'friend_accepted':
-            navigate('Friends');
-            break;
-          default:
-            break;
-        }
+    const timer = setTimeout(() => {
+      const { type, duelId, friendId, friendName, friendAvatar } = pendingRouting;
 
-        setPendingRouting(null);
-      }, 350);
+      switch (type) {
+        case 'duel_invite':
+          navigate('DuelLobby', { initialTab: 'received' });
+          break;
+        case 'duel_accepted':
+          navigate(duelId ? 'DuelGame' : 'DuelLobby', duelId ? { duelId } : undefined);
+          break;
+        case 'duel_rejected':
+          navigate('DuelLobby');
+          break;
+        case 'chat_message':
+          if (friendId) navigate('Chat', { friendId, friendName: friendName || 'Ami', friendAvatar });
+          break;
+        case 'friend_request':
+        case 'friend_accepted':
+          navigate('Friends');
+          break;
+        default:
+          break;
+      }
 
-      return () => clearTimeout(timer);
-    }
+      setPendingRouting(null);
+    }, 350);
+
+    return () => clearTimeout(timer);
   }, [user, pendingRouting]);
 };
