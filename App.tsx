@@ -58,7 +58,7 @@ export type RootStackParamList = {
   Missions: undefined;
   Friends: undefined;
   Chat: { friendId: string; friendName: string; friendAvatar?: string };
-  DuelLobby: undefined;
+  DuelLobby?: { initialTab?: 'opponents' | 'received' | 'sent' } | undefined;
   DuelGame: { duelId: string };
   Contact: undefined;
   Rules: undefined;
