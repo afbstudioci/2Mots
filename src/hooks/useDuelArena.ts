@@ -26,9 +26,19 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [lastAnswerStatus, setLastAnswerStatus] = useState<'correct' | 'wrong' | null>(null);
 
+  const [isOpponentDisconnected, setIsOpponentDisconnected] = useState<boolean>(false);
+  const [disconnectSecondsLeft, setDisconnectSecondsLeft] = useState<number>(15);
+  const [forfeitInfo, setForfeitInfo] = useState<{
+    visible: boolean;
+    isWinner: boolean;
+    penaltyKevs: number;
+    message: string;
+  } | null>(null);
+
   const globalTimerRef = useRef<any>(null);
   const buzzerTimerRef = useRef<any>(null);
   const gameStartTimestampRef = useRef<number | null>(null);
+  const disconnectStartTimestampRef = useRef<number | null>(null);
 
   // 1. Initialisation et connexion à la room
   useEffect(() => {
@@ -43,21 +53,31 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
           if (data.enigmas && data.enigmas[data.currentEnigmaIndex]) {
             setCurrentEnigma(data.enigmas[data.currentEnigmaIndex]);
           }
-          if (data.status === 'in_progress' || (data.status === 'ready' && data.startedAt)) {
+          if (data.status === 'in_progress') {
             setIsWaitingForOpponent(false);
-            gameStartTimestampRef.current = data.startedAt ? new Date(data.startedAt).getTime() : Date.now();
+            if (data.startedAt) {
+              const elapsed = Math.floor((Date.now() - new Date(data.startedAt).getTime()) / 1000);
+              gameStartTimestampRef.current = new Date(data.startedAt).getTime();
+              setGlobalSecondsLeft(Math.max(0, (data.duration || 60) - elapsed));
+            }
             playBgm();
+          } else {
+            setIsWaitingForOpponent(true);
           }
-          emit('duel_join', { duelId, userId: currentUserId });
         }
-      } catch (e) {
-        console.error('[DUEL_ARENA] Erreur chargement duel:', e);
+      } catch (err) {
+        console.warn('[DUEL_ARENA] Erreur chargement duel:', err);
       } finally {
         if (isMounted) setIsLoading(false);
       }
     };
 
     loadSession();
+
+    if (isConnected) {
+      emit('duel_join', { duelId, userId: currentUserId });
+    }
+
     return () => {
       isMounted = false;
       stopBgm();
@@ -66,9 +86,7 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
     };
   }, [duelId, currentUserId, emit, isConnected, playBgm, stopBgm]);
 
-  const disconnectStartTimestampRef = useRef<number | null>(null);
-
-  // 2. Synchronisation du chronomètre global (se met en PAUSE automatique si un joueur est déconnecté)
+  // 2. Synchronisation du chronomètre global (Pause si un joueur est déconnecté)
   useEffect(() => {
     if (isLoading || isGameOver || isWaitingForOpponent || isOpponentDisconnected || !gameStartTimestampRef.current) return;
 
@@ -245,16 +263,7 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
     };
   }, [subscribe, currentUserId, playSuccess, playError, playGameOver, playBgm, stopBgm, playBuzzer]);
 
-  const [isOpponentDisconnected, setIsOpponentDisconnected] = useState(false);
-  const [disconnectSecondsLeft, setDisconnectSecondsLeft] = useState(15);
-  const [forfeitInfo, setForfeitInfo] = useState<{
-    visible: boolean;
-    isWinner: boolean;
-    penaltyKevs: number;
-    message: string;
-  } | null>(null);
-
-  // Décompte visuel de reconnexion
+  // 4. Décompte visuel des 15 secondes d'attente
   useEffect(() => {
     if (!isOpponentDisconnected) return;
     const interval = setInterval(() => {
