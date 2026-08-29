@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import * as Haptics from 'expo-haptics';
 import { useSocketContext } from '../context/SocketContext';
 import { useAudioContext } from '../context/AudioContext';
+import api from '../services/api';
 import { getDuelDetails, DuelSessionData, DuelEnigma } from '../services/duelApi';
 
 export type BuzzerState = 'free' | 'my_turn' | 'opponent_turn' | 'expired';
@@ -65,9 +66,11 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
     };
   }, [duelId, currentUserId, emit, isConnected, playBgm, stopBgm]);
 
-  // 2. Synchronisation du chronomètre global
+  const disconnectStartTimestampRef = useRef<number | null>(null);
+
+  // 2. Synchronisation du chronomètre global (se met en PAUSE automatique si un joueur est déconnecté)
   useEffect(() => {
-    if (isLoading || isGameOver || isWaitingForOpponent || !gameStartTimestampRef.current) return;
+    if (isLoading || isGameOver || isWaitingForOpponent || isOpponentDisconnected || !gameStartTimestampRef.current) return;
 
     const tick = () => {
       if (!gameStartTimestampRef.current) return;
@@ -89,7 +92,7 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
     return () => {
       if (globalTimerRef.current) clearInterval(globalTimerRef.current);
     };
-  }, [isLoading, isGameOver, isWaitingForOpponent, duel?.duration, duelId, emit]);
+  }, [isLoading, isGameOver, isWaitingForOpponent, isOpponentDisconnected, duel?.duration, duelId, emit]);
 
   // 3. Écouteurs Socket temps réel
   useEffect(() => {
@@ -184,6 +187,50 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
       if (data?.nextEnigma) setCurrentEnigma(data.nextEnigma);
     });
 
+    const unsubPlayerDisc = subscribe('duel_player_disconnected', (data: any) => {
+      if (String(data?.userId) !== String(currentUserId)) {
+        disconnectStartTimestampRef.current = Date.now();
+        setIsOpponentDisconnected(true);
+        setDisconnectSecondsLeft(data?.graceSeconds || 15);
+        stopBgm();
+      }
+    });
+
+    const unsubPlayerRec = subscribe('duel_player_reconnected', (data: any) => {
+      if (String(data?.userId) !== String(currentUserId)) {
+        if (disconnectStartTimestampRef.current && gameStartTimestampRef.current) {
+          const pausedDuration = Date.now() - disconnectStartTimestampRef.current;
+          gameStartTimestampRef.current += pausedDuration;
+        }
+        disconnectStartTimestampRef.current = null;
+        setIsOpponentDisconnected(false);
+        playBgm();
+      }
+    });
+
+    const unsubForfeit = subscribe('duel_forfeited', (data: any) => {
+      if (globalTimerRef.current) clearInterval(globalTimerRef.current);
+      if (buzzerTimerRef.current) clearInterval(buzzerTimerRef.current);
+      stopBgm();
+      setIsOpponentDisconnected(false);
+      const isMe = String(data?.forfeiterId) === String(currentUserId);
+      const reason = data?.reason;
+      setForfeitInfo({
+        visible: true,
+        isWinner: !isMe,
+        penaltyKevs: data?.penaltyKevs || 1,
+        message: isMe
+          ? `Vous avez quitté la partie. Pénalité de ${data?.penaltyKevs || 1} Kevs déduite.`
+          : reason === 'disconnection_timeout'
+          ? `Votre adversaire a perdu sa connexion réseau. Vous remportez ${data?.penaltyKevs || 1} Kevs de dédommagement !`
+          : `Votre adversaire a quitté la partie. Vous remportez ${data?.penaltyKevs || 1} Kevs de compensation !`
+      });
+      if (!isMe) {
+        playSuccess();
+        try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+      }
+    });
+
     return () => {
       unsubWaiting();
       unsubStart();
@@ -192,14 +239,47 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
       unsubAnswer();
       unsubGameOver();
       unsubSkipped();
+      unsubPlayerDisc();
+      unsubPlayerRec();
+      unsubForfeit();
     };
   }, [subscribe, currentUserId, playSuccess, playError, playGameOver, playBgm, stopBgm, playBuzzer]);
 
+  const [isOpponentDisconnected, setIsOpponentDisconnected] = useState(false);
+  const [disconnectSecondsLeft, setDisconnectSecondsLeft] = useState(15);
+  const [forfeitInfo, setForfeitInfo] = useState<{
+    visible: boolean;
+    isWinner: boolean;
+    penaltyKevs: number;
+    message: string;
+  } | null>(null);
+
+  // Décompte visuel de reconnexion
+  useEffect(() => {
+    if (!isOpponentDisconnected) return;
+    const interval = setInterval(() => {
+      setDisconnectSecondsLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isOpponentDisconnected]);
+
+  const forfeitGame = useCallback(async () => {
+    try {
+      if (globalTimerRef.current) clearInterval(globalTimerRef.current);
+      if (buzzerTimerRef.current) clearInterval(buzzerTimerRef.current);
+      stopBgm();
+      emit('duel_forfeit', { duelId, userId: currentUserId });
+      await api.post('/duel/forfeit', { duelId }).catch(() => {});
+    } catch (e) {
+      console.warn('[DUEL_ARENA] Erreur abandon duel:', e);
+    }
+  }, [duelId, currentUserId, emit, stopBgm]);
+
   const pressBuzzer = useCallback(() => {
-    if (buzzerState !== 'free' || isGameOver || isWaitingForOpponent) return;
+    if (buzzerState !== 'free' || isGameOver || isWaitingForOpponent || isOpponentDisconnected) return;
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); } catch {}
     emit('duel_buzz', { duelId, userId: currentUserId });
-  }, [buzzerState, isGameOver, isWaitingForOpponent, emit, duelId, currentUserId]);
+  }, [buzzerState, isGameOver, isWaitingForOpponent, isOpponentDisconnected, emit, duelId, currentUserId]);
 
   const submitAnswer = useCallback(
     (answer: string) => {
@@ -223,6 +303,10 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
     isGameOver,
     isLoading,
     lastAnswerStatus,
+    isOpponentDisconnected,
+    disconnectSecondsLeft,
+    forfeitInfo,
+    forfeitGame,
     pressBuzzer,
     submitAnswer,
   };

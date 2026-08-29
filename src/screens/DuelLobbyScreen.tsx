@@ -129,6 +129,22 @@ export default function DuelLobbyScreen({ route }: any) {
     });
 
     const unsubCancelled = subscribe('duel_invite_cancelled', () => {
+      setActiveDuel(null);
+      loadData(true);
+    });
+
+    const unsubForfeited = subscribe('duel_forfeited', () => {
+      setActiveDuel(null);
+      loadData(true);
+    });
+
+    const unsubSessionEnded = subscribe('duel_session_ended', () => {
+      setActiveDuel(null);
+      loadData(true);
+    });
+
+    const unsubDuelCancelled = subscribe('duel_cancelled', () => {
+      setActiveDuel(null);
       loadData(true);
     });
 
@@ -144,6 +160,9 @@ export default function DuelLobbyScreen({ route }: any) {
       unsubInviteReceived();
       unsubInviteResponse();
       unsubCancelled();
+      unsubForfeited();
+      unsubSessionEnded();
+      unsubDuelCancelled();
       unsubNotif();
     };
   }, [loadData, subscribe]);
@@ -244,17 +263,18 @@ export default function DuelLobbyScreen({ route }: any) {
 
   const handleCancelActiveDuel = async (duelId: string) => {
     try {
+      setActiveDuel(null);
       await cancelInactiveDuel(duelId);
       await refreshProfile();
-      setActiveDuel(null);
       loadData(true);
       setAlertConfig({
         visible: true,
-        title: 'Duel annulé',
-        message: 'Le duel a été annulé et vos Kevs ont été remboursés.',
+        title: 'Duel retiré',
+        message: 'La session de duel a été annulée.',
         type: 'success',
       });
     } catch (e: any) {
+      loadData(true);
       setAlertConfig({
         visible: true,
         title: 'Erreur',

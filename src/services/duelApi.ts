@@ -139,3 +139,8 @@ export const cancelInactiveDuel = async (duelId: string): Promise<any> => {
   const response = await api.post('/duel/cancel-inactive', { duelId });
   return response.data?.data;
 };
+
+export const forfeitDuel = async (duelId: string): Promise<any> => {
+  const response = await api.post('/duel/forfeit', { duelId });
+  return response.data?.data;
+};

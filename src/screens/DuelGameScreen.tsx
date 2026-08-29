@@ -1,6 +1,6 @@
 //src/screens/DuelGameScreen.tsx
-import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Pressable, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, BackHandler, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -10,6 +10,7 @@ import { colors, spacing, borderRadius } from '../theme/theme';
 import { useDuelArena } from '../hooks/useDuelArena';
 import { DuelResultModal } from '../components/duel/DuelResultModal';
 import { DuelBuzzerButton } from '../components/duel/DuelBuzzerButton';
+import CustomAlert from '../components/common/CustomAlert';
 import KevIcon from '../components/common/KevIcon';
 
 export default function DuelGameScreen() {
@@ -18,6 +19,8 @@ export default function DuelGameScreen() {
   const { duelId } = route.params;
   const { user } = useAuth();
   const { themeColors } = useTheme();
+
+  const [showQuitConfirm, setShowQuitConfirm] = useState(false);
 
   const currentUserId = user?._id || user?.id || '';
   const {
@@ -32,6 +35,10 @@ export default function DuelGameScreen() {
     isMyBuzzer,
     isOpponentBuzzer,
     isGameOver,
+    isOpponentDisconnected,
+    disconnectSecondsLeft,
+    forfeitInfo,
+    forfeitGame,
     pressBuzzer,
     submitAnswer,
   } = useDuelArena(duelId, currentUserId);
@@ -42,15 +49,32 @@ export default function DuelGameScreen() {
   const opponentScore = isChallenger ? scores.opponent : scores.challenger;
   const opponentUser = isChallenger ? duel?.opponent : duel?.challenger;
 
-  const handleExitGame = useCallback(() => {
+  const penaltyKevs = Math.max(1, Math.ceil((duel?.betAmount || 20) * 0.15));
+
+  const handleBackPress = useCallback(() => {
+    if (isGameOver) {
+      navigation.replace('DuelLobby');
+      return true;
+    }
+    setShowQuitConfirm(true);
+    return true;
+  }, [isGameOver, navigation]);
+
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+    return () => backHandler.remove();
+  }, [handleBackPress]);
+
+  const handleConfirmQuit = useCallback(() => {
+    setShowQuitConfirm(false);
+    forfeitGame();
     navigation.replace('DuelLobby');
-  }, [navigation]);
+  }, [forfeitGame, navigation]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
-      {/* HEADER TOP BAR */}
       <View style={styles.topBar}>
-        <TouchableOpacity onPress={handleExitGame} style={styles.closeBtn}>
+        <TouchableOpacity onPress={handleBackPress} style={styles.closeBtn}>
           <Ionicons name="close" size={24} color={themeColors.textSecondary} />
         </TouchableOpacity>
 
@@ -67,9 +91,15 @@ export default function DuelGameScreen() {
         </View>
       </View>
 
-      {/* BANDEAU D'ÉTAT TEMPS RÉEL (TOAST DU HAUT) */}
       <View style={styles.statusBarContainer}>
-        {isWaitingForOpponent ? (
+        {isOpponentDisconnected ? (
+          <View style={[styles.statusToast, { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: colors.error }]}>
+            <ActivityIndicator size="small" color={colors.error} />
+            <Text style={[styles.statusToastText, { color: colors.error }]}>
+              Adversaire déconnecté... Attente ({disconnectSecondsLeft}s)
+            </Text>
+          </View>
+        ) : isWaitingForOpponent ? (
           <View style={[styles.statusToast, { backgroundColor: 'rgba(255, 127, 80, 0.15)', borderColor: colors.coral }]}>
             <ActivityIndicator size="small" color={colors.coral} />
             <Text style={[styles.statusToastText, { color: colors.coral }]}>En attente de l'adversaire...</Text>
@@ -82,7 +112,7 @@ export default function DuelGameScreen() {
         ) : buzzerState === 'opponent_turn' ? (
           <View style={[styles.statusToast, { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: colors.error }]}>
             <Ionicons name="lock-closed" size={16} color={colors.error} />
-            <Text style={[styles.statusToastText, { color: colors.error }]}>{activeBuzzerUserName || 'Adversaire'} a la parole... ({buzzerSecondsLeft}s)</Text>
+            <Text style={[styles.statusToastText, { color: colors.error }]}>{activeBuzzerUserName || 'Adversaire'} répond... ({buzzerSecondsLeft}s)</Text>
           </View>
         ) : (
           <View style={[styles.statusToast, { backgroundColor: themeColors.overlayLight, borderColor: themeColors.border }]}>
@@ -92,7 +122,6 @@ export default function DuelGameScreen() {
         )}
       </View>
 
-      {/* DUEL VERSUS BAR */}
       <View style={[styles.versusContainer, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
         <View style={styles.playerBlock}>
           <Text style={[styles.playerName, { color: colors.coral }]} numberOfLines={1}>{user?.login}</Text>
@@ -107,7 +136,6 @@ export default function DuelGameScreen() {
         </View>
       </View>
 
-      {/* ZONE ÉNIGME */}
       <View style={[styles.enigmaCard, { backgroundColor: themeColors.card, borderColor: isMyBuzzer ? colors.coral : themeColors.border }]}>
         <Text style={[styles.enigmaLabel, { color: themeColors.textSecondary }]}>TROUVEZ LE MOT LIÉ</Text>
         <View style={styles.wordsRow}>
@@ -124,7 +152,6 @@ export default function DuelGameScreen() {
         ) : null}
       </View>
 
-      {/* PROPOSITIONS DE RÉPONSE */}
       <View style={styles.propositionsContainer}>
         {currentEnigma?.propositions?.map((prop, idx) => (
           <TouchableOpacity
@@ -145,7 +172,6 @@ export default function DuelGameScreen() {
         ))}
       </View>
 
-      {/* ZONE BUZZER & ÉTAT */}
       <View style={styles.buzzerSection}>
         {isWaitingForOpponent ? (
           <View style={styles.waitingContainer}>
@@ -160,19 +186,40 @@ export default function DuelGameScreen() {
         ) : isOpponentBuzzer ? (
           <View style={[styles.buzzerLockBox, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
             <Ionicons name="lock-closed" size={24} color={colors.error} />
-            <Text style={[styles.buzzerLockText, { color: colors.error }]}>{activeBuzzerUserName || 'L\'adversaire'} répond... ({buzzerSecondsLeft}s)</Text>
+            <Text style={[styles.buzzerLockText, { color: colors.error }]}>{activeBuzzerUserName || 'Adversaire'} répond... ({buzzerSecondsLeft}s)</Text>
           </View>
         ) : (
           <DuelBuzzerButton onPress={pressBuzzer} />
         )}
       </View>
 
-      {/* MODALE DE FIN DE DUEL */}
+      {/* CONFIRMATION D'ABANDON */}
+      <CustomAlert
+        visible={showQuitConfirm}
+        title="Abandonner le duel ?"
+        message={`En quittant la partie avant la fin, vous perdrez ${penaltyKevs} Kevs (15% de pénalité) reversés à votre adversaire.`}
+        type="error"
+        buttonText="Rester"
+        confirmText="Abandonner"
+        onConfirm={handleConfirmQuit}
+        onClose={() => setShowQuitConfirm(false)}
+      />
+
+      {/* RÉSULTAT PAR ABANDON */}
+      <CustomAlert
+        visible={Boolean(forfeitInfo?.visible)}
+        title={forfeitInfo?.isWinner ? 'Victoire par abandon !' : 'Partie terminée'}
+        message={forfeitInfo?.message || ''}
+        type={forfeitInfo?.isWinner ? 'success' : 'info'}
+        buttonText="Retour au Lobby"
+        onClose={() => navigation.replace('DuelLobby')}
+      />
+
       <DuelResultModal
-        visible={isGameOver}
+        visible={isGameOver && !forfeitInfo?.visible}
         duel={duel}
         currentUserId={currentUserId}
-        onClose={handleExitGame}
+        onClose={() => navigation.replace('DuelLobby')}
       />
     </SafeAreaView>
   );
@@ -208,9 +255,6 @@ const styles = StyleSheet.create({
   buzzerSection: { flex: 1, justifyContent: 'center', alignItems: 'center', marginVertical: spacing.sm },
   waitingContainer: { alignItems: 'center', gap: 10 },
   waitingText: { fontFamily: 'Poppins_500Medium', fontSize: 13 },
-  buzzerButton: { width: 130, height: 130, borderRadius: 65, elevation: 12, shadowColor: colors.coral, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.5, shadowRadius: 15 },
-  buzzerInner: { width: '100%', height: '100%', borderRadius: 65, justifyContent: 'center', alignItems: 'center' },
-  buzzerText: { color: '#FFFFFF', fontFamily: 'Poppins_900Black', fontSize: 16, marginTop: 2 },
   buzzerActiveBox: { alignItems: 'center' },
   buzzerCountText: { fontFamily: 'Poppins_900Black', fontSize: 24 },
   buzzerSubtext: { fontFamily: 'Poppins_400Regular', fontSize: 13, marginTop: 4 },
