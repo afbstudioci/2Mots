@@ -54,6 +54,7 @@
         {
           "icon": "./assets/notification-icon.png",
           "color": "#FF7F50",
+          "defaultChannel": "twomots_alerts_v3",
           "sounds": []
         }
       ],
