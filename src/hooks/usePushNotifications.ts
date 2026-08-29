@@ -5,7 +5,6 @@
 import { useEffect, useState } from 'react';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
-import * as Haptics from 'expo-haptics';
 import { useAuth } from '../context/AuthContext';
 import { navigate } from '../navigation/navigationRef';
 import api from '../services/api';
@@ -92,7 +91,7 @@ export const usePushNotifications = () => {
     };
   }, [user]);
 
-  // 3. Écouteurs de notifications (Foreground, Background & Cold boot)
+  // 3. Écouteurs de clics sur notification (Cold boot & Background)
   useEffect(() => {
     const checkColdBoot = async () => {
       try {
@@ -111,16 +110,8 @@ export const usePushNotifications = () => {
       }
     });
 
-    const receivedListener = Notifications.addNotificationReceivedListener((notification) => {
-      try {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } catch {}
-      console.log('[PUSH] Notification reçue en direct:', notification.request.content.title);
-    });
-
     return () => {
       responseListener.remove();
-      receivedListener.remove();
     };
   }, []);
 

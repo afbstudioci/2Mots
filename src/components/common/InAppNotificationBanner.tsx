@@ -1,18 +1,25 @@
-//src/components/common/InAppNotificationBanner.tsx
+// src/components/common/InAppNotificationBanner.tsx
+// BANNIÈRE NOTIFICATION FOREGROUND - AFFICHAGE DYNAMIQUE INSTANTANÉ
+// CSCSM Level: Bank Grade (Strict <= 325 lignes)
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import * as Notifications from 'expo-notifications';
 import { useSocketContext } from '../../context/SocketContext';
 import { useTheme } from '../../context/ThemeContext';
 import { navigate } from '../../navigation/navigationRef';
 import { colors, spacing, borderRadius, shadows } from '../../theme/theme';
 
 interface BannerData {
-  type: 'invite' | 'accepted' | 'rejected' | 'cancelled';
+  type: 'invite' | 'accepted' | 'rejected' | 'cancelled' | 'chat' | 'friend' | 'general';
   title: string;
   message: string;
   duelId?: string;
+  friendId?: string;
+  friendName?: string;
+  friendAvatar?: string;
   buttonText?: string;
   borderColor: string;
 }
@@ -46,7 +53,9 @@ export const InAppNotificationBanner: React.FC = () => {
     }).start(() => setNotification(null));
   }, [translateY]);
 
+  // Écouteurs WebSockets & Push Notifications simultanés
   useEffect(() => {
+    // 1. Écouteur Socket - Invitation Duel
     const unsubInvite = subscribe('duel_invite_received', (data: any) => {
       try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
       showBanner({
@@ -59,13 +68,14 @@ export const InAppNotificationBanner: React.FC = () => {
       }, 7000);
     });
 
+    // 2. Écouteur Socket - Réponse Duel
     const unsubResponse = subscribe('duel_invite_response', (data: any) => {
       if (data?.accept) {
         try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
         showBanner({
           type: 'accepted',
           title: 'DÉFI ACCEPTÉ !',
-          message: `${data?.opponentName || 'L\'adversaire'} a accepté ! Le duel commence !`,
+          message: `${data?.opponentName || 'L\\'adversaire'} a accepté ! Le duel commence !`,
           duelId: data?.duelId,
           buttonText: 'JOUER',
           borderColor: colors.mint,
@@ -75,12 +85,13 @@ export const InAppNotificationBanner: React.FC = () => {
         showBanner({
           type: 'rejected',
           title: 'DÉFI REFUSÉ',
-          message: `${data?.opponentName || 'L\'adversaire'} a décliné votre invitation.`,
+          message: `${data?.opponentName || 'L\\'adversaire'} a décliné votre invitation.`,
           borderColor: colors.error,
         }, 4000);
       }
     });
 
+    // 3. Écouteur Socket - Annulation
     const unsubCancelled = subscribe('duel_invite_cancelled', () => {
       showBanner({
         type: 'cancelled',
@@ -90,6 +101,7 @@ export const InAppNotificationBanner: React.FC = () => {
       }, 3500);
     });
 
+    // 4. Écouteur Socket - Notification Générale
     const unsubNotif = subscribe('notification_received', (data: any) => {
       const notifType = data?.type;
       const notifData = data?.data || {};
@@ -118,11 +130,69 @@ export const InAppNotificationBanner: React.FC = () => {
       }
     });
 
+    // 5. Écouteur PUSH NOTIFICATIONS NATIVES (FOREGROUND DISPLAY DIRECT)
+    const pushReceivedSub = Notifications.addNotificationReceivedListener((notificationEvent) => {
+      const { title, body, data } = notificationEvent.request.content;
+      const pushType = data?.type || 'general';
+      const duelId = data?.duelId;
+      const friendId = data?.friendId;
+      const friendName = data?.friendName || data?.senderName;
+
+      try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+
+      if (pushType === 'duel_invite') {
+        showBanner({
+          type: 'invite',
+          title: title || 'DÉFI EN DUEL 1V1 !',
+          message: body || 'Un joueur vous défie en duel !',
+          duelId,
+          buttonText: 'VOIR',
+          borderColor: colors.coral,
+        }, 7000);
+      } else if (pushType === 'duel_accepted') {
+        showBanner({
+          type: 'accepted',
+          title: title || 'DÉFI ACCEPTÉ !',
+          message: body || 'Le duel commence !',
+          duelId,
+          buttonText: 'JOUER',
+          borderColor: colors.mint,
+        }, 8000);
+      } else if (pushType === 'chat_message') {
+        showBanner({
+          type: 'chat',
+          title: title || 'Nouveau Message',
+          message: body || 'Vous avez reçu un message',
+          friendId,
+          friendName,
+          buttonText: 'RÉPONDRE',
+          borderColor: colors.coral,
+        }, 6000);
+      } else if (pushType === 'friend_request' || pushType === 'friend_accepted') {
+        showBanner({
+          type: 'friend',
+          title: title || 'Demande d\'ami',
+          message: body || 'Mise à jour de vos amis',
+          buttonText: 'VOIR',
+          borderColor: colors.mint,
+        }, 6000);
+      } else {
+        showBanner({
+          type: 'general',
+          title: title || 'Notification 2Mots',
+          message: body || '',
+          buttonText: 'OUVRIR',
+          borderColor: colors.coral,
+        }, 5000);
+      }
+    });
+
     return () => {
       unsubInvite();
       unsubResponse();
       unsubCancelled();
       unsubNotif();
+      pushReceivedSub.remove();
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     };
   }, [subscribe, showBanner, themeColors.border]);
@@ -130,14 +200,20 @@ export const InAppNotificationBanner: React.FC = () => {
   const handlePress = () => {
     const currentDuelId = notification?.duelId;
     const currentType = notification?.type;
+    const currentFriendId = notification?.friendId;
+    const currentFriendName = notification?.friendName;
     handleDismiss();
 
     if (currentType === 'accepted' && currentDuelId) {
       navigate('DuelGame', { duelId: currentDuelId });
     } else if (currentType === 'invite') {
       navigate('DuelLobby', { initialTab: 'received' });
+    } else if (currentType === 'chat' && currentFriendId) {
+      navigate('Chat', { friendId: currentFriendId, friendName: currentFriendName || 'Ami' });
+    } else if (currentType === 'friend') {
+      navigate('Friends');
     } else {
-      navigate('DuelLobby');
+      navigate('Home');
     }
   };
 

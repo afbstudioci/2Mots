@@ -23,13 +23,12 @@ Notifications.setNotificationHandler({
 
 export const setupNotificationChannelsAsync = async () => {
   if (Platform.OS === 'android') {
-    // 1. Canal Maître Dédié Priorité MAX (Anti-Cache Android)
+    // 1. Canal Maître Dédié Priorité MAX (Son système natif sans ressource audio manquante)
     await Notifications.setNotificationChannelAsync(PRIMARY_CHANNEL_ID, {
       name: 'Alertes & Duels 2Mots',
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#FF7F50',
-      sound: 'default',
       enableLights: true,
       enableVibrate: true,
       showBadge: true,
@@ -43,7 +42,6 @@ export const setupNotificationChannelsAsync = async () => {
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#FF7F50',
-      sound: 'default',
       enableLights: true,
       enableVibrate: true,
       showBadge: true,

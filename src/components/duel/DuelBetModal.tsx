@@ -1,6 +1,6 @@
 //src/components/duel/DuelBetModal.tsx
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, Pressable, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Modal, Pressable, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../context/ThemeContext';
@@ -17,7 +17,7 @@ interface DuelBetModalProps {
   isLoading?: boolean;
 }
 
-const BET_OPTIONS = [25, 50, 100, 200];
+const QUICK_BETS = [25, 50, 100, 200, 500];
 
 export const DuelBetModal: React.FC<DuelBetModalProps> = ({
   visible,
@@ -28,26 +28,49 @@ export const DuelBetModal: React.FC<DuelBetModalProps> = ({
   isLoading = false,
 }) => {
   const { themeColors } = useTheme();
-  const [selectedBet, setSelectedBet] = useState<number>(25);
+  const [betAmount, setBetAmount] = useState<number>(25);
+  const [customInput, setCustomInput] = useState<string>('25');
 
   if (!opponent) return null;
 
-  const handleSelectBet = (amount: number) => {
+  const handleSelectQuickBet = (amount: number) => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch {}
-    setSelectedBet(amount);
+    const safeAmount = Math.min(amount, userKevs);
+    setBetAmount(safeAmount);
+    setCustomInput(String(safeAmount));
+  };
+
+  const handleCustomChange = (text: string) => {
+    const cleaned = text.replace(/[^0-9]/g, '');
+    setCustomInput(cleaned);
+    const num = parseInt(cleaned, 10);
+    if (!isNaN(num)) {
+      setBetAmount(num);
+    } else {
+      setBetAmount(0);
+    }
+  };
+
+  const handleMaxBet = () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+    const maxAmount = Math.max(5, userKevs);
+    setBetAmount(maxAmount);
+    setCustomInput(String(maxAmount));
   };
 
   const handleConfirm = () => {
-    if (isLoading || userKevs < selectedBet) return;
+    if (isLoading || betAmount < 5 || betAmount > userKevs) return;
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch {}
-    onConfirm(selectedBet);
+    onConfirm(betAmount);
   };
 
-  const canAfford = userKevs >= selectedBet;
+  const canAfford = betAmount >= 5 && betAmount <= userKevs;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -75,32 +98,43 @@ export const DuelBetModal: React.FC<DuelBetModalProps> = ({
             </View>
           </View>
 
-          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Choisissez la mise :</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Saisir ou choisir la mise :</Text>
+
+          <View style={[styles.inputRow, { backgroundColor: themeColors.overlayLight, borderColor: themeColors.border }]}>
+            <KevIcon size={20} />
+            <TextInput
+              style={[styles.numericInput, { color: themeColors.text }]}
+              value={customInput}
+              onChangeText={handleCustomChange}
+              keyboardType="number-pad"
+              placeholder="Montant libre..."
+              placeholderTextColor={themeColors.textSecondary}
+              maxLength={7}
+            />
+            <TouchableOpacity onPress={handleMaxBet} style={styles.maxBadge}>
+              <Text style={styles.maxBadgeText}>MAX</Text>
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.betOptionsGrid}>
-            {BET_OPTIONS.map((amount) => {
-              const isSelected = selectedBet === amount;
+            {QUICK_BETS.map((amount) => {
+              const isSelected = betAmount === amount;
               const isAvailable = userKevs >= amount;
               return (
                 <TouchableOpacity
                   key={amount}
-                  onPress={() => handleSelectBet(amount)}
+                  onPress={() => handleSelectQuickBet(amount)}
                   disabled={!isAvailable || isLoading}
                   style={[
                     styles.betButton,
                     {
                       backgroundColor: isSelected ? colors.coral : themeColors.overlayLight,
                       borderColor: isSelected ? colors.coral : themeColors.border,
-                      opacity: isAvailable ? 1 : 0.4,
+                      opacity: isAvailable ? 1 : 0.35,
                     },
                   ]}
                 >
-                  <KevIcon size={16} />
-                  <Text
-                    style={[
-                      styles.betButtonText,
-                      { color: isSelected ? '#FFFFFF' : themeColors.text },
-                    ]}
-                  >
+                  <Text style={[styles.betButtonText, { color: isSelected ? '#FFFFFF' : themeColors.text }]}>
                     {amount}
                   </Text>
                 </TouchableOpacity>
@@ -111,7 +145,7 @@ export const DuelBetModal: React.FC<DuelBetModalProps> = ({
           <View style={styles.rewardPreview}>
             <Ionicons name="trophy-outline" size={16} color="#FFB84D" />
             <Text style={[styles.rewardText, { color: themeColors.textSecondary }]}>
-              Cagnotte à remporter : <Text style={{ color: '#FFB84D', fontFamily: 'Poppins_700Bold' }}>{selectedBet * 2} Kevs</Text>
+              Cagnotte à remporter : <Text style={{ color: '#FFB84D', fontFamily: 'Poppins_700Bold' }}>{betAmount * 2} Kevs</Text>
             </Text>
           </View>
 
@@ -130,7 +164,7 @@ export const DuelBetModal: React.FC<DuelBetModalProps> = ({
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <Text style={styles.confirmButtonText}>
-                {canAfford ? 'LANCER LE DÉFI' : 'SOLDE INSUFFISANT'}
+                {betAmount < 5 ? 'MINIMUM 5 KEVS' : canAfford ? 'LANCER LE DÉFI' : 'SOLDE INSUFFISANT'}
               </Text>
             )}
           </TouchableOpacity>
@@ -198,27 +232,52 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontFamily: 'Poppins_600SemiBold',
     fontSize: 13,
+    marginBottom: spacing.xs,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
     marginBottom: spacing.sm,
+    gap: 8,
+  },
+  numericInput: {
+    flex: 1,
+    fontFamily: 'Poppins_700Bold',
+    fontSize: 16,
+    paddingVertical: 4,
+  },
+  maxBadge: {
+    backgroundColor: colors.coral,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: borderRadius.xs,
+  },
+  maxBadgeText: {
+    color: '#FFFFFF',
+    fontFamily: 'Poppins_700Bold',
+    fontSize: 11,
   },
   betOptionsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 8,
+    gap: 6,
     marginBottom: spacing.md,
   },
   betButton: {
     flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.sm + 2,
-    borderRadius: borderRadius.sm,
-    borderWidth: 1.5,
-    gap: 4,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.xs,
+    borderWidth: 1,
   },
   betButtonText: {
     fontFamily: 'Poppins_700Bold',
-    fontSize: 14,
+    fontSize: 13,
   },
   rewardPreview: {
     flexDirection: 'row',
