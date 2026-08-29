@@ -148,17 +148,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       const currentToken = await getToken();
-      // 1. Invalidation immédiate et synchrone locale
-      await clearTokens();
-      setUser(null);
-
-      // 2. Notification au serveur en arrière-plan sans bloquer
       if (currentToken) {
+        api.delete('/auth/fcm-token', {
+          headers: { Authorization: `Bearer ${currentToken}` },
+          timeout: 2000,
+        }).catch(() => {});
         api.post('/auth/logout', {}, {
           headers: { Authorization: `Bearer ${currentToken}` },
           timeout: 2000,
         }).catch(() => {});
       }
+      await clearTokens();
+      setUser(null);
     } catch (e) {
       console.warn('[AUTH] Erreur déconnexion:', e);
       await clearTokens();

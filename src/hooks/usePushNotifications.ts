@@ -1,6 +1,6 @@
 // src/hooks/usePushNotifications.ts
 // GESTION FCM - Enregistrement, Synchronisation et Aiguillage Deep Link
-// CSCSM Level: Bank Grade (Strict <= 325 lignes)
+// CSCSM Level: Bank Grade (Strict <= 270 lignes)
 
 import { useEffect, useState } from 'react';
 import * as Notifications from 'expo-notifications';
@@ -10,28 +10,18 @@ import { navigate } from '../navigation/navigationRef';
 import api from '../services/api';
 import { setupNotificationChannelsAsync } from '../services/notificationService';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
-
 export const usePushNotifications = () => {
   const { user } = useAuth();
   const [pendingRouting, setPendingRouting] = useState<any>(null);
 
-  // 1. Initialisation immédiate des canaux Android au montage
+  // 1. Initialisation immediate des canaux Android au montage
   useEffect(() => {
     setupNotificationChannelsAsync().catch((err) => {
       console.warn('[PUSH] Erreur setup canaux au montage:', err);
     });
   }, []);
 
-  // 2. Demande de permissions & Enregistrement Token FCM dès qu'un utilisateur est actif
+  // 2. Demande de permissions & Enregistrement Token FCM des qu'un utilisateur est connecte
   useEffect(() => {
     if (!user) return;
 
@@ -51,7 +41,7 @@ export const usePushNotifications = () => {
           }
 
           if (finalStatus !== 'granted') {
-            console.warn('[PUSH] Permission de notification refusée.');
+            console.warn('[PUSH] Permission de notification refusee.');
             return;
           }
 
@@ -75,7 +65,7 @@ export const usePushNotifications = () => {
           }
 
           if (token && isMounted) {
-            console.log('[PUSH] Token FCM synchronisé:', token);
+            console.log('[PUSH] Token FCM synchronise:', token);
             await api.post('/auth/fcm-token', { fcmToken: token });
           }
         }
@@ -91,7 +81,7 @@ export const usePushNotifications = () => {
     };
   }, [user]);
 
-  // 3. Écouteurs de clics sur notification (Cold boot & Background)
+  // 3. Ecouteurs de clics sur notification (Cold boot & Background)
   useEffect(() => {
     const checkColdBoot = async () => {
       try {
@@ -115,7 +105,7 @@ export const usePushNotifications = () => {
     };
   }, []);
 
-  // 4. Aiguillage et Deep Linking instantané
+  // 4. Aiguillage et Deep Linking instantane
   useEffect(() => {
     if (user && pendingRouting) {
       const timer = setTimeout(() => {
@@ -123,7 +113,7 @@ export const usePushNotifications = () => {
 
         switch (type) {
           case 'duel_invite':
-            navigate('DuelLobby');
+            navigate('DuelLobby', { initialTab: 'received' });
             break;
           case 'duel_accepted':
             if (duelId) {
