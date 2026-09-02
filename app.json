@@ -7,18 +7,12 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/Splash-Center.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#FF7F50"
-    },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "package": "com.afbstudio.twomots",
       "versionCode": 30,
-      "supportsTablet": true,
       "permissions": [
         "com.android.vending.BILLING",
         "android.permission.RECORD_AUDIO",
@@ -49,6 +43,14 @@
       "policy": "appVersion"
     },
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/Splash-Center.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#FF7F50"
+        }
+      ],
       "expo-audio",
       [
         "expo-notifications",
