@@ -1,11 +1,8 @@
 //src/screens/SplashScreen.tsx
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import { colors, spacing } from '../theme/theme';
 import api from '../services/api';
-
-const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 interface SplashScreenProps {
   onFinish?: () => void;
@@ -20,47 +17,9 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
   const containerFadeAnim = useRef(new Animated.Value(1)).current;
   const contentFadeAnim = useRef(new Animated.Value(1)).current;
   const statusFadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const drawAnim = useRef(new Animated.Value(400)).current;
 
   const hasFinished = useRef(false);
   const serverResponded = useRef(false);
-
-  // Animation de tracé initial (complet à 100%) suivi d'un pulse en boucle
-  useEffect(() => {
-    let loopAnimation: Animated.CompositeAnimation | null = null;
-
-    Animated.timing(drawAnim, {
-      toValue: 0,
-      duration: 1400,
-      easing: Easing.inOut(Easing.ease),
-      useNativeDriver: false,
-    }).start(() => {
-      loopAnimation = Animated.loop(
-        Animated.sequence([
-          Animated.timing(scaleAnim, {
-            toValue: 1.1,
-            duration: 1000,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(scaleAnim, {
-            toValue: 1,
-            duration: 1000,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-        ])
-      );
-      loopAnimation.start();
-    });
-
-    return () => {
-      if (loopAnimation) {
-        loopAnimation.stop();
-      }
-    };
-  }, []);
 
   const completeSplash = () => {
     if (hasFinished.current) return;
@@ -113,7 +72,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
       });
     }, 80);
 
-    // 3. Si après 1.4s le serveur n'a pas répondu, on affiche le message de réveil
+    // 3. Si après 1.4s le serveur n'a pas répondu, on affiche le message de démarrage
     const wakeUpTimer = setTimeout(() => {
       if (!serverResponded.current) {
         setShowStatus(true);
@@ -166,25 +125,11 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
           },
         ]}
       >
-        <Animated.View style={styles.centerBlock}>
-          <Animated.View style={{ transform: [{ scale: scaleAnim }], alignItems: 'center', justifyContent: 'center' }}>
-            <Svg width={130} height={65} viewBox="0 0 100 50">
-              <AnimatedPath
-                d="M 50 25 C 65 0, 95 0, 95 25 C 95 50, 65 50, 50 25 Z"
-                fill="none"
-                stroke={colors.white}
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeDasharray="400"
-                strokeDashoffset={drawAnim}
-              />
-            </Svg>
-          </Animated.View>
+        <View style={styles.centerBlock}>
+          <Text style={styles.signatureText}>BY_ KEVY</Text>
+        </View>
 
-          <Animated.Text style={styles.signatureText}>By_ KEVY</Animated.Text>
-        </Animated.View>
-
-        <Animated.View style={styles.bottomBlock}>
+        <View style={styles.bottomBlock}>
           {showStatus && (
             <Animated.View style={[styles.statusContainer, { opacity: statusFadeAnim }]}>
               <Text style={styles.statusText}>
@@ -193,15 +138,15 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
             </Animated.View>
           )}
 
-          <Animated.View style={styles.progressBarBackground}>
+          <View style={styles.progressBarBackground}>
             <Animated.View
               style={[
                 styles.progressBarFill,
                 { width: `${progress}%`, backgroundColor: colors.white },
               ]}
             />
-          </Animated.View>
-        </Animated.View>
+          </View>
+        </View>
       </Animated.View>
     </Animated.View>
   );
@@ -229,9 +174,8 @@ const styles = StyleSheet.create({
   signatureText: {
     fontFamily: 'Poppins_700Bold',
     color: colors.white,
-    fontSize: 20,
-    letterSpacing: 4,
-    marginTop: spacing.lg,
+    fontSize: 24,
+    letterSpacing: 6,
     textTransform: 'uppercase',
   },
   bottomBlock: {
@@ -248,11 +192,11 @@ const styles = StyleSheet.create({
   statusText: {
     fontFamily: 'Poppins_600SemiBold',
     color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 11,
+    fontSize: 12,
     letterSpacing: 0.5,
   },
   progressBarBackground: {
-    width: 110,
+    width: 120,
     height: 4,
     borderRadius: 10,
     overflow: 'hidden',

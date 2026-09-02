@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.coral,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: borderRadius.xs,
+    borderRadius: borderRadius.sm,
   },
   maxBadgeText: {
     color: '#FFFFFF',
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacing.sm,
-    borderRadius: borderRadius.xs,
+    borderRadius: borderRadius.sm,
     borderWidth: 1,
   },
   betButtonText: {

@@ -16,6 +16,8 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
   const [currentEnigma, setCurrentEnigma] = useState<DuelEnigma | null>(null);
   const [scores, setScores] = useState<{ challenger: number; opponent: number }>({ challenger: 0, opponent: 0 });
   const [isWaitingForOpponent, setIsWaitingForOpponent] = useState<boolean>(true);
+  const [lobbySecondsLeft, setLobbySecondsLeft] = useState<number>(60);
+  const [lobbyTimeoutInfo, setLobbyTimeoutInfo] = useState<{ visible: boolean; message: string } | null>(null);
 
   const [buzzerState, setBuzzerState] = useState<BuzzerState>('free');
   const [activeBuzzerUserId, setActiveBuzzerUserId] = useState<string | null>(null);
@@ -37,6 +39,7 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
 
   const globalTimerRef = useRef<any>(null);
   const buzzerTimerRef = useRef<any>(null);
+  const lobbyTimerRef = useRef<any>(null);
   const gameStartTimestampRef = useRef<number | null>(null);
   const disconnectStartTimestampRef = useRef<number | null>(null);
 
@@ -83,6 +86,7 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
       stopBgm();
       if (globalTimerRef.current) clearInterval(globalTimerRef.current);
       if (buzzerTimerRef.current) clearInterval(buzzerTimerRef.current);
+      if (lobbyTimerRef.current) clearInterval(lobbyTimerRef.current);
     };
   }, [duelId, currentUserId, emit, isConnected, playBgm, stopBgm]);
 
@@ -114,11 +118,27 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
 
   // 3. Écouteurs Socket temps réel
   useEffect(() => {
-    const unsubWaiting = subscribe('duel_waiting_opponent', () => {
+    const unsubWaiting = subscribe('duel_waiting_opponent', (data: any) => {
       setIsWaitingForOpponent(true);
+      if (!lobbyTimerRef.current) {
+        setLobbySecondsLeft(data?.waitSeconds || 60);
+        lobbyTimerRef.current = setInterval(() => {
+          setLobbySecondsLeft((prev) => {
+            if (prev <= 1) {
+              if (lobbyTimerRef.current) clearInterval(lobbyTimerRef.current);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
     });
 
     const unsubStart = subscribe('duel_start', (data: any) => {
+      if (lobbyTimerRef.current) {
+        clearInterval(lobbyTimerRef.current);
+        lobbyTimerRef.current = null;
+      }
       setIsWaitingForOpponent(false);
       gameStartTimestampRef.current = Date.now();
       setGlobalSecondsLeft(data?.duration || 60);
@@ -249,6 +269,24 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
       }
     });
 
+    const unsubLobbyTimeout = subscribe('duel_lobby_timeout', (data: any) => {
+      if (lobbyTimerRef.current) clearInterval(lobbyTimerRef.current);
+      setIsWaitingForOpponent(false);
+      setLobbyTimeoutInfo({
+        visible: true,
+        message: data?.message || "L'adversaire n'a pas rejoint la salle à temps (60s). Le duel a été annulé et vos Kevs sont intacts."
+      });
+    });
+
+    const unsubLobbyCancelled = subscribe('duel_lobby_cancelled', (data: any) => {
+      if (lobbyTimerRef.current) clearInterval(lobbyTimerRef.current);
+      setIsWaitingForOpponent(false);
+      setLobbyTimeoutInfo({
+        visible: true,
+        message: data?.message || "Le duel a été annulé. Vos Kevs vous ont été restitués."
+      });
+    });
+
     return () => {
       unsubWaiting();
       unsubStart();
@@ -260,6 +298,8 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
       unsubPlayerDisc();
       unsubPlayerRec();
       unsubForfeit();
+      unsubLobbyTimeout();
+      unsubLobbyCancelled();
     };
   }, [subscribe, currentUserId, playSuccess, playError, playGameOver, playBgm, stopBgm, playBuzzer]);
 
@@ -271,6 +311,16 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
     }, 1000);
     return () => clearInterval(interval);
   }, [isOpponentDisconnected]);
+
+  const cancelLobbyWait = useCallback(async () => {
+    try {
+      if (lobbyTimerRef.current) clearInterval(lobbyTimerRef.current);
+      emit('duel_cancel_lobby', { duelId, userId: currentUserId });
+      await api.post('/duel/cancel-inactive', { duelId }).catch(() => {});
+    } catch (e) {
+      console.warn('[DUEL_ARENA] Erreur annulation lobby:', e);
+    }
+  }, [duelId, currentUserId, emit]);
 
   const forfeitGame = useCallback(async () => {
     try {
@@ -307,6 +357,9 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
     buzzerState,
     activeBuzzerUserName,
     isWaitingForOpponent,
+    lobbySecondsLeft,
+    lobbyTimeoutInfo,
+    cancelLobbyWait,
     isMyBuzzer: buzzerState === 'my_turn',
     isOpponentBuzzer: buzzerState === 'opponent_turn',
     isGameOver,

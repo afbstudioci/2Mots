@@ -1,6 +1,6 @@
 //src/screens/DuelLobbyScreen.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, AppState } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, AppState, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -35,7 +35,7 @@ export default function DuelLobbyScreen({ route }: any) {
   const navigation = useNavigation<any>();
   const { themeColors } = useTheme();
   const { user, refreshProfile } = useAuth();
-  const { emit, subscribe } = useSocketContext();
+  const { emit, subscribe, isUserOnline } = useSocketContext();
 
   const [activeTab, setActiveTab] = useState<'opponents' | 'received' | 'sent'>(
     route?.params?.initialTab || 'opponents'
@@ -167,23 +167,47 @@ export default function DuelLobbyScreen({ route }: any) {
     };
   }, [loadData, subscribe]);
 
+  const handleShareInvite = useCallback(async (invite: DuelInvite) => {
+    try {
+      const oppName = invite.opponent?.login || 'Ami';
+      const link = `https://twomots.app/duel/${invite._id}`;
+      await Share.share({
+        title: 'Défi 2Mots',
+        message: `Salut ${oppName} ! Je te défie sur 2Mots pour ${invite.betAmount} Kevs. Clique ici pour me rejoindre et jouer : ${link}`,
+      });
+    } catch (err) {
+      console.warn('[SHARE] Erreur partage défi:', err);
+    }
+  }, []);
+
   const handleSendInvite = async (betAmount: number) => {
     if (!selectedOpponent) return;
+    const targetOpponent = selectedOpponent;
     try {
       setIsSendingInvite(true);
-      const res = await sendDuelInvite(selectedOpponent._id, betAmount);
+      const res = await sendDuelInvite(targetOpponent._id, betAmount);
+      const createdId = String(res?._id || '');
       emit('duel_send_invite', {
-        opponentId: String(selectedOpponent._id),
+        opponentId: String(targetOpponent._id),
         challengerName: user?.login,
         betAmount,
-        duelId: String(res?._id || ''),
+        duelId: createdId,
       });
       setSelectedOpponent(null);
       setAlertConfig({
         visible: true,
         title: 'Défi envoyé !',
-        message: `Votre invitation pour ${betAmount} Kevs a été transmise à ${selectedOpponent.login}.`,
+        message: `Votre invitation pour ${betAmount} Kevs a été transmise à ${targetOpponent.login}. Voulez-vous lui envoyer le lien sur WhatsApp ?`,
         type: 'success',
+        buttonText: 'Plus tard',
+        confirmText: 'Partager',
+        onConfirm: () => {
+          handleShareInvite({
+            _id: createdId,
+            opponent: { login: targetOpponent.login },
+            betAmount,
+          } as any);
+        },
       });
       loadData(true);
     } catch (e: any) {
@@ -347,6 +371,7 @@ export default function DuelLobbyScreen({ route }: any) {
               <OpponentItem
                 item={item}
                 isAlreadyInvited={pendingSentOpponentIds.includes(String(item._id)) || activeOpponentId === String(item._id)}
+                isOnline={Boolean(item.isOnline || isUserOnline(item._id))}
                 themeColors={themeColors}
                 onSelect={setSelectedOpponent}
               />
@@ -362,6 +387,7 @@ export default function DuelLobbyScreen({ route }: any) {
                 item={item}
                 themeColors={themeColors}
                 onCancel={(invite) => handleCancelInvite(invite._id, invite.opponent?._id)}
+                onShare={handleShareInvite}
                 isCancelling={cancellingInviteId === item._id}
               />
             )

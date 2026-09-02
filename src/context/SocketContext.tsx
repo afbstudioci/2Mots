@@ -8,6 +8,8 @@ import { getToken } from '../services/authStorage';
 interface SocketContextData {
   socket: Socket | null;
   isConnected: boolean;
+  onlineUserIds: Set<string>;
+  isUserOnline: (targetUserId?: string) => boolean;
   emit: (event: string, data: any) => void;
   sendMessage: (data: any) => void;
   startTyping: (recipientId: string) => void;
@@ -26,14 +28,49 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const userId = user?._id || user?.id;
   const [socketInstance, setSocketInstance] = useState<Socket | null>(socketService.getSocket());
   const [isConnected, setIsConnected] = useState<boolean>(socketService.isSocketConnected());
+  const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const unsubStatus = socketService.onStatusChange((connected) => {
       setIsConnected(connected);
       setSocketInstance(socketService.getSocket());
+      if (connected) {
+        socketService.emit('get_online_users', (ids: string[]) => {
+          if (Array.isArray(ids)) {
+            setOnlineUserIds(new Set(ids.map(String)));
+          }
+        });
+      }
     });
-    return unsubStatus;
+
+    const handlePresence = (data: { userId: string; isOnline: boolean }) => {
+      if (!data?.userId) return;
+      setOnlineUserIds((prev) => {
+        const next = new Set(prev);
+        if (data.isOnline) {
+          next.add(String(data.userId));
+        } else {
+          next.delete(String(data.userId));
+        }
+        return next;
+      });
+    };
+
+    socketService.on('user_presence_change', handlePresence);
+
+    return () => {
+      unsubStatus();
+      socketService.off('user_presence_change', handlePresence);
+    };
   }, []);
+
+  const isUserOnline = useCallback(
+    (targetUserId?: string) => {
+      if (!targetUserId) return false;
+      return onlineUserIds.has(String(targetUserId));
+    },
+    [onlineUserIds]
+  );
 
   const initSocket = useCallback(async () => {
     if (!userId) {
@@ -102,6 +139,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     () => ({
       socket: socketInstance,
       isConnected,
+      onlineUserIds,
+      isUserOnline,
       emit,
       sendMessage,
       startTyping,
@@ -112,7 +151,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       markAsRead,
       subscribe,
     }),
-    [socketInstance, isConnected, emit, sendMessage, startTyping, stopTyping, editMessage, deleteMessage, toggleReaction, markAsRead, subscribe]
+    [socketInstance, isConnected, onlineUserIds, isUserOnline, emit, sendMessage, startTyping, stopTyping, editMessage, deleteMessage, toggleReaction, markAsRead, subscribe]
   );
 
   return <SocketContext.Provider value={contextValue}>{children}</SocketContext.Provider>;

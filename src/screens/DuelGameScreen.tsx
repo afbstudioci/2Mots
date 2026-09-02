@@ -10,6 +10,7 @@ import { colors, spacing, borderRadius } from '../theme/theme';
 import { useDuelArena } from '../hooks/useDuelArena';
 import { DuelResultModal } from '../components/duel/DuelResultModal';
 import { DuelBuzzerButton } from '../components/duel/DuelBuzzerButton';
+import { DuelWaitingLobby } from '../components/duel/DuelWaitingLobby';
 import CustomAlert from '../components/common/CustomAlert';
 import KevIcon from '../components/common/KevIcon';
 
@@ -32,6 +33,9 @@ export default function DuelGameScreen() {
     buzzerState,
     activeBuzzerUserName,
     isWaitingForOpponent,
+    lobbySecondsLeft,
+    lobbyTimeoutInfo,
+    cancelLobbyWait,
     isMyBuzzer,
     isOpponentBuzzer,
     isGameOver,
@@ -56,9 +60,14 @@ export default function DuelGameScreen() {
       navigation.replace('DuelLobby');
       return true;
     }
+    if (isWaitingForOpponent) {
+      cancelLobbyWait();
+      navigation.replace('DuelLobby');
+      return true;
+    }
     setShowQuitConfirm(true);
     return true;
-  }, [isGameOver, navigation]);
+  }, [isGameOver, isWaitingForOpponent, cancelLobbyWait, navigation]);
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
@@ -73,125 +82,142 @@ export default function DuelGameScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <View style={styles.topBar}>
-        <TouchableOpacity onPress={handleBackPress} style={styles.closeBtn}>
-          <Ionicons name="close" size={24} color={themeColors.textSecondary} />
-        </TouchableOpacity>
+      {isWaitingForOpponent ? (
+        <DuelWaitingLobby
+          challengerName={user?.login || 'Vous'}
+          challengerAvatar={user?.avatar}
+          opponentName={opponentUser?.login || 'Adversaire'}
+          opponentAvatar={opponentUser?.avatar}
+          betAmount={duel?.betAmount || 25}
+          secondsLeft={lobbySecondsLeft}
+          onCancel={() => {
+            cancelLobbyWait();
+            navigation.replace('DuelLobby');
+          }}
+        />
+      ) : (
+        <>
+          <View style={styles.topBar}>
+            <TouchableOpacity onPress={handleBackPress} style={styles.closeBtn}>
+              <Ionicons name="close" size={24} color={themeColors.textSecondary} />
+            </TouchableOpacity>
 
-        <View style={[styles.timerBadge, { backgroundColor: themeColors.overlayLight, borderColor: globalSecondsLeft < 15 ? colors.error : colors.coral }]}>
-          <Ionicons name="time-outline" size={16} color={globalSecondsLeft < 15 ? colors.error : colors.coral} />
-          <Text style={[styles.timerText, { color: globalSecondsLeft < 15 ? colors.error : themeColors.text }]}>
-            {isWaitingForOpponent ? '--' : `${globalSecondsLeft}s`}
-          </Text>
-        </View>
+            <View style={[styles.timerBadge, { backgroundColor: themeColors.overlayLight, borderColor: globalSecondsLeft < 15 ? colors.error : colors.coral }]}>
+              <Ionicons name="time-outline" size={16} color={globalSecondsLeft < 15 ? colors.error : colors.coral} />
+              <Text style={[styles.timerText, { color: globalSecondsLeft < 15 ? colors.error : themeColors.text }]}>
+                {`${globalSecondsLeft}s`}
+              </Text>
+            </View>
 
-        <View style={styles.potTag}>
-          <KevIcon size={14} />
-          <Text style={[styles.potText, { color: '#FFB84D' }]}>{duel?.totalPot || 0}</Text>
-        </View>
-      </View>
+            <View style={styles.potTag}>
+              <KevIcon size={14} />
+              <Text style={[styles.potText, { color: '#FFB84D' }]}>{duel?.totalPot || 0}</Text>
+            </View>
+          </View>
 
-      <View style={styles.statusBarContainer}>
-        {isOpponentDisconnected ? (
-          <View style={[styles.statusToast, { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: colors.error }]}>
-            <ActivityIndicator size="small" color={colors.error} />
-            <Text style={[styles.statusToastText, { color: colors.error }]}>
-              Adversaire déconnecté... Attente ({disconnectSecondsLeft}s)
-            </Text>
+          <View style={styles.statusBarContainer}>
+            {isOpponentDisconnected ? (
+              <View style={[styles.statusToast, { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: colors.error }]}>
+                <ActivityIndicator size="small" color={colors.error} />
+                <Text style={[styles.statusToastText, { color: colors.error }]}>
+                  Adversaire déconnecté... Attente ({disconnectSecondsLeft}s)
+                </Text>
+              </View>
+            ) : buzzerState === 'my_turn' ? (
+              <View style={[styles.statusToast, { backgroundColor: 'rgba(74, 222, 128, 0.15)', borderColor: colors.mint }]}>
+                <Ionicons name="hand-right" size={16} color={colors.mint} />
+                <Text style={[styles.statusToastText, { color: colors.mint }]}>Vous avez la parole ! ({buzzerSecondsLeft}s)</Text>
+              </View>
+            ) : buzzerState === 'opponent_turn' ? (
+              <View style={[styles.statusToast, { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: colors.error }]}>
+                <Ionicons name="lock-closed" size={16} color={colors.error} />
+                <Text style={[styles.statusToastText, { color: colors.error }]}>{activeBuzzerUserName || 'Adversaire'} répond... ({buzzerSecondsLeft}s)</Text>
+              </View>
+            ) : (
+              <View style={[styles.statusToast, { backgroundColor: themeColors.overlayLight, borderColor: themeColors.border }]}>
+                <Ionicons name="radio-outline" size={16} color={colors.coral} />
+                <Text style={[styles.statusToastText, { color: themeColors.text }]}>Parole libre — Buzzez pour répondre !</Text>
+              </View>
+            )}
           </View>
-        ) : isWaitingForOpponent ? (
-          <View style={[styles.statusToast, { backgroundColor: 'rgba(255, 127, 80, 0.15)', borderColor: colors.coral }]}>
-            <ActivityIndicator size="small" color={colors.coral} />
-            <Text style={[styles.statusToastText, { color: colors.coral }]}>En attente de l'adversaire...</Text>
-          </View>
-        ) : buzzerState === 'my_turn' ? (
-          <View style={[styles.statusToast, { backgroundColor: 'rgba(74, 222, 128, 0.15)', borderColor: colors.mint }]}>
-            <Ionicons name="hand-right" size={16} color={colors.mint} />
-            <Text style={[styles.statusToastText, { color: colors.mint }]}>Vous avez la parole ! ({buzzerSecondsLeft}s)</Text>
-          </View>
-        ) : buzzerState === 'opponent_turn' ? (
-          <View style={[styles.statusToast, { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderColor: colors.error }]}>
-            <Ionicons name="lock-closed" size={16} color={colors.error} />
-            <Text style={[styles.statusToastText, { color: colors.error }]}>{activeBuzzerUserName || 'Adversaire'} répond... ({buzzerSecondsLeft}s)</Text>
-          </View>
-        ) : (
-          <View style={[styles.statusToast, { backgroundColor: themeColors.overlayLight, borderColor: themeColors.border }]}>
-            <Ionicons name="radio-outline" size={16} color={colors.coral} />
-            <Text style={[styles.statusToastText, { color: themeColors.text }]}>Parole libre — Buzzez pour répondre !</Text>
-          </View>
-        )}
-      </View>
 
-      <View style={[styles.versusContainer, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
-        <View style={styles.playerBlock}>
-          <Text style={[styles.playerName, { color: colors.coral }]} numberOfLines={1}>{user?.login}</Text>
-          <Text style={[styles.playerScore, { color: themeColors.text }]}>{myScore} pts</Text>
-        </View>
-        <View style={styles.vsBadge}>
-          <Text style={styles.vsText}>VS</Text>
-        </View>
-        <View style={styles.playerBlock}>
-          <Text style={[styles.playerName, { color: themeColors.textSecondary }]} numberOfLines={1}>{opponentUser?.login || 'Adversaire'}</Text>
-          <Text style={[styles.playerScore, { color: themeColors.text }]}>{opponentScore} pts</Text>
-        </View>
-      </View>
+          <View style={[styles.versusContainer, { backgroundColor: themeColors.card, borderColor: themeColors.border }]}>
+            <View style={styles.playerBlock}>
+              <Text style={[styles.playerName, { color: colors.coral }]} numberOfLines={1}>{user?.login}</Text>
+              <Text style={[styles.playerScore, { color: themeColors.text }]}>{myScore} pts</Text>
+            </View>
+            <View style={styles.vsBadge}>
+              <Text style={styles.vsText}>VS</Text>
+            </View>
+            <View style={styles.playerBlock}>
+              <Text style={[styles.playerName, { color: themeColors.textSecondary }]} numberOfLines={1}>{opponentUser?.login || 'Adversaire'}</Text>
+              <Text style={[styles.playerScore, { color: themeColors.text }]}>{opponentScore} pts</Text>
+            </View>
+          </View>
 
-      <View style={[styles.enigmaCard, { backgroundColor: themeColors.card, borderColor: isMyBuzzer ? colors.coral : themeColors.border }]}>
-        <Text style={[styles.enigmaLabel, { color: themeColors.textSecondary }]}>TROUVEZ LE MOT LIÉ</Text>
-        <View style={styles.wordsRow}>
-          <View style={[styles.wordBubble, { backgroundColor: themeColors.overlayLight }]}>
-            <Text style={[styles.wordText, { color: themeColors.text }]}>{currentEnigma?.word1 || '...'}</Text>
+          <View style={[styles.enigmaCard, { backgroundColor: themeColors.card, borderColor: isMyBuzzer ? colors.coral : themeColors.border }]}>
+            <Text style={[styles.enigmaLabel, { color: themeColors.textSecondary }]}>TROUVEZ LE MOT LIÉ</Text>
+            <View style={styles.wordsRow}>
+              <View style={[styles.wordBubble, { backgroundColor: themeColors.overlayLight }]}>
+                <Text style={[styles.wordText, { color: themeColors.text }]}>{currentEnigma?.word1 || '...'}</Text>
+              </View>
+              <Text style={[styles.plusSign, { color: colors.coral }]}>+</Text>
+              <View style={[styles.wordBubble, { backgroundColor: themeColors.overlayLight }]}>
+                <Text style={[styles.wordText, { color: themeColors.text }]}>{currentEnigma?.word2 || '...'}</Text>
+              </View>
+            </View>
+            {currentEnigma?.clue ? (
+              <Text style={[styles.clueText, { color: themeColors.textSecondary }]}>Indice : {currentEnigma.clue}</Text>
+            ) : null}
           </View>
-          <Text style={[styles.plusSign, { color: colors.coral }]}>+</Text>
-          <View style={[styles.wordBubble, { backgroundColor: themeColors.overlayLight }]}>
-            <Text style={[styles.wordText, { color: themeColors.text }]}>{currentEnigma?.word2 || '...'}</Text>
-          </View>
-        </View>
-        {currentEnigma?.clue ? (
-          <Text style={[styles.clueText, { color: themeColors.textSecondary }]}>Indice : {currentEnigma.clue}</Text>
-        ) : null}
-      </View>
 
-      <View style={styles.propositionsContainer}>
-        {currentEnigma?.propositions?.map((prop, idx) => (
-          <TouchableOpacity
-            key={idx}
-            disabled={!isMyBuzzer}
-            onPress={() => submitAnswer(prop)}
-            style={[
-              styles.propButton,
-              {
-                backgroundColor: isMyBuzzer ? themeColors.card : themeColors.overlayLight,
-                borderColor: isMyBuzzer ? colors.coral : themeColors.border,
-                opacity: isMyBuzzer ? 1 : 0.45,
-              },
-            ]}
-          >
-            <Text style={[styles.propText, { color: isMyBuzzer ? colors.coral : themeColors.text }]}>{prop}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+          <View style={styles.propositionsContainer}>
+            {currentEnigma?.propositions?.map((prop, idx) => (
+              <TouchableOpacity
+                key={idx}
+                disabled={!isMyBuzzer}
+                onPress={() => submitAnswer(prop)}
+                style={[
+                  styles.propButton,
+                  {
+                    backgroundColor: isMyBuzzer ? themeColors.card : themeColors.overlayLight,
+                    borderColor: isMyBuzzer ? colors.coral : themeColors.border,
+                    opacity: isMyBuzzer ? 1 : 0.45,
+                  },
+                ]}
+              >
+                <Text style={[styles.propText, { color: isMyBuzzer ? colors.coral : themeColors.text }]}>{prop}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-      <View style={styles.buzzerSection}>
-        {isWaitingForOpponent ? (
-          <View style={styles.waitingContainer}>
-            <ActivityIndicator size="large" color={colors.coral} />
-            <Text style={[styles.waitingText, { color: themeColors.textSecondary }]}>Connexion du deuxième joueur...</Text>
+          <View style={styles.buzzerSection}>
+            {isMyBuzzer ? (
+              <View style={styles.buzzerActiveBox}>
+                <Text style={[styles.buzzerCountText, { color: colors.mint }]}>À VOUS ! {buzzerSecondsLeft}s</Text>
+                <Text style={[styles.buzzerSubtext, { color: themeColors.textSecondary }]}>Choisissez votre réponse ci-dessus</Text>
+              </View>
+            ) : isOpponentBuzzer ? (
+              <View style={[styles.buzzerLockBox, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
+                <Ionicons name="lock-closed" size={24} color={colors.error} />
+                <Text style={[styles.buzzerLockText, { color: colors.error }]}>{activeBuzzerUserName || 'Adversaire'} répond... ({buzzerSecondsLeft}s)</Text>
+              </View>
+            ) : (
+              <DuelBuzzerButton onPress={pressBuzzer} />
+            )}
           </View>
-        ) : isMyBuzzer ? (
-          <View style={styles.buzzerActiveBox}>
-            <Text style={[styles.buzzerCountText, { color: colors.mint }]}>À VOUS ! {buzzerSecondsLeft}s</Text>
-            <Text style={[styles.buzzerSubtext, { color: themeColors.textSecondary }]}>Choisissez votre réponse ci-dessus</Text>
-          </View>
-        ) : isOpponentBuzzer ? (
-          <View style={[styles.buzzerLockBox, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
-            <Ionicons name="lock-closed" size={24} color={colors.error} />
-            <Text style={[styles.buzzerLockText, { color: colors.error }]}>{activeBuzzerUserName || 'Adversaire'} répond... ({buzzerSecondsLeft}s)</Text>
-          </View>
-        ) : (
-          <DuelBuzzerButton onPress={pressBuzzer} />
-        )}
-      </View>
+        </>
+      )}
+
+      {/* TIMEOUT OU ANNULATION LOBBY (REMBOURSEMENT TOTAL) */}
+      <CustomAlert
+        visible={Boolean(lobbyTimeoutInfo?.visible)}
+        title="Session de duel"
+        message={lobbyTimeoutInfo?.message || "La session de duel a pris fin. Vos Kevs sont intacts."}
+        type="info"
+        buttonText="Retour au Lobby"
+        onClose={() => navigation.replace('DuelLobby')}
+      />
 
       {/* CONFIRMATION D'ABANDON */}
       <CustomAlert
@@ -253,8 +279,6 @@ const styles = StyleSheet.create({
   propButton: { paddingVertical: 11, borderRadius: borderRadius.md, borderWidth: 1.5, alignItems: 'center' },
   propText: { fontFamily: 'Poppins_700Bold', fontSize: 15 },
   buzzerSection: { flex: 1, justifyContent: 'center', alignItems: 'center', marginVertical: spacing.sm },
-  waitingContainer: { alignItems: 'center', gap: 10 },
-  waitingText: { fontFamily: 'Poppins_500Medium', fontSize: 13 },
   buzzerActiveBox: { alignItems: 'center' },
   buzzerCountText: { fontFamily: 'Poppins_900Black', fontSize: 24 },
   buzzerSubtext: { fontFamily: 'Poppins_400Regular', fontSize: 13, marginTop: 4 },

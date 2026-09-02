@@ -133,6 +133,8 @@ const AppContent = () => {
     config: {
       screens: {
         Chat: 'chat/:friendId',
+        DuelGame: 'duel/:duelId',
+        DuelLobby: 'duels',
         Home: {
           screens: {
             Messages: 'messages',
