@@ -85,7 +85,7 @@ const RegisterScreen = ({ navigation, route }: any) => {
     } catch (err: any) {
       setAlert({
         visible: true,
-        title: 'Erreur',
+        title: err.title || 'Inscription impossible',
         message: err.message || "Erreur lors de l'inscription.",
         type: 'error',
       });

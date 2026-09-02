@@ -4,6 +4,8 @@ import { DeviceEventEmitter } from 'react-native';
 import api from '../services/api';
 import { saveTokens, saveUser, getToken, getUser, clearTokens } from '../services/authStorage';
 
+import { parseApiError } from '../utils/apiError';
+
 interface AuthContextData {
   user: any;
   loading: boolean;
@@ -79,7 +81,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await saveUser(userData);
       setUser(userData);
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Erreur de connexion');
+      const parsed = parseApiError(error, 'Erreur de connexion', 'Identifiant ou mot de passe incorrect.');
+      const err = new Error(parsed.message);
+      (err as any).title = parsed.title;
+      (err as any).isNetworkError = parsed.isNetworkError;
+      (err as any).isTimeout = parsed.isTimeout;
+      throw err;
     }
   };
 
@@ -92,7 +99,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await saveUser(userData);
       setUser(userData);
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Erreur lors de la connexion Google');
+      const parsed = parseApiError(error, 'Connexion Google échouée', 'Erreur lors de la connexion Google.');
+      const err = new Error(parsed.message);
+      (err as any).title = parsed.title;
+      throw err;
     }
   };
 
@@ -105,7 +115,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await saveUser(newUserData);
       setUser(newUserData);
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Erreur lors de l'inscription");
+      const parsed = parseApiError(error, "Erreur d'inscription", "Erreur lors de la création du compte.");
+      const err = new Error(parsed.message);
+      (err as any).title = parsed.title;
+      throw err;
     }
   };
 
@@ -125,7 +138,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await saveUser(updatedUser);
       setUser(updatedUser);
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Erreur lors de la mise à jour du profil');
+      const parsed = parseApiError(error, 'Mise à jour échouée', 'Erreur lors de la mise à jour du profil.');
+      const err = new Error(parsed.message);
+      (err as any).title = parsed.title;
+      throw err;
     }
   };
 

@@ -68,8 +68,8 @@ const LoginScreen = ({ navigation }: any) => {
     } catch (err: any) {
       setAlert({
         visible: true,
-        title: 'Erreur de connexion',
-        message: err.message || 'Identifiants incorrects ou serveur indisponible.',
+        title: err.title || 'Connexion impossible',
+        message: err.message || 'Une erreur est survenue lors de la tentative de connexion.',
         type: 'error',
       });
     } finally {
