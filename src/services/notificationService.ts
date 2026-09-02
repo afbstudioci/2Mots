@@ -4,10 +4,12 @@
 
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { colors } from '../theme/theme';
 
-export const PRIMARY_CHANNEL_ID = 'twomots_alerts_v3';
+export const PRIMARY_CHANNEL_ID = 'twomots_channel_v4_urgent';
 export const LEGACY_CHANNEL_ID = 'default';
 
+// Handler racine pour intercepter et forcer l'affichage de la banniere visuelle
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -20,14 +22,15 @@ Notifications.setNotificationHandler({
 
 export const setupNotificationChannelsAsync = async () => {
   if (Platform.OS === 'android') {
-    // 1. Canal Maitre Dedie Priorite MAX (Son systeme natif sans ressource audio manquante)
+    // 1. Canal Maitre Dedie Haute Priorite (Heads-up banner & son)
     await Notifications.setNotificationChannelAsync(PRIMARY_CHANNEL_ID, {
       name: 'Alertes & Duels 2Mots',
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#FF7F50',
+      lightColor: colors.coral,
       enableLights: true,
       enableVibrate: true,
+      sound: 'default',
       showBadge: true,
       lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       bypassDnd: false,
@@ -35,12 +38,13 @@ export const setupNotificationChannelsAsync = async () => {
 
     // 2. Canal Secondaire Compatibilite
     await Notifications.setNotificationChannelAsync(LEGACY_CHANNEL_ID, {
-      name: 'Notifications Generales',
+      name: 'Notifications Générales',
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#FF7F50',
+      lightColor: colors.coral,
       enableLights: true,
       enableVibrate: true,
+      sound: 'default',
       showBadge: true,
       lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       bypassDnd: false,
@@ -52,3 +56,4 @@ export const setupNotificationChannelsAsync = async () => {
 setupNotificationChannelsAsync().catch((err) => {
   console.warn('[PUSH] Erreur initialisation canaux Android:', err);
 });
+
