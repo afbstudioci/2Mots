@@ -26,39 +26,39 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
   const hasFinished = useRef(false);
   const serverResponded = useRef(false);
 
-  // Animation de tracé en boucle continue (effet dessin serpent)
+  // Animation de tracé initial suivi d'un pulse en boucle (conforme à GameLoading)
   useEffect(() => {
-    const loopDrawAnimation = Animated.loop(
-      Animated.sequence([
-        // 1. Le tracé de l'infini se dessine (300 -> 0)
-        Animated.timing(drawAnim, {
-          toValue: 0,
-          duration: 1500,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: false,
-        }),
-        Animated.delay(200),
-        // 2. Le tracé s'efface dans le sens de la course (0 -> -300)
-        Animated.timing(drawAnim, {
-          toValue: -300,
-          duration: 1500,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: false,
-        }),
-        // 3. Réinitialisation instantanée à 300 pour le cycle suivant
-        Animated.timing(drawAnim, {
-          toValue: 300,
-          duration: 0,
-          useNativeDriver: false,
-        }),
-        Animated.delay(100),
-      ])
-    );
+    let loopAnimation: Animated.CompositeAnimation | null = null;
 
-    loopDrawAnimation.start();
+    Animated.timing(drawAnim, {
+      toValue: 0,
+      duration: 1400,
+      easing: Easing.inOut(Easing.ease),
+      useNativeDriver: false,
+    }).start(() => {
+      loopAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(scaleAnim, {
+            toValue: 1.1,
+            duration: 1000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(scaleAnim, {
+            toValue: 1,
+            duration: 1000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      loopAnimation.start();
+    });
 
     return () => {
-      loopDrawAnimation.stop();
+      if (loopAnimation) {
+        loopAnimation.stop();
+      }
     };
   }, []);
 
@@ -163,22 +163,23 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
           styles.content,
           {
             opacity: contentFadeAnim,
-            transform: [{ scale: scaleAnim }],
           },
         ]}
       >
         <Animated.View style={styles.centerBlock}>
-          <Svg width={130} height={65} viewBox="0 0 100 50">
-            <AnimatedPath
-              d="M 50 25 C 65 0, 95 0, 95 25 C 95 50, 65 50, 50 25 Z"
-              fill="none"
-              stroke={colors.white}
-              strokeWidth="6"
-              strokeLinecap="round"
-              strokeDasharray="300"
-              strokeDashoffset={drawAnim}
-            />
-          </Svg>
+          <Animated.View style={{ transform: [{ scale: scaleAnim }], alignItems: 'center', justifyContent: 'center' }}>
+            <Svg width={130} height={65} viewBox="0 0 100 50">
+              <AnimatedPath
+                d="M 50 25 C 65 0, 95 0, 95 25 C 95 50, 65 50, 50 25 Z"
+                fill="none"
+                stroke={colors.white}
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeDasharray="300"
+                strokeDashoffset={drawAnim}
+              />
+            </Svg>
+          </Animated.View>
 
           <Animated.Text style={styles.signatureText}>By_ KEVY</Animated.Text>
         </Animated.View>

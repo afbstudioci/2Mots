@@ -22,7 +22,7 @@ Notifications.setNotificationHandler({
 
 export const setupNotificationChannelsAsync = async () => {
   if (Platform.OS === 'android') {
-    // 1. Canal Maitre Dedie Haute Priorite (Heads-up banner & son)
+    // 1. Canal Maitre V4 (Heads-up banner & son)
     await Notifications.setNotificationChannelAsync(PRIMARY_CHANNEL_ID, {
       name: 'Alertes & Duels 2Mots',
       importance: Notifications.AndroidImportance.MAX,
@@ -36,7 +36,21 @@ export const setupNotificationChannelsAsync = async () => {
       bypassDnd: false,
     });
 
-    // 2. Canal Secondaire Compatibilite
+    // 2. Canal V3 Fallback
+    await Notifications.setNotificationChannelAsync('twomots_alerts_v3', {
+      name: 'Notifications 2Mots',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: colors.coral,
+      enableLights: true,
+      enableVibrate: true,
+      sound: 'default',
+      showBadge: true,
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      bypassDnd: false,
+    });
+
+    // 3. Canal Secondaire Compatibilite
     await Notifications.setNotificationChannelAsync(LEGACY_CHANNEL_ID, {
       name: 'Notifications Générales',
       importance: Notifications.AndroidImportance.MAX,

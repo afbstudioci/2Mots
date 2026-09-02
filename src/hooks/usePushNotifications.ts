@@ -30,8 +30,11 @@ export const usePushNotifications = () => {
       return;
     }
 
+    const userId = String(user._id || user.id || '');
+    if (!userId) return;
+
     // Evite de re-synchroniser si on est deja synced pour ce user
-    if (tokenSyncedForUser.current === String(user._id)) return;
+    if (tokenSyncedForUser.current === userId) return;
 
     let isMounted = true;
 
@@ -95,8 +98,8 @@ export const usePushNotifications = () => {
         if (isMounted && token) {
           try {
             await api.post('/auth/fcm-token', { fcmToken: token });
-            tokenSyncedForUser.current = String(user._id);
-            console.log(`[PUSH] Token FCM synchronise avec le backend pour l'utilisateur ${user._id}`);
+            tokenSyncedForUser.current = userId;
+            console.log(`[PUSH] Token FCM synchronise avec le backend pour l'utilisateur ${userId}`);
           } catch (apiErr: any) {
             console.warn('[PUSH] Erreur synchronisation token avec le backend:', apiErr.message);
           }
