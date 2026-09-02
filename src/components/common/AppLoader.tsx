@@ -16,7 +16,7 @@ interface AppLoaderProps {
 export default function AppLoader({ onRetry, error }: AppLoaderProps) {
   const { themeColors } = useTheme();
   
-  const drawAnim = useRef(new Animated.Value(300)).current;
+  const drawAnim = useRef(new Animated.Value(400)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const errorFadeAnim = useRef(new Animated.Value(0)).current;
@@ -89,7 +89,7 @@ export default function AppLoader({ onRetry, error }: AppLoaderProps) {
             stroke={colors.coral}
             strokeWidth="6"
             strokeLinecap="round"
-            strokeDasharray="300"
+            strokeDasharray="400"
             strokeDashoffset={drawAnim}
           />
         </Svg>

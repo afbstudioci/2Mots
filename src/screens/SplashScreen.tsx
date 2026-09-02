@@ -21,12 +21,12 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
   const contentFadeAnim = useRef(new Animated.Value(1)).current;
   const statusFadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const drawAnim = useRef(new Animated.Value(300)).current;
+  const drawAnim = useRef(new Animated.Value(400)).current;
 
   const hasFinished = useRef(false);
   const serverResponded = useRef(false);
 
-  // Animation de tracé initial suivi d'un pulse en boucle (conforme à GameLoading)
+  // Animation de tracé initial (complet à 100%) suivi d'un pulse en boucle
   useEffect(() => {
     let loopAnimation: Animated.CompositeAnimation | null = null;
 
@@ -175,7 +175,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
                 stroke={colors.white}
                 strokeWidth="6"
                 strokeLinecap="round"
-                strokeDasharray="300"
+                strokeDasharray="400"
                 strokeDashoffset={drawAnim}
               />
             </Svg>
