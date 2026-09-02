@@ -5,6 +5,8 @@ import Svg, { Path } from 'react-native-svg';
 import { colors, spacing } from '../theme/theme';
 import api from '../services/api';
 
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+
 interface SplashScreenProps {
   onFinish?: () => void;
 }
@@ -19,34 +21,44 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
   const contentFadeAnim = useRef(new Animated.Value(1)).current;
   const statusFadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const infinityPulse = useRef(new Animated.Value(0)).current;
+  const drawAnim = useRef(new Animated.Value(300)).current;
 
   const hasFinished = useRef(false);
   const serverResponded = useRef(false);
 
-  // Animation continue en douceur de l'icone infinie
+  // Animation de tracé en boucle continue (effet dessin serpent)
   useEffect(() => {
-    const loopAnimation = Animated.loop(
+    const loopDrawAnimation = Animated.loop(
       Animated.sequence([
-        Animated.timing(infinityPulse, {
-          toValue: 1,
-          duration: 1600,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(infinityPulse, {
+        // 1. Le tracé de l'infini se dessine (300 -> 0)
+        Animated.timing(drawAnim, {
           toValue: 0,
-          duration: 1600,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
+          duration: 1500,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: false,
         }),
+        Animated.delay(200),
+        // 2. Le tracé s'efface dans le sens de la course (0 -> -300)
+        Animated.timing(drawAnim, {
+          toValue: -300,
+          duration: 1500,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: false,
+        }),
+        // 3. Réinitialisation instantanée à 300 pour le cycle suivant
+        Animated.timing(drawAnim, {
+          toValue: 300,
+          duration: 0,
+          useNativeDriver: false,
+        }),
+        Animated.delay(100),
       ])
     );
 
-    loopAnimation.start();
+    loopDrawAnimation.start();
 
     return () => {
-      loopAnimation.stop();
+      loopDrawAnimation.stop();
     };
   }, []);
 
@@ -135,21 +147,6 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
 
   const dotsString = '.'.repeat(dotsCount);
 
-  const infinityScale = infinityPulse.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.94, 1.06],
-  });
-
-  const infinityTranslateY = infinityPulse.interpolate({
-    inputRange: [0, 1],
-    outputRange: [2, -2],
-  });
-
-  const infinityOpacity = infinityPulse.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.85, 1],
-  });
-
   return (
     <Animated.View
       style={[
@@ -171,27 +168,17 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
         ]}
       >
         <Animated.View style={styles.centerBlock}>
-          <Animated.View
-            style={{
-              transform: [
-                { scale: infinityScale },
-                { translateY: infinityTranslateY },
-              ],
-              opacity: infinityOpacity,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Svg width={130} height={65} viewBox="0 0 100 50">
-              <Path
-                d="M 50 25 C 65 0, 95 0, 95 25 C 95 50, 65 50, 50 25 C 35 0, 5 0, 5 25 C 5 50, 35 50, 50 25 Z"
-                fill="none"
-                stroke={colors.white}
-                strokeWidth="6"
-                strokeLinecap="round"
-              />
-            </Svg>
-          </Animated.View>
+          <Svg width={130} height={65} viewBox="0 0 100 50">
+            <AnimatedPath
+              d="M 50 25 C 65 0, 95 0, 95 25 C 95 50, 65 50, 50 25 Z"
+              fill="none"
+              stroke={colors.white}
+              strokeWidth="6"
+              strokeLinecap="round"
+              strokeDasharray="300"
+              strokeDashoffset={drawAnim}
+            />
+          </Svg>
 
           <Animated.Text style={styles.signatureText}>By_ KEVY</Animated.Text>
         </Animated.View>
@@ -200,7 +187,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
           {showStatus && (
             <Animated.View style={[styles.statusContainer, { opacity: statusFadeAnim }]}>
               <Text style={styles.statusText}>
-                {isReady ? 'Serveur prêt !' : `Démarrage du serveur ${dotsString}`}
+                {isReady ? 'Prêt !' : `Démarrage${dotsString}`}
               </Text>
             </Animated.View>
           )}

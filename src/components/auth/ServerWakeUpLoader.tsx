@@ -1,11 +1,11 @@
-﻿//src/components/auth/ServerWakeUpLoader.tsx
+//src/components/auth/ServerWakeUpLoader.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Modal, Animated } from 'react-native';
 import { colors, borderRadius, spacing } from '../../theme/theme';
 import { useTheme } from '../../context/ThemeContext';
 
 const MESSAGES = [
-  'Connexion au serveur...',
+  'Connexion en cours...',
   'Synchronisation de vos données...',
   'Préparation de vos défis...',
   'Sécurisation de la session...',
