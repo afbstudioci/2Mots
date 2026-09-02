@@ -9,7 +9,6 @@ import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import CustomAlert from '../components/common/CustomAlert';
-import api from '../services/api';
 import { spacing, borderRadius, typography, colors, shadows } from '../theme/theme';
 import { RootStackParamList } from '../../App';
 
@@ -62,33 +61,6 @@ export default function SettingsScreen() {
         await deleteAccount();
       },
     });
-  };
-
-  const [isTestingPush, setIsTestingPush] = useState(false);
-
-  const handleTestPush = async () => {
-    setIsTestingPush(true);
-    try {
-      await api.post('/notifications/test-push');
-      setAlertConfig({
-        visible: true,
-        title: 'TEST PUSH ENVOYÉ',
-        message: 'Une notification de test a été transmise à Firebase. Mettez l’application en arrière-plan pour voir la bannière.',
-        type: 'success',
-        buttonText: 'Parfait',
-      });
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.message || err.message || 'Erreur de connexion';
-      setAlertConfig({
-        visible: true,
-        title: 'ÉCHEC DU TEST PUSH',
-        message: `Erreur lors de l'envoi du push : ${errorMsg}`,
-        type: 'error',
-        buttonText: 'Fermer',
-      });
-    } finally {
-      setIsTestingPush(false);
-    }
   };
 
   const SettingRow = ({ icon, title, isSwitch, value, onToggle, onPress, isLast }: any) => (
@@ -153,7 +125,7 @@ export default function SettingsScreen() {
           <SettingRow icon={isDark ? 'moon' : 'sunny'} title="Mode Sombre" isSwitch value={isDark} onToggle={toggleTheme} isLast />
         </View>
 
-        <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>INFORMATIONS & DIAGNOSTIC</Text>
+        <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>INFORMATIONS</Text>
         <View
           style={[
             styles.section,
@@ -165,7 +137,6 @@ export default function SettingsScreen() {
             shadows.soft(isDark),
           ]}
         >
-          <SettingRow icon="notifications-outline" title="Tester les notifications push" onPress={handleTestPush} />
           <SettingRow icon="document-text" title="Règles du jeu" onPress={() => handleNavigation('Rules')} />
           <SettingRow icon="shield-checkmark" title="Politique de confidentialité" onPress={() => handleNavigation('Privacy')} />
           <SettingRow icon="help-buoy" title="Nous contacter" onPress={() => handleNavigation('Contact')} isLast />

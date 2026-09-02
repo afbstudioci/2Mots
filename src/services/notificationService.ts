@@ -1,6 +1,6 @@
-// src/services/notificationService.ts
+﻿// src/services/notificationService.ts
 // GESTION CANAUX ET ENREGISTREMENT PUSH - STANDARDS INDUSTRIELS
-// CSCSM Level: Bank Grade (Strict <= 270 lignes)
+// CSCSM Level: Bank Grade (Strict <= 270 lignes, Sans Emojis)
 
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
@@ -52,7 +52,7 @@ export const setupNotificationChannelsAsync = async () => {
 
     // 3. Canal Secondaire Compatibilite
     await Notifications.setNotificationChannelAsync(LEGACY_CHANNEL_ID, {
-      name: 'Notifications Générales',
+      name: 'Notifications Generales',
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: colors.coral,
@@ -70,4 +70,3 @@ export const setupNotificationChannelsAsync = async () => {
 setupNotificationChannelsAsync().catch((err) => {
   console.warn('[PUSH] Erreur initialisation canaux Android:', err);
 });
-

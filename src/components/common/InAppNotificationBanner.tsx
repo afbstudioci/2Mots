@@ -1,4 +1,7 @@
-// src/components/common/InAppNotificationBanner.tsx
+﻿// src/components/common/InAppNotificationBanner.tsx
+// BANNIERE DE NOTIFICATION IN-APP - AFFICHAGE FOREGROUND HAUTE PRIORITE
+// CSCSM Level: Bank Grade (Modularise < 325 lignes, Sans Emojis)
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -69,7 +72,6 @@ export const InAppNotificationBanner: React.FC = () => {
     }).start(() => setNotification(null));
   }, [translateY]);
 
-  // Conversion et affichage selon le type de notification
   const handleIncomingPayload = useCallback((title: string, body: string, data: any) => {
     const rawType = data?.type || 'general';
     try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
@@ -84,8 +86,8 @@ export const InAppNotificationBanner: React.FC = () => {
       case 'invite':
         showBanner({
           type: 'invite',
-          title: title || 'DÉFI EN DUEL 1V1 !',
-          message: body || `${data?.challengerName || 'Un joueur'} vous défie !`,
+          title: title || 'DEFI EN DUEL 1V1 !',
+          message: body || `${data?.challengerName || 'Un joueur'} vous defie !`,
           duelId,
           buttonText: 'VOIR',
           borderColor: colors.coral,
@@ -96,7 +98,7 @@ export const InAppNotificationBanner: React.FC = () => {
       case 'accepted':
         showBanner({
           type: 'accepted',
-          title: title || 'DÉFI ACCEPTÉ !',
+          title: title || 'DEFI ACCEPTE !',
           message: body || 'Le duel commence !',
           duelId,
           buttonText: 'JOUER',
@@ -108,8 +110,8 @@ export const InAppNotificationBanner: React.FC = () => {
       case 'rejected':
         showBanner({
           type: 'rejected',
-          title: title || 'DÉFI REFUSÉ',
-          message: body || 'Invitation déclinée.',
+          title: title || 'DEFI REFUSE',
+          message: body || 'Invitation declinee.',
           borderColor: colors.error,
         }, 4500);
         break;
@@ -119,11 +121,11 @@ export const InAppNotificationBanner: React.FC = () => {
         showBanner({
           type: 'chat',
           title: friendName,
-          message: body || 'Nouveau message reçu.',
+          message: body || 'Nouveau message recu.',
           friendId,
           friendName,
           friendAvatar,
-          buttonText: 'RÉPONDRE',
+          buttonText: 'REPONDRE',
           borderColor: colors.coral,
         }, 6000);
         break;
@@ -143,8 +145,8 @@ export const InAppNotificationBanner: React.FC = () => {
       case 'friend_accepted':
         showBanner({
           type: 'friend_accepted',
-          title: title || 'DEMANDE ACCEPTÉE !',
-          message: body || `${friendName} et vous êtes maintenant amis !`,
+          title: title || 'DEMANDE ACCEPTEE !',
+          message: body || `${friendName} et vous etes maintenant amis !`,
           friendId,
           friendName,
           buttonText: 'VOIR',
@@ -155,8 +157,8 @@ export const InAppNotificationBanner: React.FC = () => {
       case 'level_up':
         showBanner({
           type: 'level_up',
-          title: title || 'NIVEAU SUPÉRIEUR !',
-          message: body || 'Félicitations pour votre progression !',
+          title: title || 'NIVEAU SUPERIEUR !',
+          message: body || 'Felicitations pour votre progression !',
           buttonText: 'PROFIL',
           borderColor: colors.coral,
         }, 6000);
@@ -165,9 +167,9 @@ export const InAppNotificationBanner: React.FC = () => {
       case 'mission_complete':
         showBanner({
           type: 'mission_complete',
-          title: title || 'MISSION TERMINÉE !',
-          message: body || 'Une récompense est prête à être réclamée !',
-          buttonText: 'RÉCLAMER',
+          title: title || 'MISSION TERMINEE !',
+          message: body || 'Une recompense est prete a etre reclamee !',
+          buttonText: 'RECLAMER',
           borderColor: colors.mint,
         }, 6500);
         break;
@@ -185,25 +187,24 @@ export const InAppNotificationBanner: React.FC = () => {
   }, [showBanner]);
 
   useEffect(() => {
-    // 1. Événements Socket.io en direct
     const unsubInvite = subscribe('duel_invite_received', (data: any) => {
-      handleIncomingPayload('DÉFI EN DUEL 1V1 !', `${data?.challengerName || 'Un joueur'} vous défie (${data?.betAmount || 25} Kevs)`, { ...data, type: 'duel_invite' });
+      handleIncomingPayload('DEFI EN DUEL 1V1 !', `${data?.challengerName || 'Un joueur'} vous defie (${data?.betAmount || 25} Kevs)`, { ...data, type: 'duel_invite' });
     });
 
     const unsubResponse = subscribe('duel_invite_response', (data: any) => {
       const opp = data?.opponentName || "L'adversaire";
       if (data?.accept) {
-        handleIncomingPayload('DÉFI ACCEPTÉ !', `${opp} a accepté ! Le duel commence !`, { ...data, type: 'duel_accepted' });
+        handleIncomingPayload('DEFI ACCEPTE !', `${opp} a accepte ! Le duel commence !`, { ...data, type: 'duel_accepted' });
       } else {
-        handleIncomingPayload('DÉFI REFUSÉ', `${opp} a décliné votre invitation.`, { ...data, type: 'duel_rejected' });
+        handleIncomingPayload('DEFI REFUSE', `${opp} a decline votre invitation.`, { ...data, type: 'duel_rejected' });
       }
     });
 
     const unsubCancelled = subscribe('duel_invite_cancelled', () => {
       showBanner({
         type: 'cancelled',
-        title: 'DÉFI ANNULÉ',
-        message: "L'invitation de duel a été retirée.",
+        title: 'DEFI ANNULE',
+        message: "L'invitation de duel a ete retiree.",
         borderColor: themeColors.border,
       }, 3500);
     });
@@ -212,7 +213,6 @@ export const InAppNotificationBanner: React.FC = () => {
       handleIncomingPayload(data?.title, data?.body, { ...(data?.data || {}), type: data?.type });
     });
 
-    // 2. Écouteur FCM Foreground expo-notifications
     const pushSub = Notifications.addNotificationReceivedListener((event) => {
       const { title, body, data } = event.request.content;
       handleIncomingPayload(title || '', body || '', data || {});
@@ -310,6 +310,7 @@ const styles = StyleSheet.create({
     left: spacing.md,
     right: spacing.md,
     zIndex: 9999,
+    elevation: 1000,
     borderRadius: borderRadius.lg,
     borderWidth: 1.5,
     padding: spacing.sm + 2,
