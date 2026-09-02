@@ -1,6 +1,6 @@
-﻿// src/components/common/InAppNotificationBanner.tsx
+// src/components/common/InAppNotificationBanner.tsx
 // BANNIERE DE NOTIFICATION IN-APP - AFFICHAGE FOREGROUND HAUTE PRIORITE
-// CSCSM Level: Bank Grade (Modularise < 325 lignes, Sans Emojis)
+// CSCSM Level: Bank Grade (Strict <= 270 lignes, Sans Emojis)
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Image } from 'react-native';
@@ -10,31 +10,8 @@ import * as Notifications from 'expo-notifications';
 import { useSocketContext } from '../../context/SocketContext';
 import { useTheme } from '../../context/ThemeContext';
 import { navigate } from '../../navigation/navigationRef';
-import { colors, spacing, borderRadius, shadows } from '../../theme/theme';
-
-export type BannerType =
-  | 'invite'
-  | 'accepted'
-  | 'rejected'
-  | 'cancelled'
-  | 'chat'
-  | 'friend_request'
-  | 'friend_accepted'
-  | 'level_up'
-  | 'mission_complete'
-  | 'general';
-
-interface BannerData {
-  type: BannerType;
-  title: string;
-  message: string;
-  duelId?: string;
-  friendId?: string;
-  friendName?: string;
-  friendAvatar?: string;
-  buttonText?: string;
-  borderColor: string;
-}
+import { spacing, borderRadius, shadows } from '../../theme/theme';
+import { BannerData, buildBannerData } from './bannerUtils';
 
 export const InAppNotificationBanner: React.FC = () => {
   const { subscribe } = useSocketContext();
@@ -44,7 +21,7 @@ export const InAppNotificationBanner: React.FC = () => {
   const translateY = useRef(new Animated.Value(-140)).current;
   const hideTimerRef = useRef<any>(null);
 
-  const showBanner = useCallback((data: BannerData, autoDismissMs = 6000) => {
+  const showBanner = useCallback((data: BannerData) => {
     setNotification(data);
     Animated.spring(translateY, {
       toValue: 0,
@@ -60,7 +37,7 @@ export const InAppNotificationBanner: React.FC = () => {
         duration: 250,
         useNativeDriver: true,
       }).start(() => setNotification(null));
-    }, autoDismissMs);
+    }, data.autoDismissMs || 6000);
   }, [translateY]);
 
   const handleDismiss = useCallback(() => {
@@ -73,140 +50,33 @@ export const InAppNotificationBanner: React.FC = () => {
   }, [translateY]);
 
   const handleIncomingPayload = useCallback((title: string, body: string, data: any) => {
-    const rawType = data?.type || 'general';
     try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
-
-    const duelId = data?.duelId ? String(data.duelId) : undefined;
-    const friendId = data?.friendId ? String(data.friendId) : (data?.senderId ? String(data.senderId) : undefined);
-    const friendName = data?.friendName || data?.senderName || 'Ami';
-    const friendAvatar = data?.friendAvatar;
-
-    switch (rawType) {
-      case 'duel_invite':
-      case 'invite':
-        showBanner({
-          type: 'invite',
-          title: title || 'DEFI EN DUEL 1V1 !',
-          message: body || `${data?.challengerName || 'Un joueur'} vous defie !`,
-          duelId,
-          buttonText: 'VOIR',
-          borderColor: colors.coral,
-        }, 7000);
-        break;
-
-      case 'duel_accepted':
-      case 'accepted':
-        showBanner({
-          type: 'accepted',
-          title: title || 'DEFI ACCEPTE !',
-          message: body || 'Le duel commence !',
-          duelId,
-          buttonText: 'JOUER',
-          borderColor: colors.mint,
-        }, 8000);
-        break;
-
-      case 'duel_rejected':
-      case 'rejected':
-        showBanner({
-          type: 'rejected',
-          title: title || 'DEFI REFUSE',
-          message: body || 'Invitation declinee.',
-          borderColor: colors.error,
-        }, 4500);
-        break;
-
-      case 'chat_message':
-      case 'chat':
-        showBanner({
-          type: 'chat',
-          title: friendName,
-          message: body || 'Nouveau message recu.',
-          friendId,
-          friendName,
-          friendAvatar,
-          buttonText: 'REPONDRE',
-          borderColor: colors.coral,
-        }, 6000);
-        break;
-
-      case 'friend_request':
-        showBanner({
-          type: 'friend_request',
-          title: title || "NOUVELLE DEMANDE D'AMI",
-          message: body || `${friendName} souhaite devenir votre ami !`,
-          friendId,
-          friendName,
-          buttonText: 'VOIR',
-          borderColor: colors.coral,
-        }, 6500);
-        break;
-
-      case 'friend_accepted':
-        showBanner({
-          type: 'friend_accepted',
-          title: title || 'DEMANDE ACCEPTEE !',
-          message: body || `${friendName} et vous etes maintenant amis !`,
-          friendId,
-          friendName,
-          buttonText: 'VOIR',
-          borderColor: colors.mint,
-        }, 6500);
-        break;
-
-      case 'level_up':
-        showBanner({
-          type: 'level_up',
-          title: title || 'NIVEAU SUPERIEUR !',
-          message: body || 'Felicitations pour votre progression !',
-          buttonText: 'PROFIL',
-          borderColor: colors.coral,
-        }, 6000);
-        break;
-
-      case 'mission_complete':
-        showBanner({
-          type: 'mission_complete',
-          title: title || 'MISSION TERMINEE !',
-          message: body || 'Une recompense est prete a etre reclamee !',
-          buttonText: 'RECLAMER',
-          borderColor: colors.mint,
-        }, 6500);
-        break;
-
-      default:
-        showBanner({
-          type: 'general',
-          title: title || 'NOTIFICATION',
-          message: body || 'Nouvelle information.',
-          buttonText: 'VOIR',
-          borderColor: colors.coral,
-        }, 5000);
-        break;
-    }
+    const banner = buildBannerData(title, body, data);
+    showBanner(banner);
   }, [showBanner]);
 
   useEffect(() => {
     const unsubInvite = subscribe('duel_invite_received', (data: any) => {
-      handleIncomingPayload('DEFI EN DUEL 1V1 !', `${data?.challengerName || 'Un joueur'} vous defie (${data?.betAmount || 25} Kevs)`, { ...data, type: 'duel_invite' });
+      handleIncomingPayload('DÉFI EN DUEL 1V1 !', `${data?.challengerName || 'Un joueur'} vous défie (${data?.betAmount || 25} Kevs)`, { ...data, type: 'duel_invite' });
     });
 
     const unsubResponse = subscribe('duel_invite_response', (data: any) => {
       const opp = data?.opponentName || "L'adversaire";
       if (data?.accept) {
-        handleIncomingPayload('DEFI ACCEPTE !', `${opp} a accepte ! Le duel commence !`, { ...data, type: 'duel_accepted' });
+        handleIncomingPayload('DÉFI ACCEPTÉ !', `${opp} a accepté ! Le duel commence !`, { ...data, type: 'duel_accepted' });
       } else {
-        handleIncomingPayload('DEFI REFUSE', `${opp} a decline votre invitation.`, { ...data, type: 'duel_rejected' });
+        handleIncomingPayload('DÉFI REFUSÉ', `${opp} a décliné votre invitation.`, { ...data, type: 'duel_rejected' });
       }
     });
 
     const unsubCancelled = subscribe('duel_invite_cancelled', () => {
       showBanner({
         type: 'cancelled',
-        title: 'DEFI ANNULE',
-        message: "L'invitation de duel a ete retiree.",
+        title: 'DÉFI ANNULÉ',
+        message: "L'invitation de duel a été retirée.",
         borderColor: themeColors.border,
-      }, 3500);
+        autoDismissMs: 3500,
+      });
     });
 
     const unsubNotif = subscribe('notification_received', (data: any) => {
@@ -309,8 +179,8 @@ const styles = StyleSheet.create({
     top: 50,
     left: spacing.md,
     right: spacing.md,
-    zIndex: 9999,
-    elevation: 1000,
+    zIndex: 99999,
+    elevation: 2000,
     borderRadius: borderRadius.lg,
     borderWidth: 1.5,
     padding: spacing.sm + 2,
