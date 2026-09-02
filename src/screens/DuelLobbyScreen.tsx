@@ -170,7 +170,7 @@ export default function DuelLobbyScreen({ route }: any) {
   const handleShareInvite = useCallback(async (invite: DuelInvite) => {
     try {
       const oppName = invite.opponent?.login || 'Ami';
-      const link = `https://twomots.app/duel/${invite._id}`;
+      const link = `https://twomots-web.onrender.com/duel/${invite._id}`;
       await Share.share({
         title: 'Défi 2Mots',
         message: `Salut ${oppName} ! Je te défie sur 2Mots pour ${invite.betAmount} Kevs. Clique ici pour me rejoindre et jouer : ${link}`,

@@ -129,7 +129,12 @@ const AppContent = () => {
   };
 
   const linking = {
-    prefixes: ['twomots://', 'https://twomots.app'],
+    prefixes: [
+      'twomots://',
+      'https://2mots-web.onrender.com',
+      'https://twomots-web.onrender.com',
+      'https://twomots.app',
+    ],
     config: {
       screens: {
         Chat: 'chat/:friendId',
