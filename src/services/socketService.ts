@@ -17,7 +17,7 @@ class SocketService {
   connect(userId: string, token?: string) {
     if (!SOCKET_URL || !userId) return;
 
-    if (this.socket && this.isConnected && this.currentUserId === userId) {
+    if (this.socket && this.socket.connected && this.isConnected && this.currentUserId === userId) {
       return;
     }
 
@@ -32,10 +32,10 @@ class SocketService {
       auth: { token },
       transports: ['websocket'],
       reconnection: true,
-      reconnectionAttempts: 15,
-      reconnectionDelay: 1500,
-      reconnectionDelayMax: 6000,
-      timeout: 20000,
+      reconnectionAttempts: 20,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 15000,
       autoConnect: true,
     });
 
@@ -57,6 +57,15 @@ class SocketService {
     });
 
     this.rebindAllListeners();
+  }
+
+  reconnect(userId: string, token?: string) {
+    if (!SOCKET_URL || !userId) return;
+    if (this.socket && !this.socket.connected) {
+      this.socket.connect();
+    } else if (!this.socket) {
+      this.connect(userId, token);
+    }
   }
 
   private rebindAllListeners() {

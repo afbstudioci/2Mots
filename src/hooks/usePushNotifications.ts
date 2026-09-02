@@ -160,6 +160,12 @@ export const usePushNotifications = () => {
         case 'friend_accepted':
           navigate('Friends');
           break;
+        case 'level_up':
+          navigate('Profile');
+          break;
+        case 'mission_complete':
+          navigate('Missions');
+          break;
         default:
           break;
       }

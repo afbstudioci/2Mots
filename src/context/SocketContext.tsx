@@ -1,5 +1,5 @@
-//src/context/SocketContext.tsx
 import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
 import { Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import socketService from '../services/socketService';
@@ -35,20 +35,36 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return unsubStatus;
   }, []);
 
-  useEffect(() => {
+  const initSocket = useCallback(async () => {
     if (!userId) {
       socketService.disconnect();
       return;
     }
+    const token = await getToken();
+    socketService.connect(userId, token || undefined);
+    setSocketInstance(socketService.getSocket());
+  }, [userId]);
 
-    const initSocket = async () => {
-      const token = await getToken();
-      socketService.connect(userId, token || undefined);
-      setSocketInstance(socketService.getSocket());
+  // Connexion initiale ou au changement d'utilisateur
+  useEffect(() => {
+    initSocket();
+  }, [initSocket]);
+
+  // Auto-reconnexion lors du retour au premier plan (Foreground)
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'active' && userId) {
+        if (!socketService.isSocketConnected() || !socketService.getSocket()?.connected) {
+          initSocket();
+        }
+      }
     };
 
-    initSocket();
-  }, [userId]);
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => {
+      subscription.remove();
+    };
+  }, [userId, initSocket]);
 
   const emit = useCallback((event: string, data: any) => {
     socketService.emit(event, data);
