@@ -3,7 +3,7 @@
     "name": "2Mots",
     "slug": "2Mots",
     "scheme": "twomots",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -12,7 +12,7 @@
     },
     "android": {
       "package": "com.afbstudio.twomots",
-      "versionCode": 31,
+      "versionCode": 32,
       "permissions": [
         "com.android.vending.BILLING",
         "android.permission.RECORD_AUDIO",

@@ -241,6 +241,20 @@ export default function DuelLobbyScreen({ route }: any) {
       });
 
       if (accept) {
+        if (res?.status === 'challenger_offline') {
+          setAlertConfig({
+            visible: true,
+            title: 'Adversaire non connecté',
+            message:
+              res?.message ||
+              `${res?.challengerName || "L'adversaire"} n'est pas dans l'application actuellement. Une notification lui a été transmise. Votre défi reste en attente.`,
+            type: 'info',
+            buttonText: 'Compris',
+          });
+          loadData(true);
+          return;
+        }
+
         await refreshProfile();
         navigation.navigate('DuelGame', { duelId: res?._id || duelId });
       } else {

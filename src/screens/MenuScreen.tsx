@@ -18,7 +18,7 @@ const APP_VERSION =
   Constants.nativeAppVersion ||
   Constants.expoConfig?.version ||
   packageJson.version ||
-  '1.0.5';
+  '1.0.6';
 
 const MENU_ITEMS = [
   { id: 'Profile', label: 'Mon Profil', icon: 'person-outline' },
