@@ -8,12 +8,17 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { colors, spacing, borderRadius, typography } from '../theme/theme';
+import Constants from 'expo-constants';
 import { RootStackParamList } from '../../App';
 import packageJson from '../../package.json';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Menu'>;
 
-const APP_VERSION = packageJson.version || '1.0.5';
+const APP_VERSION =
+  Constants.nativeAppVersion ||
+  Constants.expoConfig?.version ||
+  packageJson.version ||
+  '1.0.5';
 
 const MENU_ITEMS = [
   { id: 'Profile', label: 'Mon Profil', icon: 'person-outline' },
