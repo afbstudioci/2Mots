@@ -42,7 +42,7 @@ import { useAppUpdates } from './src/hooks/useAppUpdates';
 
 export type RootStackParamList = {
   Login: undefined;
-  Register: undefined;
+  Register?: { ref?: string; referralCode?: string } | undefined;
   Home: undefined;
   Menu: undefined;
   Game: undefined;
@@ -141,6 +141,7 @@ const AppContent = () => {
         Chat: 'chat/:friendId',
         DuelGame: 'duel/:duelId',
         DuelLobby: 'duels',
+        Register: 'ref/:referralCode',
         Home: {
           screens: {
             Messages: 'messages',

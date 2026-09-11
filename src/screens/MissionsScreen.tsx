@@ -83,13 +83,14 @@ export default function MissionsScreen() {
     }
   };
 
-  const handleShare = () => {
-    setAlertConfig({
-      visible: true,
-      title: 'Parrainage en Test',
-      message: "Indisponible actuellement car l'application est en test.",
-      type: 'info',
-    });
+  const handleShare = async () => {
+    if (!user?.referralCode) return;
+    try {
+      await Share.share({
+        message: `Rejoins-moi sur 2Mots, le jeu d'association de mots et de duels 1v1 ! Utilise mon code de parrainage "${user.referralCode}" pour gagner 200 Kevs bonus dès ton inscription : https://twomots-web.onrender.com/ref/${user.referralCode}`,
+        title: 'Invitation 2Mots - 200 Kevs offerts !',
+      });
+    } catch {}
   };
 
   const submitReferral = async () => {
