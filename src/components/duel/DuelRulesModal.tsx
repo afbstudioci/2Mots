@@ -1,13 +1,14 @@
 //src/components/duel/DuelRulesModal.tsx
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../context/ThemeContext';
 import { colors, spacing, borderRadius, typography, shadows } from '../../theme/theme';
+import { DUEL_RULES_STEPS, DUEL_RULES_SEEN_KEY } from './duelRulesData';
 
-export const DUEL_RULES_SEEN_KEY = '@twomots_has_seen_duel_rules';
+export { DUEL_RULES_SEEN_KEY };
 
 interface DuelRulesModalProps {
   visible: boolean;
@@ -15,86 +16,22 @@ interface DuelRulesModalProps {
   onComplete: () => void;
 }
 
-const STEPS = [
-  {
-    stepNumber: 1,
-    badge: 'ÉTAPE 1 / 3',
-    icon: 'trophy' as const,
-    title: 'La Mise & Le Défi',
-    description:
-      'Défiez qui vous voulez en face-à-face et décidez de la mise en Kevs.',
-    points: [
-      {
-        subtitle: 'Mise équitable',
-        text: 'Les deux joueurs engagent la même somme de Kevs (ex: 30 Kevs chacun).',
-      },
-      {
-        subtitle: 'Le vainqueur rafle tout',
-        text: 'Le gagnant remporte la totalité des mises en jeu (60 Kevs) ainsi que +50 XP !',
-      },
-      {
-        subtitle: 'Partage direct',
-        text: 'Partagez le lien du duel sur WhatsApp, Telegram, SMS ou Facebook. S\'il a l\'application, il arrive droit dans l\'arène !',
-      },
-    ],
-  },
-  {
-    stepNumber: 2,
-    badge: 'ÉTAPE 2 / 3',
-    icon: 'timer' as const,
-    title: 'L\'Arène & Le Buzzer',
-    description:
-      'La partie se dispute en direct sur une série de 5 énigmes en 60 secondes chrono.',
-    points: [
-      {
-        subtitle: 'Prenez la main au Buzzer',
-        text: 'Dès que l\'énigme s\'affiche, appuyez sur le buzzer avant votre adversaire pour tenter votre chance.',
-      },
-      {
-        subtitle: '3 secondes pour répondre',
-        text: 'Une fois le buzzer verrouillé, vous avez exactement 3 secondes pour choisir la bonne réponse.',
-      },
-      {
-        subtitle: '10 points par énigme',
-        text: 'Chaque mot trouvé rapporte +10 points. Si le temps expire ou si vous ratez, la main redevient libre.',
-      },
-    ],
-  },
-  {
-    stepNumber: 3,
-    badge: 'ÉTAPE 3 / 3',
-    icon: 'shield-checkmark' as const,
-    title: 'Fair-Play & Pénalités',
-    description:
-      'Chaque duel doit se jouer dans le respect des règles et jusqu\'au terme du chrono.',
-    points: [
-      {
-        subtitle: 'Pause de 15 secondes',
-        text: 'En cas de déconnexion ou d\'appel imprévu, le duel est mis en pause avec 15 secondes de grâce.',
-      },
-      {
-        subtitle: 'Sanction pour abandon',
-        text: 'Si le joueur déconnecté ne revient pas dans les 15s, il est automatiquement déclaré forfait.',
-      },
-      {
-        subtitle: 'Dédommagement du loyal',
-        text: 'Le joueur resté fidèle conserve sa mise et empoche une pénalité de 15% prise sur la mise adverse (+20 XP) !',
-      },
-    ],
-  },
-];
-
-export const DuelRulesModal: React.FC<DuelRulesModalProps> = ({ visible, onClose, onComplete }) => {
+export const DuelRulesModal: React.FC<DuelRulesModalProps> = ({
+  visible,
+  onClose,
+  onComplete,
+}) => {
   const { themeColors, isDark } = useTheme();
   const [currentStep, setCurrentStep] = useState(0);
 
-  const stepData = STEPS[currentStep];
+  const stepData = DUEL_RULES_STEPS[currentStep];
+  const isLastStep = currentStep === DUEL_RULES_STEPS.length - 1;
 
   const handleNext = () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch {}
-    if (currentStep < STEPS.length - 1) {
+    if (currentStep < DUEL_RULES_STEPS.length - 1) {
       setCurrentStep((prev) => prev + 1);
     } else {
       handleFinish();
@@ -124,8 +61,6 @@ export const DuelRulesModal: React.FC<DuelRulesModalProps> = ({ visible, onClose
     onClose();
   };
 
-  const isLastStep = currentStep === STEPS.length - 1;
-
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleDismiss}>
       <View style={styles.overlay}>
@@ -147,7 +82,10 @@ export const DuelRulesModal: React.FC<DuelRulesModalProps> = ({ visible, onClose
                 {stepData.badge}
               </Text>
             </View>
-            <TouchableOpacity onPress={handleDismiss} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <TouchableOpacity
+              onPress={handleDismiss}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
               <Ionicons name="close" size={24} color={themeColors.textSecondary} />
             </TouchableOpacity>
           </View>
@@ -182,7 +120,7 @@ export const DuelRulesModal: React.FC<DuelRulesModalProps> = ({ visible, onClose
 
           {/* Indicateur de pagination */}
           <View style={styles.dotsContainer}>
-            {STEPS.map((_, i) => (
+            {DUEL_RULES_STEPS.map((_, i) => (
               <View
                 key={i}
                 style={[
@@ -198,38 +136,47 @@ export const DuelRulesModal: React.FC<DuelRulesModalProps> = ({ visible, onClose
 
           {/* Actions de navigation */}
           <View style={styles.footer}>
-            {currentStep > 0 ? (
+            {currentStep > 0 && (
               <TouchableOpacity
                 onPress={handlePrev}
-                style={[styles.prevButton, { borderColor: themeColors.border }]}
+                style={[
+                  styles.prevIconButton,
+                  {
+                    borderColor: themeColors.border,
+                    backgroundColor: themeColors.overlayLight,
+                  },
+                ]}
+                activeOpacity={0.7}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Ionicons name="arrow-back" size={20} color={themeColors.text} />
-                <Text style={[styles.prevButtonText, { color: themeColors.text }]}>Précédent</Text>
               </TouchableOpacity>
-            ) : (
-              <View style={styles.emptySpacer} />
             )}
 
-            <Pressable
+            <TouchableOpacity
               onPress={handleNext}
               style={[
                 styles.nextButton,
                 {
-                  backgroundColor: isLastStep ? colors.mint : themeColors.primary,
-                  flex: currentStep > 0 ? 1.4 : 2,
+                  backgroundColor: themeColors.primary,
                 },
               ]}
+              activeOpacity={0.8}
             >
-              <Text style={styles.nextButtonText}>
-                {isLastStep ? 'COMMENCER LE DUEL' : 'Suivant'}
+              <Text
+                style={styles.nextButtonText}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+              >
+                {isLastStep ? 'Commencer le duel' : 'Suivant'}
               </Text>
               <Ionicons
                 name={isLastStep ? 'flash' : 'arrow-forward'}
                 size={18}
                 color={colors.white}
-                style={{ marginLeft: 6 }}
               />
-            </Pressable>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -272,9 +219,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   iconCircle: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.sm,
@@ -334,36 +281,31 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    marginTop: spacing.xs,
+    gap: spacing.sm + 2,
+    marginTop: spacing.sm,
   },
-  prevButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.md,
+  prevIconButton: {
+    width: 48,
+    height: 48,
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    gap: 4,
-  },
-  prevButtonText: {
-    ...typography.bodySmall,
-    fontWeight: '600',
-  },
-  emptySpacer: {
-    flex: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   nextButton: {
+    flex: 1,
+    height: 48,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
+    gap: spacing.xs + 2,
   },
   nextButtonText: {
-    ...typography.buttonPrimary,
+    fontFamily: 'Poppins_700Bold',
     color: colors.white,
-    fontSize: 14,
+    fontSize: 14.5,
+    letterSpacing: 0.3,
   },
 });
