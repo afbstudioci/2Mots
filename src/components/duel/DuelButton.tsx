@@ -1,10 +1,11 @@
-//src/components/duel/DuelButton.tsx
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../context/ThemeContext';
 import { colors, spacing, borderRadius, shadows } from '../../theme/theme';
+import { DuelRulesModal, DUEL_RULES_SEEN_KEY } from './DuelRulesModal';
 
 interface DuelButtonProps {
   onPress: () => void;
@@ -19,18 +20,29 @@ export const DuelButton: React.FC<DuelButtonProps> = ({
 }) => {
   const { themeColors, isDark } = useTheme();
   const [imageError, setImageError] = useState(false);
+  const [showRulesModal, setShowRulesModal] = useState(false);
 
   if (userLevel < 5) return null;
 
-  const handlePress = () => {
+  const handlePress = async () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch {}
+
+    try {
+      const hasSeen = await AsyncStorage.getItem(DUEL_RULES_SEEN_KEY);
+      if (!hasSeen) {
+        setShowRulesModal(true);
+        return;
+      }
+    } catch {}
+
     onPress();
   };
 
   return (
-    <Pressable
+    <>
+      <Pressable
       onPress={handlePress}
       style={({ pressed }) => [
         styles.card,
@@ -72,6 +84,16 @@ export const DuelButton: React.FC<DuelButtonProps> = ({
         <Ionicons name="chevron-forward" size={18} color={themeColors.textSecondary} />
       </View>
     </Pressable>
+
+    <DuelRulesModal
+      visible={showRulesModal}
+      onClose={() => setShowRulesModal(false)}
+      onComplete={() => {
+        setShowRulesModal(false);
+        onPress();
+      }}
+    />
+    </>
   );
 };
 

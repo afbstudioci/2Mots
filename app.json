@@ -12,7 +12,7 @@
     },
     "android": {
       "package": "com.afbstudio.twomots",
-      "versionCode": 32,
+      "versionCode": 33,
       "permissions": [
         "com.android.vending.BILLING",
         "android.permission.RECORD_AUDIO",

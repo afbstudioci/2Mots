@@ -137,7 +137,8 @@ export default function SettingsScreen() {
             shadows.soft(isDark),
           ]}
         >
-          <SettingRow icon="document-text" title="Règles du jeu" onPress={() => handleNavigation('Rules')} />
+          <SettingRow icon="document-text" title="Règles du jeu (Solo)" onPress={() => navigation.navigate('Rules', { initialTab: 'classic' } as any)} />
+          <SettingRow icon="flash" title="Règles du duel 1v1" onPress={() => navigation.navigate('Rules', { initialTab: 'duel' } as any)} />
           <SettingRow icon="shield-checkmark" title="Politique de confidentialité" onPress={() => handleNavigation('Privacy')} />
           <SettingRow icon="help-buoy" title="Nous contacter" onPress={() => handleNavigation('Contact')} isLast />
         </View>

@@ -14,8 +14,10 @@ import { DuelSkeleton } from '../components/duel/DuelSkeleton';
 import { DuelAcceptModal } from '../components/duel/DuelAcceptModal';
 import { ActiveDuelBanner } from '../components/duel/ActiveDuelBanner';
 import { OpponentItem, ReceivedInviteItem, SentInviteItem } from '../components/duel/DuelListItem';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import CustomAlert from '../components/common/CustomAlert';
 import KevIcon from '../components/common/KevIcon';
+import { DuelRulesModal, DUEL_RULES_SEEN_KEY } from '../components/duel/DuelRulesModal';
 import {
   getEligibleOpponents,
   getPendingInvites,
@@ -59,6 +61,7 @@ export default function DuelLobbyScreen({ route }: any) {
     opponentName: '',
     duelId: '',
   });
+  const [showRulesModal, setShowRulesModal] = useState<boolean>(false);
   const [respondingInviteId, setRespondingInviteId] = useState<string | null>(null);
   const [cancellingInviteId, setCancellingInviteId] = useState<string | null>(null);
   const [alertConfig, setAlertConfig] = useState<{
@@ -104,6 +107,14 @@ export default function DuelLobbyScreen({ route }: any) {
       loadData(true);
     }, [loadData])
   );
+
+  useEffect(() => {
+    AsyncStorage.getItem(DUEL_RULES_SEEN_KEY)
+      .then((seen) => {
+        if (!seen) setShowRulesModal(true);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
@@ -334,9 +345,17 @@ export default function DuelLobbyScreen({ route }: any) {
           <Ionicons name="arrow-back" size={24} color={themeColors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: themeColors.text }]}>ARÈNE DUEL 1V1</Text>
-        <View style={styles.balanceTag}>
-          <KevIcon size={16} />
-          <Text style={[styles.balanceText, { color: themeColors.text }]}>{user?.kevs || 0}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Rules', { initialTab: 'duel' })}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="help-circle-outline" size={22} color={themeColors.textSecondary} />
+          </TouchableOpacity>
+          <View style={styles.balanceTag}>
+            <KevIcon size={16} />
+            <Text style={[styles.balanceText, { color: themeColors.text }]}>{user?.kevs || 0}</Text>
+          </View>
         </View>
       </View>
 
@@ -427,6 +446,12 @@ export default function DuelLobbyScreen({ route }: any) {
         onClose={() => setSelectedOpponent(null)}
         onConfirm={handleSendInvite}
         isLoading={isSendingInvite}
+      />
+
+      <DuelRulesModal
+        visible={showRulesModal}
+        onClose={() => setShowRulesModal(false)}
+        onComplete={() => setShowRulesModal(false)}
       />
 
       <DuelAcceptModal

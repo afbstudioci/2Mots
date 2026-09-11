@@ -62,7 +62,7 @@ export type RootStackParamList = {
   DuelLobby?: { initialTab?: 'opponents' | 'received' | 'sent' } | undefined;
   DuelGame: { duelId: string };
   Contact: undefined;
-  Rules: undefined;
+  Rules?: { initialTab?: 'classic' | 'duel' } | undefined;
   Privacy: undefined;
 };
 
