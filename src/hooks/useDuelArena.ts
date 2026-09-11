@@ -120,18 +120,18 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
   useEffect(() => {
     const unsubWaiting = subscribe('duel_waiting_opponent', (data: any) => {
       setIsWaitingForOpponent(true);
-      if (!lobbyTimerRef.current) {
-        setLobbySecondsLeft(data?.waitSeconds || 60);
-        lobbyTimerRef.current = setInterval(() => {
-          setLobbySecondsLeft((prev) => {
-            if (prev <= 1) {
-              if (lobbyTimerRef.current) clearInterval(lobbyTimerRef.current);
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-      }
+      const expiresAt = data?.expiresAt || (Date.now() + (data?.waitSeconds || 60) * 1000);
+      const initialRemaining = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+      setLobbySecondsLeft(initialRemaining);
+
+      if (lobbyTimerRef.current) clearInterval(lobbyTimerRef.current);
+      lobbyTimerRef.current = setInterval(() => {
+        const remaining = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+        setLobbySecondsLeft(remaining);
+        if (remaining <= 0) {
+          if (lobbyTimerRef.current) clearInterval(lobbyTimerRef.current);
+        }
+      }, 1000);
     });
 
     const unsubStart = subscribe('duel_start', (data: any) => {
