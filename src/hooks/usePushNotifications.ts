@@ -1,6 +1,7 @@
 // src/hooks/usePushNotifications.ts
-// GESTION FCM - Enregistrement, Synchronisation et Aiguillage Deep Link
-// Architecture : getDevicePushTokenAsync uniquement — pas de token Expo
+// GESTION DES NOTIFICATIONS PUSH EXPO (100% GRATUIT)
+// Enregistrement, Synchronisation et Aiguillage Deep Link
+// Standard : Bank Grade (Strict <= 270 lignes, Sans Emojis)
 
 import { useEffect, useRef, useState } from 'react';
 import * as Notifications from 'expo-notifications';
@@ -11,19 +12,21 @@ import { navigate } from '../navigation/navigationRef';
 import api from '../services/api';
 import { setupNotificationChannelsAsync } from '../services/notificationService';
 
+const EAS_PROJECT_ID = 'b10e5217-af10-4e8a-a753-b7b2608af455';
+
 export const usePushNotifications = () => {
   const { user } = useAuth();
   const [pendingRouting, setPendingRouting] = useState<any>(null);
   const tokenSyncedForUser = useRef<string | null>(null);
 
-  // 1. Creation des canaux Android (MAX priority) au montage, une seule fois
+  // 1. Creation des canaux Android (priorite MAX) au montage
   useEffect(() => {
     setupNotificationChannelsAsync().catch((err) => {
       console.warn('[PUSH] Erreur setup canaux Android:', err);
     });
   }, []);
 
-  // 2. Demande permissions & enregistrement du token FCM natif quand user connecte
+  // 2. Demande des permissions & obtention du token Expo Push
   useEffect(() => {
     if (!user) {
       tokenSyncedForUser.current = null;
@@ -33,22 +36,19 @@ export const usePushNotifications = () => {
     const userId = String(user._id || user.id || '');
     if (!userId) return;
 
-    // Evite de re-synchroniser si on est deja synced pour ce user
     if (tokenSyncedForUser.current === userId) return;
 
     let isMounted = true;
 
     const initPush = async () => {
       try {
-        // Les canaux doivent etre crees AVANT toute reception de notif
         await setupNotificationChannelsAsync();
 
         if (!Device.isDevice) {
-          console.warn('[PUSH] Simulateur detecte — les push FCM ne fonctionnent pas sur simulateur.');
+          console.log('[PUSH] Simulateur detecte — push non disponible.');
           return;
         }
 
-        // Demande de permissions (Android 13+ et iOS)
         const { status: existingStatus } = await Notifications.getPermissionsAsync();
         let finalStatus = existingStatus;
 
@@ -58,40 +58,24 @@ export const usePushNotifications = () => {
         }
 
         if (finalStatus !== 'granted') {
-          console.warn('[PUSH] Permission de notification refusee par l\'utilisateur.');
+          console.warn('[PUSH] Permission de notification refusee.');
           return;
         }
 
-        // CRITIQUE : getDevicePushTokenAsync = vrai token FCM natif Google
-        // Ne JAMAIS utiliser getExpoPushTokenAsync ici, car notre backend
-        // utilise Firebase Admin SDK directement et ne comprend que les tokens FCM natifs.
         if (Platform.OS !== 'android' && Platform.OS !== 'ios') {
-          console.warn('[PUSH] Plateforme non supportee pour les push:', Platform.OS);
           return;
         }
 
         let token: string | undefined;
 
         try {
-          const tokenData = await Notifications.getDevicePushTokenAsync();
-          token = typeof tokenData?.data === 'string' ? tokenData.data : undefined;
-
-          if (!token) {
-            console.error('[PUSH] getDevicePushTokenAsync a retourne un token vide ou invalide.');
-            return;
-          }
-
-          // Verification de securite : le token FCM natif ne commence jamais par ExponentPushToken
-          if (token.startsWith('ExponentPushToken') || token.startsWith('ExpoPushToken')) {
-            console.error('[PUSH] ERREUR : token au format Expo recu alors qu\'on attend un token FCM natif.');
-            console.error('[PUSH] Verifiez que google-services.json est correctement configure.');
-            return;
-          }
-
-          console.log(`[PUSH] Token FCM natif obtenu (${token.substring(0, 20)}...)`);
+          const tokenResponse = await Notifications.getExpoPushTokenAsync({
+            projectId: EAS_PROJECT_ID,
+          });
+          token = tokenResponse?.data;
+          console.log(`[PUSH] Token Expo Push obtenu: ${token?.substring(0, 25)}...`);
         } catch (tokenErr: any) {
-          console.error('[PUSH] Impossible d\'obtenir le token FCM natif:', tokenErr.message);
-          console.error('[PUSH] Verifiez que google-services.json est present et que google_app_id est correct.');
+          console.warn('[PUSH] Erreur obtention token Expo:', tokenErr.message);
           return;
         }
 
@@ -99,9 +83,9 @@ export const usePushNotifications = () => {
           try {
             await api.post('/auth/fcm-token', { fcmToken: token });
             tokenSyncedForUser.current = userId;
-            console.log(`[PUSH] Token FCM synchronise avec le backend pour l'utilisateur ${userId}`);
+            console.log(`[PUSH] Token synchronise pour l'utilisateur ${userId}`);
           } catch (apiErr: any) {
-            console.warn('[PUSH] Erreur synchronisation token avec le backend:', apiErr.message);
+            console.warn('[PUSH] Erreur synchronisation token backend:', apiErr.message);
           }
         }
       } catch (err: any) {
@@ -130,7 +114,7 @@ export const usePushNotifications = () => {
     checkColdBoot();
 
     const responseListener = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data;
+      const data = response?.notification?.request?.content?.data;
       if (data) setPendingRouting(data);
     });
 
@@ -139,7 +123,7 @@ export const usePushNotifications = () => {
     };
   }, []);
 
-  // 4. Aiguillage Deep Linking instantane
+  // 4. Aiguillage Deep Linking automatique
   useEffect(() => {
     if (!user || !pendingRouting) return;
 
@@ -151,7 +135,12 @@ export const usePushNotifications = () => {
           navigate('DuelLobby', { initialTab: 'received' });
           break;
         case 'duel_accepted':
-          navigate(duelId ? 'DuelGame' : 'DuelLobby', duelId ? { duelId } : undefined);
+        case 'duel_opponent_ready':
+          if (duelId) {
+            navigate('DuelGame', { duelId });
+          } else {
+            navigate('DuelLobby');
+          }
           break;
         case 'duel_rejected':
           navigate('DuelLobby');

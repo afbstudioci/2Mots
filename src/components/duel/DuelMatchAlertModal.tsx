@@ -1,4 +1,7 @@
 // src/components/duel/DuelMatchAlertModal.tsx
+// MODALE D'ALERTE EN DIRECT QUAND L'ADVERSAIRE REJOINT LE DUEL
+// Standard : Bank Grade (Strict <= 270 lignes, Sans Emojis)
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -53,7 +56,7 @@ export default function DuelMatchAlertModal() {
   }, [alertData, user, emit, progressAnim]);
 
   useEffect(() => {
-    const unsub = subscribe('duel_match_alert', (data: DuelAlertData) => {
+    const unsubAlert = subscribe('duel_match_alert', (data: DuelAlertData) => {
       if (!data?.duelId) return;
 
       try {
@@ -87,11 +90,19 @@ export default function DuelMatchAlertModal() {
       }, 1000);
     });
 
+    const unsubStart = subscribe('duel_start', (data: any) => {
+      if (alertData && String(data?.duelId) === String(alertData.duelId)) {
+        handleDismiss(true);
+        navigate('DuelGame', { duelId: data.duelId });
+      }
+    });
+
     return () => {
-      unsub();
+      unsubAlert();
+      unsubStart();
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
-  }, [subscribe, handleDismiss, progressAnim]);
+  }, [subscribe, handleDismiss, progressAnim, alertData]);
 
   useEffect(() => {
     if (alertData) {
@@ -113,10 +124,6 @@ export default function DuelMatchAlertModal() {
     navigate('DuelGame', { duelId: targetDuelId });
   };
 
-  const handleReject = () => {
-    handleDismiss(false);
-  };
-
   if (!alertData) return null;
 
   return (
@@ -125,14 +132,14 @@ export default function DuelMatchAlertModal() {
         <View style={[styles.card, { backgroundColor: themeColors.card, borderColor: colors.coral }]}>
           <View style={styles.headerBadge}>
             <Ionicons name="flash" size={18} color={colors.white} />
-            <Text style={styles.headerBadgeText}>DÉFI EN DIRECT !</Text>
+            <Text style={styles.headerBadgeText}>DEFI EN DIRECT !</Text>
           </View>
 
           <Text style={[styles.title, { color: themeColors.text }]}>
             {alertData.opponentName}
           </Text>
           <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-            a accepté votre invitation !
+            a rejoint votre defi !
           </Text>
 
           <Animated.View style={[styles.betContainer, { transform: [{ scale: pulseAnim }] }]}>
@@ -155,7 +162,7 @@ export default function DuelMatchAlertModal() {
               />
             </View>
             <Text style={[styles.timerCountdown, { color: themeColors.textSecondary }]}>
-              Départ dans {remainingSec}s
+              Depart dans {remainingSec}s
             </Text>
           </View>
 
@@ -171,11 +178,11 @@ export default function DuelMatchAlertModal() {
 
             <TouchableOpacity
               style={[styles.btn, styles.btnReject, { borderColor: themeColors.border }]}
-              onPress={handleReject}
+              onPress={() => handleDismiss(false)}
               activeOpacity={0.7}
             >
               <Text style={[styles.btnRejectText, { color: themeColors.textSecondary }]}>
-                Refuser / Occupé
+                Refuser / Occupe
               </Text>
             </TouchableOpacity>
           </View>
@@ -220,7 +227,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: 'Poppins_900Black',
-    fontSize: 24,
+    fontSize: 22,
     textAlign: 'center',
     textTransform: 'uppercase',
   },
@@ -275,7 +282,7 @@ const styles = StyleSheet.create({
   },
   btn: {
     width: '100%',
-    height: 52,
+    height: 50,
     borderRadius: borderRadius.xl,
     justifyContent: 'center',
     alignItems: 'center',
@@ -287,7 +294,7 @@ const styles = StyleSheet.create({
   },
   btnAcceptText: {
     fontFamily: 'Poppins_800ExtraBold',
-    fontSize: 15,
+    fontSize: 14,
     color: colors.white,
     marginLeft: spacing.xs,
     letterSpacing: 0.5,

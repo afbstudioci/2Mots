@@ -1,10 +1,14 @@
-//src/hooks/useDuelArena.ts
+// src/hooks/useDuelArena.ts
+// HOOK PRINCIPAL DE L'ARENE DE DUEL 1V1 - 2MOTS
+// Standard : Clean Architecture / Bank Grade (Strict <= 270 lignes, Sans Emojis)
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as Haptics from 'expo-haptics';
 import { useSocketContext } from '../context/SocketContext';
 import { useAudioContext } from '../context/AudioContext';
 import api from '../services/api';
 import { getDuelDetails, DuelSessionData, DuelEnigma } from '../services/duelApi';
+import { useDuelSocketEvents } from './useDuelSocketEvents';
 
 export type BuzzerState = 'free' | 'my_turn' | 'opponent_turn' | 'expired';
 
@@ -42,8 +46,9 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
   const lobbyTimerRef = useRef<any>(null);
   const gameStartTimestampRef = useRef<number | null>(null);
   const disconnectStartTimestampRef = useRef<number | null>(null);
+  const hasGameStartedRef = useRef<boolean>(false);
 
-  // 1. Initialisation et connexion à la room
+  // 1. Initialisation et chargement de la session
   useEffect(() => {
     let isMounted = true;
 
@@ -56,7 +61,9 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
           if (data.enigmas && data.enigmas[data.currentEnigmaIndex]) {
             setCurrentEnigma(data.enigmas[data.currentEnigmaIndex]);
           }
-          if (data.status === 'in_progress') {
+
+          if (data.status === 'in_progress' || hasGameStartedRef.current) {
+            hasGameStartedRef.current = true;
             setIsWaitingForOpponent(false);
             if (data.startedAt) {
               const elapsed = Math.floor((Date.now() - new Date(data.startedAt).getTime()) / 1000);
@@ -65,11 +72,13 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
             }
             playBgm();
           } else {
-            setIsWaitingForOpponent(true);
+            if (!hasGameStartedRef.current) {
+              setIsWaitingForOpponent(true);
+            }
           }
         }
       } catch (err) {
-        console.warn('[DUEL_ARENA] Erreur chargement duel:', err);
+        console.warn('[DUEL_ARENA] Erreur chargement session:', err);
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -90,7 +99,36 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
     };
   }, [duelId, currentUserId, emit, isConnected, playBgm, stopBgm]);
 
-  // 2. Synchronisation du chronomètre global (Pause si un joueur est déconnecté)
+  // 2. Ecouteurs Socket temps reel
+  useDuelSocketEvents({
+    subscribe,
+    currentUserId,
+    hasGameStartedRef,
+    lobbyTimerRef,
+    globalTimerRef,
+    buzzerTimerRef,
+    gameStartTimestampRef,
+    disconnectStartTimestampRef,
+    setIsWaitingForOpponent,
+    setLobbySecondsLeft,
+    setGlobalSecondsLeft,
+    setDuel,
+    setScores,
+    setCurrentEnigma,
+    setActiveBuzzerUserId,
+    setActiveBuzzerUserName,
+    setBuzzerState,
+    setBuzzerSecondsLeft,
+    setLastAnswerStatus,
+    setIsGameOver,
+    setIsOpponentDisconnected,
+    setDisconnectSecondsLeft,
+    setForfeitInfo,
+    setLobbyTimeoutInfo,
+    audio: { playBgm, stopBgm, playSuccess, playError, playGameOver, playBuzzer },
+  });
+
+  // 3. Synchronisation du chronometre global de la partie
   useEffect(() => {
     if (isLoading || isGameOver || isWaitingForOpponent || isOpponentDisconnected || !gameStartTimestampRef.current) return;
 
@@ -116,194 +154,7 @@ export const useDuelArena = (duelId: string, currentUserId: string) => {
     };
   }, [isLoading, isGameOver, isWaitingForOpponent, isOpponentDisconnected, duel?.duration, duelId, emit]);
 
-  // 3. Écouteurs Socket temps réel
-  useEffect(() => {
-    const unsubWaiting = subscribe('duel_waiting_opponent', (data: any) => {
-      setIsWaitingForOpponent(true);
-      const expiresAt = data?.expiresAt || (Date.now() + (data?.waitSeconds || 60) * 1000);
-      const initialRemaining = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
-      setLobbySecondsLeft(initialRemaining);
-
-      if (lobbyTimerRef.current) clearInterval(lobbyTimerRef.current);
-      lobbyTimerRef.current = setInterval(() => {
-        const remaining = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
-        setLobbySecondsLeft(remaining);
-        if (remaining <= 0) {
-          if (lobbyTimerRef.current) clearInterval(lobbyTimerRef.current);
-        }
-      }, 1000);
-    });
-
-    const unsubStart = subscribe('duel_start', (data: any) => {
-      if (lobbyTimerRef.current) {
-        clearInterval(lobbyTimerRef.current);
-        lobbyTimerRef.current = null;
-      }
-      setIsWaitingForOpponent(false);
-      gameStartTimestampRef.current = Date.now();
-      setGlobalSecondsLeft(data?.duration || 60);
-      playBgm();
-      if (data?.duel) {
-        setDuel(data.duel);
-        setScores(data.duel.scores || { challenger: 0, opponent: 0 });
-        if (data.duel.enigmas && data.duel.enigmas[data.duel.currentEnigmaIndex]) {
-          setCurrentEnigma(data.duel.enigmas[data.duel.currentEnigmaIndex]);
-        }
-      }
-      try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
-    });
-
-    const unsubBuzz = subscribe('duel_buzzer_locked', (data: any) => {
-      const isMine = String(data.userId) === String(currentUserId);
-      setActiveBuzzerUserId(String(data.userId));
-      setActiveBuzzerUserName(data.userName || (isMine ? 'Vous' : 'Adversaire'));
-      setBuzzerState(isMine ? 'my_turn' : 'opponent_turn');
-      setBuzzerSecondsLeft(3);
-
-      playBuzzer();
-      try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); } catch {}
-
-      if (buzzerTimerRef.current) clearInterval(buzzerTimerRef.current);
-      buzzerTimerRef.current = setInterval(() => {
-        setBuzzerSecondsLeft((prev) => {
-          if (prev <= 1) {
-            if (buzzerTimerRef.current) clearInterval(buzzerTimerRef.current);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    });
-
-    const unsubExpired = subscribe('duel_buzzer_expired', () => {
-      if (buzzerTimerRef.current) clearInterval(buzzerTimerRef.current);
-      setActiveBuzzerUserId(null);
-      setActiveBuzzerUserName(null);
-      setBuzzerState('free');
-      setBuzzerSecondsLeft(0);
-    });
-
-    const unsubAnswer = subscribe('duel_answer_result', (data: any) => {
-      if (buzzerTimerRef.current) clearInterval(buzzerTimerRef.current);
-      setActiveBuzzerUserId(null);
-      setActiveBuzzerUserName(null);
-      setBuzzerState('free');
-      setBuzzerSecondsLeft(0);
-
-      if (data.scores) setScores(data.scores);
-
-      if (data.isCorrect) {
-        setLastAnswerStatus('correct');
-        playSuccess();
-        try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
-        if (data.nextEnigma) setCurrentEnigma(data.nextEnigma);
-      } else {
-        setLastAnswerStatus('wrong');
-        playError();
-        try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); } catch {}
-      }
-
-      setTimeout(() => setLastAnswerStatus(null), 1200);
-    });
-
-    const unsubGameOver = subscribe('duel_game_over', (data: any) => {
-      if (globalTimerRef.current) clearInterval(globalTimerRef.current);
-      if (buzzerTimerRef.current) clearInterval(buzzerTimerRef.current);
-      setGlobalSecondsLeft(0);
-      if (data?.duel) setDuel(data.duel);
-      setIsGameOver(true);
-      stopBgm();
-      playGameOver(true);
-    });
-
-    const unsubSkipped = subscribe('duel_enigma_skipped', (data: any) => {
-      if (buzzerTimerRef.current) clearInterval(buzzerTimerRef.current);
-      setActiveBuzzerUserId(null);
-      setActiveBuzzerUserName(null);
-      setBuzzerState('free');
-      setBuzzerSecondsLeft(0);
-      if (data?.nextEnigma) setCurrentEnigma(data.nextEnigma);
-    });
-
-    const unsubPlayerDisc = subscribe('duel_player_disconnected', (data: any) => {
-      if (String(data?.userId) !== String(currentUserId)) {
-        disconnectStartTimestampRef.current = Date.now();
-        setIsOpponentDisconnected(true);
-        setDisconnectSecondsLeft(data?.graceSeconds || 15);
-        stopBgm();
-      }
-    });
-
-    const unsubPlayerRec = subscribe('duel_player_reconnected', (data: any) => {
-      if (String(data?.userId) !== String(currentUserId)) {
-        if (disconnectStartTimestampRef.current && gameStartTimestampRef.current) {
-          const pausedDuration = Date.now() - disconnectStartTimestampRef.current;
-          gameStartTimestampRef.current += pausedDuration;
-        }
-        disconnectStartTimestampRef.current = null;
-        setIsOpponentDisconnected(false);
-        playBgm();
-      }
-    });
-
-    const unsubForfeit = subscribe('duel_forfeited', (data: any) => {
-      if (globalTimerRef.current) clearInterval(globalTimerRef.current);
-      if (buzzerTimerRef.current) clearInterval(buzzerTimerRef.current);
-      stopBgm();
-      setIsOpponentDisconnected(false);
-      const isMe = String(data?.forfeiterId) === String(currentUserId);
-      const reason = data?.reason;
-      setForfeitInfo({
-        visible: true,
-        isWinner: !isMe,
-        penaltyKevs: data?.penaltyKevs || 1,
-        message: isMe
-          ? `Vous avez quitté la partie. Pénalité de ${data?.penaltyKevs || 1} Kevs déduite.`
-          : reason === 'disconnection_timeout'
-          ? `Votre adversaire a perdu sa connexion réseau. Vous remportez ${data?.penaltyKevs || 1} Kevs de dédommagement !`
-          : `Votre adversaire a quitté la partie. Vous remportez ${data?.penaltyKevs || 1} Kevs de compensation !`
-      });
-      if (!isMe) {
-        playSuccess();
-        try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
-      }
-    });
-
-    const unsubLobbyTimeout = subscribe('duel_lobby_timeout', (data: any) => {
-      if (lobbyTimerRef.current) clearInterval(lobbyTimerRef.current);
-      setIsWaitingForOpponent(false);
-      setLobbyTimeoutInfo({
-        visible: true,
-        message: data?.message || "L'adversaire n'a pas rejoint la salle à temps (60s). Le duel a été annulé et vos Kevs sont intacts."
-      });
-    });
-
-    const unsubLobbyCancelled = subscribe('duel_lobby_cancelled', (data: any) => {
-      if (lobbyTimerRef.current) clearInterval(lobbyTimerRef.current);
-      setIsWaitingForOpponent(false);
-      setLobbyTimeoutInfo({
-        visible: true,
-        message: data?.message || "Le duel a été annulé. Vos Kevs vous ont été restitués."
-      });
-    });
-
-    return () => {
-      unsubWaiting();
-      unsubStart();
-      unsubBuzz();
-      unsubExpired();
-      unsubAnswer();
-      unsubGameOver();
-      unsubSkipped();
-      unsubPlayerDisc();
-      unsubPlayerRec();
-      unsubForfeit();
-      unsubLobbyTimeout();
-      unsubLobbyCancelled();
-    };
-  }, [subscribe, currentUserId, playSuccess, playError, playGameOver, playBgm, stopBgm, playBuzzer]);
-
-  // 4. Décompte visuel des 15 secondes d'attente
+  // 4. Decompte visuel de deconnexion adverse (15s)
   useEffect(() => {
     if (!isOpponentDisconnected) return;
     const interval = setInterval(() => {
