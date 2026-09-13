@@ -3,6 +3,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import { DeviceEventEmitter } from 'react-native';
 import api from '../services/api';
 import { saveTokens, saveUser, getToken, getUser, clearTokens } from '../services/authStorage';
+import { registerForPushNotificationsAsync } from '../services/notificationService';
 
 import { parseApiError } from '../utils/apiError';
 
@@ -56,6 +57,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  const syncPushToken = async () => {
+    try {
+      const token = await registerForPushNotificationsAsync();
+      if (token) {
+        await api.post('/notifications/push-token', {
+          token,
+          platform: 'android',
+        }).catch(() => api.post('/auth/fcm-token', { fcmToken: token }));
+        console.log('[PUSH] Token synchronise avec succes :', token);
+      }
+    } catch (err: any) {
+      console.warn('[PUSH] Erreur synchronisation push-token backend :', err?.message);
+    }
+  };
+
   const refreshProfileSilently = async () => {
     const token = await getToken();
     if (!token) return;
@@ -68,6 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (freshUser && currentToken) {
         await saveUser(freshUser);
         setUser(freshUser);
+        syncPushToken();
       }
     } catch {}
   };
@@ -80,6 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await saveTokens(accessToken, refreshToken);
       await saveUser(userData);
       setUser(userData);
+      syncPushToken();
     } catch (error: any) {
       const parsed = parseApiError(error, 'Erreur de connexion', 'Identifiant ou mot de passe incorrect.');
       const err = new Error(parsed.message);
@@ -98,6 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await saveTokens(accessToken, refreshToken);
       await saveUser(userData);
       setUser(userData);
+      syncPushToken();
     } catch (error: any) {
       const parsed = parseApiError(error, 'Connexion Google échouée', 'Erreur lors de la connexion Google.');
       const err = new Error(parsed.message);
@@ -114,6 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await saveTokens(accessToken, refreshToken);
       await saveUser(newUserData);
       setUser(newUserData);
+      syncPushToken();
     } catch (error: any) {
       const parsed = parseApiError(error, "Erreur d'inscription", "Erreur lors de la création du compte.");
       const err = new Error(parsed.message);

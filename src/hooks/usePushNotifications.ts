@@ -1,32 +1,31 @@
 // src/hooks/usePushNotifications.ts
-// GESTION DES NOTIFICATIONS PUSH EXPO (100% GRATUIT)
+// GESTION DES NOTIFICATIONS PUSH EXPO (ANDROID HAUTE PRIORITE)
 // Enregistrement, Synchronisation et Aiguillage Deep Link
 // Standard : Bank Grade (Strict <= 270 lignes, Sans Emojis)
 
 import { useEffect, useRef, useState } from 'react';
 import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
-import { Platform } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { navigate } from '../navigation/navigationRef';
 import api from '../services/api';
-import { setupNotificationChannelsAsync } from '../services/notificationService';
-
-const EAS_PROJECT_ID = 'b10e5217-af10-4e8a-a753-b7b2608af455';
+import {
+  setupNotificationChannelsAsync,
+  registerForPushNotificationsAsync,
+} from '../services/notificationService';
 
 export const usePushNotifications = () => {
   const { user } = useAuth();
   const [pendingRouting, setPendingRouting] = useState<any>(null);
   const tokenSyncedForUser = useRef<string | null>(null);
 
-  // 1. Creation des canaux Android (priorite MAX) au montage
+  // 1. Creation des canaux Android au montage
   useEffect(() => {
     setupNotificationChannelsAsync().catch((err) => {
       console.warn('[PUSH] Erreur setup canaux Android:', err);
     });
   }, []);
 
-  // 2. Demande des permissions & obtention du token Expo Push
+  // 2. Synchronisation du token des qu'un utilisateur est actif
   useEffect(() => {
     if (!user) {
       tokenSyncedForUser.current = null;
@@ -42,54 +41,22 @@ export const usePushNotifications = () => {
 
     const initPush = async () => {
       try {
-        await setupNotificationChannelsAsync();
-
-        if (!Device.isDevice) {
-          console.log('[PUSH] Simulateur detecte — push non disponible.');
-          return;
-        }
-
-        const { status: existingStatus } = await Notifications.getPermissionsAsync();
-        let finalStatus = existingStatus;
-
-        if (existingStatus !== 'granted') {
-          const { status } = await Notifications.requestPermissionsAsync();
-          finalStatus = status;
-        }
-
-        if (finalStatus !== 'granted') {
-          console.warn('[PUSH] Permission de notification refusee.');
-          return;
-        }
-
-        if (Platform.OS !== 'android' && Platform.OS !== 'ios') {
-          return;
-        }
-
-        let token: string | undefined;
-
-        try {
-          const tokenResponse = await Notifications.getExpoPushTokenAsync({
-            projectId: EAS_PROJECT_ID,
-          });
-          token = tokenResponse?.data;
-          console.log(`[PUSH] Token Expo Push obtenu: ${token?.substring(0, 25)}...`);
-        } catch (tokenErr: any) {
-          console.warn('[PUSH] Erreur obtention token Expo:', tokenErr.message);
-          return;
-        }
-
+        const token = await registerForPushNotificationsAsync();
         if (isMounted && token) {
           try {
-            await api.post('/auth/fcm-token', { fcmToken: token });
+            await api.post('/notifications/push-token', {
+              token,
+              platform: 'android',
+            }).catch(() => api.post('/auth/fcm-token', { fcmToken: token }));
+
             tokenSyncedForUser.current = userId;
-            console.log(`[PUSH] Token synchronise pour l'utilisateur ${userId}`);
+            console.log(`[PUSH] Token synchronise pour ${userId}`);
           } catch (apiErr: any) {
-            console.warn('[PUSH] Erreur synchronisation token backend:', apiErr.message);
+            console.warn('[PUSH] Erreur API token:', apiErr?.message);
           }
         }
       } catch (err: any) {
-        console.error('[PUSH] Erreur generale enregistrement push:', err.message);
+        console.error('[PUSH] Erreur enregistrement push:', err?.message);
       }
     };
 
