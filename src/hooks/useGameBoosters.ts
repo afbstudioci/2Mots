@@ -38,6 +38,7 @@ export const useGameBoosters = ({
   const [eliminatedChoices, setEliminatedChoices] = useState<string[]>([]);
   const [isHintUsed, setIsHintUsed] = useState<boolean>(false);
   const [showNoKevsModal, setShowNoKevsModal] = useState<boolean>(false);
+  const [emergencyBoosterType, setEmergencyBoosterType] = useState<'hint' | 'timeFreeze' | 'superClue' | null>(null);
 
   const syncInventory = useCallback(async () => {
     try {
@@ -57,7 +58,7 @@ export const useGameBoosters = ({
   const handleUseHint = () => {
     if (isHintUsed || isChecking || hasTriggeredGameOver) return;
     if (userKevs < 5) {
-      setShowNoKevsModal(true);
+      setEmergencyBoosterType('hint');
       return;
     }
     if (!currentPair?.options || currentPair.options.length < 3) return;
@@ -75,7 +76,7 @@ export const useGameBoosters = ({
   const handleUseTimeFreeze = async () => {
     if (isTimeFrozen || isChecking || hasTriggeredGameOver) return;
     if (timeFreezeCount <= 0 && userKevs < 15) {
-      setShowNoKevsModal(true);
+      setEmergencyBoosterType('timeFreeze');
       return;
     }
 
@@ -97,7 +98,7 @@ export const useGameBoosters = ({
   const handleUseSuperClue = async () => {
     if (isChecking || hasTriggeredGameOver) return;
     if (superClueCount <= 0 && userKevs < 25) {
-      setShowNoKevsModal(true);
+      setEmergencyBoosterType('superClue');
       return;
     }
     if (!currentPair?.options) return;
@@ -113,6 +114,32 @@ export const useGameBoosters = ({
       setIsHintUsed(true);
       playSuccess();
     } catch {}
+  };
+
+  const handleApplyEmergencyBooster = (type: 'hint' | 'timeFreeze' | 'superClue') => {
+    if (type === 'hint') {
+      if (!currentPair?.options || currentPair.options.length < 3) return;
+      const exact = currentPair.exactMatch ? currentPair.exactMatch[0] : currentPair.options[0];
+      const wrong = currentPair.options.filter((o: string) => normalizeStr(o) !== normalizeStr(exact));
+      const toEliminate = wrong[Math.floor(Math.random() * wrong.length)];
+      setEliminatedChoices([toEliminate]);
+      setIsHintUsed(true);
+      playHint();
+    } else if (type === 'timeFreeze') {
+      setIsTimeFrozen(true);
+      onTimeFreezeActivated(5000);
+      playHint();
+      setTimeout(() => {
+        setIsTimeFrozen(false);
+      }, 5000);
+    } else if (type === 'superClue') {
+      if (!currentPair?.options) return;
+      const exact = currentPair.exactMatch ? currentPair.exactMatch[0] : currentPair.options[0];
+      const allWrong = currentPair.options.filter((o: string) => normalizeStr(o) !== normalizeStr(exact));
+      setEliminatedChoices(allWrong);
+      setIsHintUsed(true);
+      playSuccess();
+    }
   };
 
   const handleUseSecondChance = async (onTransition?: () => void) => {
@@ -154,6 +181,9 @@ export const useGameBoosters = ({
     isHintUsed,
     showNoKevsModal,
     setShowNoKevsModal,
+    emergencyBoosterType,
+    setEmergencyBoosterType,
+    handleApplyEmergencyBooster,
     syncInventory,
     handleUseHint,
     handleUseTimeFreeze,

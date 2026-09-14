@@ -60,6 +60,12 @@
           "sounds": []
         }
       ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-5873173554180779~9273317337"
+        }
+      ],
       "expo-web-browser"
     ],
     "extra": {

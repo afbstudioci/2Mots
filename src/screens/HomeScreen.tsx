@@ -15,6 +15,7 @@ import { RootStackParamList } from '../../App';
 import KevIcon from '../components/common/KevIcon';
 import ReferralCelebration from '../components/common/ReferralCelebration';
 import { DuelButton } from '../components/duel/DuelButton';
+import { HappyHourBanner } from '../components/home/HappyHourBanner';
 import { getPendingInvites } from '../services/duelApi';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -176,6 +177,7 @@ const HomeScreen = () => {
         </Animated.View>
 
         <View style={styles.centerContainer}>
+          <HappyHourBanner />
           <Animated.View
             style={[styles.statsContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
           >

@@ -14,6 +14,7 @@ import GameLoading from '../components/game/GameLoading';
 import GameEmpty from '../components/game/GameEmpty';
 import CustomAlert from '../components/common/CustomAlert';
 import GameOverLimitModal from '../components/game/GameOverLimitModal';
+import { EmergencyBoosterModal } from '../components/game/EmergencyBoosterModal';
 import KevyChestModal from '../components/game/KevyChestModal';
 import LiveRivalBanner from '../components/game/LiveRivalBanner';
 import FeverOverlay from '../components/game/FeverOverlay';
@@ -26,56 +27,20 @@ export default function GameScreen({ navigation }: any) {
   const { themeColors } = useTheme();
   const { playBgm, stopBgm } = useAudioContext();
   const {
-    wordPairs,
-    currentIndex,
-    setCurrentIndex,
-    timeLeft,
-    maxTime,
-    selectedChoice,
-    correctChoice,
-    isCorrectState,
-    isFastCombo,
-    isFeverMode,
-    isLoading,
-    errorMessage,
-    isChecking,
-    eliminatedChoices,
-    isHintUsed,
-    handleUseHint,
-    handleUseTimeFreeze,
-    handleUseSuperClue,
-    handleUseSecondChance,
-    isTimeFrozen,
-    timeFreezeCount,
-    superClueCount,
-    secondChanceCount,
-    showNoKevsModal,
-    setShowNoKevsModal,
-    userLevel,
-    currentXp,
-    xpNeeded,
-    userKevs,
-    kevyKeys,
-    showKevyChest,
-    handleCloseKevyChest,
-    activeRivalAlert,
-    timeWon,
-    setTimeWon,
-    successTrigger,
-    lastAccuracy,
-    selectChoice,
-    showLevelUpModal,
-    handleCloseLevelUp,
-    errorLimitData,
-    setErrorLimitData,
-    triggerGameOver,
+    wordPairs, currentIndex, setCurrentIndex, timeLeft, maxTime, selectedChoice,
+    correctChoice, isCorrectState, isFastCombo, isFeverMode, isLoading, errorMessage,
+    isChecking, eliminatedChoices, isHintUsed, handleUseHint, handleUseTimeFreeze,
+    handleUseSuperClue, handleUseSecondChance, emergencyBoosterType, setEmergencyBoosterType,
+    handleApplyEmergencyBooster, isTimeFrozen, timeFreezeCount, superClueCount,
+    secondChanceCount, userLevel, currentXp, xpNeeded, userKevs, kevyKeys,
+    showKevyChest, handleCloseKevyChest, activeRivalAlert, timeWon, setTimeWon,
+    successTrigger, lastAccuracy, selectChoice, showLevelUpModal, handleCloseLevelUp,
+    errorLimitData, setErrorLimitData, triggerGameOver,
   } = useGameLogic();
 
   useEffect(() => {
     playBgm();
-    return () => {
-      stopBgm();
-    };
+    return () => { stopBgm(); };
   }, []);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -87,7 +52,6 @@ export default function GameScreen({ navigation }: any) {
       Animated.timing(scaleAnim, { toValue: 0.94, duration: 120, useNativeDriver: true }),
     ]).start(() => {
       setCurrentIndex((prev) => prev + 1);
-
       Animated.parallel([
         Animated.timing(fadeAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
         Animated.spring(scaleAnim, { toValue: 1, friction: 7, tension: 60, useNativeDriver: true }),
@@ -96,9 +60,7 @@ export default function GameScreen({ navigation }: any) {
   };
 
   const handleSelect = (choice: string) => {
-    selectChoice(choice, () => {
-      startNextWordAnimation();
-    });
+    selectChoice(choice, () => { startNextWordAnimation(); });
   };
 
   const orb1Anim = useRef(new Animated.Value(0)).current;
@@ -126,12 +88,10 @@ export default function GameScreen({ navigation }: any) {
 
   let currentPair = wordPairs[currentIndex];
   if (!currentPair && wordPairs.length > 0) {
-    const emergency = getLocalGameBatch(5, userLevel)[0];
-    currentPair = emergency as any;
+    currentPair = getLocalGameBatch(5, userLevel)[0] as any;
   }
 
   if (isLoading || (!currentPair && wordPairs.length > 0 && currentIndex < wordPairs.length)) return <GameLoading />;
-
   if (errorMessage && wordPairs.length === 0) {
     return <GameEmpty message={errorMessage || 'Chargement impossible'} onBack={() => navigation.navigate('Home')} />;
   }
@@ -186,13 +146,7 @@ export default function GameScreen({ navigation }: any) {
 
         <View style={styles.playAreaWrapper}>
           <SuccessRipple trigger={successTrigger} accuracy={lastAccuracy} />
-          <Animated.View
-            style={{
-              width: '100%',
-              opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }],
-            }}
-          >
+          <Animated.View style={{ width: '100%', opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}>
             <GamePlayArea currentPair={currentPair} />
           </Animated.View>
         </View>
@@ -229,13 +183,15 @@ export default function GameScreen({ navigation }: any) {
         buttonText="Continuer"
       />
 
-      <CustomAlert
-        visible={showNoKevsModal}
-        title="KEVS INSUFFISANTS"
-        message="Vous n'avez pas assez de Kevs pour cette action. Gagnez-en en résolvant des énigmes !"
-        onClose={() => setShowNoKevsModal(false)}
-        type="error"
-        buttonText="Compris"
+      <EmergencyBoosterModal
+        visible={Boolean(emergencyBoosterType)}
+        boosterType={emergencyBoosterType}
+        onSuccess={() => {
+          if (emergencyBoosterType) {
+            handleApplyEmergencyBooster(emergencyBoosterType);
+          }
+        }}
+        onClose={() => setEmergencyBoosterType(null)}
       />
 
       <GameOverLimitModal
@@ -251,10 +207,7 @@ export default function GameScreen({ navigation }: any) {
         onUseSecondChance={() => handleUseSecondChance(startNextWordAnimation)}
       />
 
-      <KevyChestModal
-        visible={showKevyChest}
-        onClose={handleCloseKevyChest}
-      />
+      <KevyChestModal visible={showKevyChest} onClose={handleCloseKevyChest} />
     </ScreenWrapper>
   );
 }

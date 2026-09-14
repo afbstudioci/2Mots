@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
 import VipCard from '../components/shop/VipCard';
+import { FreeKevsCard } from '../components/shop/FreeKevsCard';
 import KevsPacksGrid from '../components/shop/KevsPacksGrid';
 import ShopRowItem from '../components/shop/ShopRowItem';
 import ShopItemDetailModal from '../components/shop/ShopItemDetailModal';
@@ -98,6 +99,8 @@ export default function ShopScreen() {
         <TouchableOpacity activeOpacity={0.9} onPress={() => setSelectedDetailItem(catalog.vip)}>
           <VipCard vip={catalog.vip} isVip={isVip} onBuy={() => handleInAppPurchase(catalog.vip)} />
         </TouchableOpacity>
+
+        <FreeKevsCard onRewardClaimed={(newKevs) => setUserKevs(newKevs)} />
 
         <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>PACKS DE KEVS</Text>
         <KevsPacksGrid

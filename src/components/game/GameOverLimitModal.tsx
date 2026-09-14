@@ -1,10 +1,13 @@
-﻿//src/components/game/GameOverLimitModal.tsx
-import React, { useEffect, useRef } from 'react';
-import { Modal, View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+//src/components/game/GameOverLimitModal.tsx
+import React, { useEffect, useRef, useState } from 'react';
+import { Modal, View, Text, StyleSheet, TouchableOpacity, Animated, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { colors, shadows, spacing, borderRadius } from '../../theme/theme';
 import { useTheme } from '../../context/ThemeContext';
+import { useRewardedAd } from '../../hooks/useRewardedAd';
 import KevIcon from '../common/KevIcon';
+import api from '../../services/api';
 
 interface GameOverLimitModalProps {
   visible: boolean;
@@ -24,12 +27,18 @@ export default function GameOverLimitModal({
   onUseSecondChance,
 }: GameOverLimitModalProps) {
   const { themeColors, isDark } = useTheme();
+  const { showRewardedAd } = useRewardedAd();
+  const [isClaimingAd, setIsClaimingAd] = useState(false);
+  const [adError, setAdError] = useState<string | null>(null);
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.85)).current;
   const badgePulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (visible) {
+      setAdError(null);
+      setIsClaimingAd(false);
       Animated.parallel([
         Animated.timing(fadeAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
         Animated.spring(scaleAnim, { toValue: 1, friction: 7, tension: 45, useNativeDriver: true }),
@@ -55,7 +64,33 @@ export default function GameOverLimitModal({
     ? 'Ashhh ! Trois erreurs consécutives entraînent la fin de la partie.'
     : 'Ashhh ! Vous avez atteint le quota maximal de 5 erreurs.';
 
-  const canUseSecondChance = Boolean(onUseSecondChance && (secondChanceCount > 0 || userKevs >= 30));
+  const hasDirectAccess = secondChanceCount > 0 || userKevs >= 30;
+
+  const handleWatchAdSecondChance = () => {
+    if (isClaimingAd) return;
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+
+    setIsClaimingAd(true);
+    setAdError(null);
+
+    showRewardedAd(
+      async () => {
+        try {
+          await api.post('/ads/claim-second-chance');
+          try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+          setIsClaimingAd(false);
+          if (onUseSecondChance) onUseSecondChance();
+        } catch {
+          setIsClaimingAd(false);
+          if (onUseSecondChance) onUseSecondChance();
+        }
+      },
+      (error: any) => {
+        setIsClaimingAd(false);
+        setAdError(error?.message || 'Vidéo indisponible. Réessayez.');
+      }
+    );
+  };
 
   return (
     <Modal transparent visible={visible} animationType="none" onRequestClose={onConfirm}>
@@ -72,12 +107,7 @@ export default function GameOverLimitModal({
             shadows.medium(isDark),
           ]}
         >
-          <Animated.View
-            style={[
-              styles.badgeContainer,
-              { transform: [{ scale: badgePulse }] },
-            ]}
-          >
+          <Animated.View style={[styles.badgeContainer, { transform: [{ scale: badgePulse }] }]}>
             <View style={styles.badgeInner}>
               <Text style={styles.badgeNumber}>{errorCount}</Text>
             </View>
@@ -85,28 +115,41 @@ export default function GameOverLimitModal({
 
           <Text style={[styles.title, { color: themeColors.text }]}>{title}</Text>
           <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>{subtitle}</Text>
+          {adError && <Text style={[styles.adErrorText, { color: colors.error }]}>{adError}</Text>}
 
           <View style={styles.buttonsContainer}>
-            {canUseSecondChance && (
-              <TouchableOpacity
-                style={styles.secondChanceBtn}
-                onPress={onUseSecondChance}
-                activeOpacity={0.85}
-              >
-                <Ionicons name="refresh-circle" size={20} color="#1A1A1A" style={{ marginRight: 6 }} />
-                <Text style={styles.secondChanceBtnText}>
-                  {secondChanceCount > 0 ? `SECONDE CHANCE (${secondChanceCount} DISPO)` : 'SECONDE CHANCE (-30'}
-                </Text>
-                {secondChanceCount <= 0 && <KevIcon size={13} style={{ marginLeft: 4, marginRight: 2 }} />}
-                {secondChanceCount <= 0 && <Text style={styles.secondChanceBtnText}>)</Text>}
-              </TouchableOpacity>
+            {onUseSecondChance && (
+              hasDirectAccess ? (
+                <TouchableOpacity style={styles.secondChanceBtn} onPress={onUseSecondChance} activeOpacity={0.85}>
+                  <Ionicons name="refresh-circle" size={20} color="#1A1A1A" style={{ marginRight: 6 }} />
+                  <Text style={styles.secondChanceBtnText}>
+                    {secondChanceCount > 0 ? `SECONDE CHANCE (${secondChanceCount} DISPO)` : 'SECONDE CHANCE (-30'}
+                  </Text>
+                  {secondChanceCount <= 0 && <KevIcon size={13} style={{ marginLeft: 4, marginRight: 2 }} />}
+                  {secondChanceCount <= 0 && <Text style={styles.secondChanceBtnText}>)</Text>}
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.secondChanceBtn, { backgroundColor: colors.coral }]}
+                  onPress={handleWatchAdSecondChance}
+                  activeOpacity={0.85}
+                  disabled={isClaimingAd}
+                >
+                  {isClaimingAd ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <>
+                      <Ionicons name="play-circle" size={20} color="#FFFFFF" style={{ marginRight: 6 }} />
+                      <Text style={[styles.secondChanceBtnText, { color: '#FFFFFF' }]}>
+                        SECONDE CHANCE (VIDÉO GRATUITE)
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )
             )}
 
-            <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={onConfirm}
-              activeOpacity={0.85}
-            >
+            <TouchableOpacity style={styles.actionBtn} onPress={onConfirm} activeOpacity={0.85}>
               <Text style={styles.actionBtnText}>VOIR LE BILAN</Text>
               <Ionicons name="arrow-forward" size={17} color="#FFFFFF" style={{ marginLeft: 8 }} />
             </TouchableOpacity>
@@ -175,6 +218,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     paddingHorizontal: spacing.xs,
   },
+  adErrorText: {
+    fontFamily: 'Poppins_500Medium',
+    fontSize: 11,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
   buttonsContainer: {
     width: '100%',
     gap: 8,
@@ -192,7 +241,7 @@ const styles = StyleSheet.create({
   secondChanceBtnText: {
     fontFamily: 'Poppins_800ExtraBold',
     color: '#1A1A1A',
-    fontSize: 13,
+    fontSize: 12.5,
     letterSpacing: 0.3,
   },
   actionBtn: {

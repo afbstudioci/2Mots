@@ -126,6 +126,16 @@ export const buildBannerData = (title: string, body: string, data: any): BannerD
         autoDismissMs: 6500,
       };
 
+    case 'happy_hour':
+      return {
+        type: 'general',
+        title: title || "L'HEURE MAGIQUE EST LÀ !",
+        message: body || 'Gains de Kevs et XP doublés pendant 2 heures !',
+        buttonText: 'JOUER',
+        borderColor: colors.coral,
+        autoDismissMs: 8000,
+      };
+
     default:
       return {
         type: 'general',
