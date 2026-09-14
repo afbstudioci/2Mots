@@ -60,12 +60,6 @@
           "sounds": []
         }
       ],
-      [
-        "react-native-google-mobile-ads",
-        {
-          "androidAppId": "ca-app-pub-5873173554180779~9273317337"
-        }
-      ],
       "expo-web-browser"
     ],
     "extra": {
@@ -73,5 +67,8 @@
         "projectId": "b10e5217-af10-4e8a-a753-b7b2608af455"
       }
     }
+  },
+  "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-5873173554180779~9273317337"
   }
 }
