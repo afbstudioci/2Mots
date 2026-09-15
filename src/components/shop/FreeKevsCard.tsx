@@ -25,13 +25,22 @@ interface AdStatus {
   remainingCooldownSeconds: number;
 }
 
+const DEFAULT_STATUS: AdStatus = {
+  canWatch: true,
+  dailyRemaining: 5,
+  dailyLimit: 5,
+  rewardKevs: 25,
+  inCooldown: false,
+  remainingCooldownSeconds: 0,
+};
+
 export const FreeKevsCard: React.FC<FreeKevsCardProps> = ({ onRewardClaimed }) => {
-  const { themeColors, isDark } = useTheme();
-  const { isLoaded, showRewardedAd } = useRewardedAd();
-  const [status, setStatus] = useState<AdStatus | null>(null);
+  const { themeColors } = useTheme();
+  const { showRewardedAd } = useRewardedAd();
+  const [status, setStatus] = useState<AdStatus>(DEFAULT_STATUS);
   const [cooldownSec, setCooldownSec] = useState<number>(0);
   const [isClaiming, setIsClaiming] = useState<boolean>(false);
-  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ message: string; isError: boolean } | null>(null);
   const timerRef = useRef<any>(null);
 
   const fetchStatus = useCallback(async () => {
@@ -42,7 +51,7 @@ export const FreeKevsCard: React.FC<FreeKevsCardProps> = ({ onRewardClaimed }) =
         setCooldownSec(res.data.data.remainingCooldownSeconds || 0);
       }
     } catch {
-      // Mode dégradé
+      // Mode dégradé sans blocage de l'interface
     }
   }, []);
 
@@ -63,21 +72,19 @@ export const FreeKevsCard: React.FC<FreeKevsCardProps> = ({ onRewardClaimed }) =
         });
       }, 1000);
     }
-
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [cooldownSec, fetchStatus]);
 
   const handleWatchAd = () => {
-    if (!status?.canWatch || cooldownSec > 0 || isClaiming) return;
-
+    if (!status.canWatch || cooldownSec > 0 || isClaiming) return;
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch {}
 
     setIsClaiming(true);
-    setFeedbackMessage(null);
+    setFeedback(null);
 
     showRewardedAd(
       async () => {
@@ -88,18 +95,24 @@ export const FreeKevsCard: React.FC<FreeKevsCardProps> = ({ onRewardClaimed }) =
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } catch {}
             onRewardClaimed(res.data.data.totalKevs);
-            setFeedbackMessage('+25 Kevs crédités avec succès !');
+            setFeedback({ message: '+25 Kevs crédités avec succès !', isError: false });
             fetchStatus();
           }
         } catch (error: any) {
-          setFeedbackMessage(error.response?.data?.message || 'Erreur lors de la réclamation.');
+          setFeedback({
+            message: error.response?.data?.message || 'Erreur lors de la réclamation.',
+            isError: true,
+          });
         } finally {
           setIsClaiming(false);
         }
       },
       (error: any) => {
         setIsClaiming(false);
-        setFeedbackMessage(error?.message || 'La vidéo est indisponible. Réessayez.');
+        setFeedback({
+          message: error?.message || 'Vidéo momentanément indisponible. Réessayez.',
+          isError: true,
+        });
       }
     );
   };
@@ -109,8 +122,6 @@ export const FreeKevsCard: React.FC<FreeKevsCardProps> = ({ onRewardClaimed }) =
     const secs = seconds % 60;
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
-
-  if (!status) return null;
 
   const isCompleted = status.dailyRemaining <= 0;
   const isInCooldown = cooldownSec > 0;
@@ -142,8 +153,10 @@ export const FreeKevsCard: React.FC<FreeKevsCardProps> = ({ onRewardClaimed }) =
         </View>
       </View>
 
-      {feedbackMessage ? (
-        <Text style={[styles.feedback, { color: colors.mint }]}>{feedbackMessage}</Text>
+      {feedback ? (
+        <Text style={[styles.feedback, { color: feedback.isError ? colors.coral : colors.mint }]}>
+          {feedback.message}
+        </Text>
       ) : null}
 
       <TouchableOpacity
@@ -153,10 +166,7 @@ export const FreeKevsCard: React.FC<FreeKevsCardProps> = ({ onRewardClaimed }) =
         style={[
           styles.actionButton,
           {
-            backgroundColor:
-              isInCooldown || isCompleted
-                ? themeColors.surface
-                : colors.coral,
+            backgroundColor: isInCooldown || isCompleted ? themeColors.surface : colors.coral,
             opacity: isClaiming ? 0.7 : 1,
           },
         ]}
@@ -172,13 +182,11 @@ export const FreeKevsCard: React.FC<FreeKevsCardProps> = ({ onRewardClaimed }) =
           </View>
         ) : isCompleted ? (
           <Text style={[styles.buttonText, { color: themeColors.textSecondary }]}>
-            Limite quotidienne atteinte (5/5)
+            Limite quotidienne atteinte ({status.dailyLimit}/{status.dailyLimit})
           </Text>
         ) : (
           <View style={styles.buttonContent}>
-            <Text style={[styles.buttonText, { color: colors.white }]}>
-              Regarder la vidéo (+25
-            </Text>
+            <Text style={[styles.buttonText, { color: colors.white }]}>Regarder la vidéo (+25</Text>
             <KevIcon size={16} />
             <Text style={[styles.buttonText, { color: colors.white }]}>)</Text>
           </View>
@@ -251,3 +259,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 });
+
+

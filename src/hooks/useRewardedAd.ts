@@ -1,5 +1,5 @@
 // src/hooks/useRewardedAd.ts
-// HOOK ROBUSTE DE GESTION DES ANNONCES RECOMPENSEES GOOGLE ADMOB
+// GESTIONNAIRE SINGLETON ROBUSTE DES ANNONCES RECOMPENSEES GOOGLE ADMOB
 // Standard : Bank Grade / Clean Architecture (Strict <= 270 lignes, Sans Emojis)
 
 import { useEffect, useState, useRef, useCallback } from 'react';
@@ -10,25 +10,81 @@ import mobileAds, {
 } from 'react-native-google-mobile-ads';
 import { getRewardedAdUnitId, ADMOB_CONFIG } from '../config/admob';
 
-export const useRewardedAd = () => {
-  const [isLoaded, setIsLoaded] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+type AdStateSubscriber = (state: { isLoaded: boolean; isLoading: boolean }) => void;
 
-  const rewardedAdRef = useRef<RewardedAd | null>(null);
-  const onRewardCallbackRef = useRef<(() => void) | null>(null);
-  const onErrorCallbackRef = useRef<((err: any) => void) | null>(null);
-  const pendingShowRef = useRef<{ onEarned: () => void; onError?: (err: any) => void } | null>(null);
-  const isFallbackRef = useRef<boolean>(false);
-  const loadTimeoutRef = useRef<any>(null);
+interface PendingShowRequest {
+  onEarned: () => void;
+  onError?: (err: any) => void;
+}
 
-  const loadAd = useCallback((forceTestUnit: boolean = false) => {
+// ETAT GLOBAL SINGLETON (Partagé entre tous les composants de l'application)
+class AdRewardManager {
+  private static instance: AdRewardManager;
+  private rewardedAd: RewardedAd | null = null;
+  private isLoaded: boolean = false;
+  private isLoading: boolean = false;
+  private isInitialized: boolean = false;
+  private isFallback: boolean = false;
+  private subscribers: Set<AdStateSubscriber> = new Set();
+  private pendingRequest: PendingShowRequest | null = null;
+  private retryTimeout: any = null;
+  private requestTimeout: any = null;
+  private retryAttempt: number = 0;
+
+  private constructor() {
+    this.initSdk();
+  }
+
+  public static getInstance(): AdRewardManager {
+    if (!AdRewardManager.instance) {
+      AdRewardManager.instance = new AdRewardManager();
+    }
+    return AdRewardManager.instance;
+  }
+
+  private initSdk(): void {
+    mobileAds()
+      .initialize()
+      .then(() => {
+        this.isInitialized = true;
+        this.preloadAd();
+      })
+      .catch(() => {
+        this.isInitialized = true;
+        this.preloadAd();
+      });
+  }
+
+  public subscribe(subscriber: AdStateSubscriber): () => void {
+    this.subscribers.add(subscriber);
+    subscriber({ isLoaded: this.isLoaded, isLoading: this.isLoading });
+    return () => {
+      this.subscribers.delete(subscriber);
+    };
+  }
+
+  private notify(): void {
+    const state = { isLoaded: this.isLoaded, isLoading: this.isLoading };
+    this.subscribers.forEach((sub) => sub(state));
+  }
+
+  public preloadAd(forceTest: boolean = false): void {
+    if (this.isLoaded || this.isLoading) return;
+
+    if (this.retryTimeout) {
+      clearTimeout(this.retryTimeout);
+      this.retryTimeout = null;
+    }
+
+    this.isLoading = true;
+    if (forceTest) {
+      this.isFallback = true;
+    }
+
+    this.notify();
+
     try {
-      setIsLoading(true);
-      if (forceTestUnit) {
-        isFallbackRef.current = true;
-      }
-
-      const adUnitId = isFallbackRef.current
+      const adUnitId = this.isFallback
         ? ADMOB_CONFIG.TEST_REWARDED_AD_UNIT_ID
         : getRewardedAdUnitId();
 
@@ -37,135 +93,163 @@ export const useRewardedAd = () => {
       });
 
       const unsubLoaded = ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
-        setIsLoaded(true);
-        setIsLoading(false);
+        this.isLoaded = true;
+        this.isLoading = false;
+        this.retryAttempt = 0;
+        this.notify();
 
-        // Si l'utilisateur avait cliqué avant la fin du chargement, afficher immédiatement
-        if (pendingShowRef.current) {
-          if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
-          const { onEarned, onError } = pendingShowRef.current;
-          onRewardCallbackRef.current = onEarned;
-          onErrorCallbackRef.current = onError || null;
-          pendingShowRef.current = null;
-          try {
-            ad.show();
-          } catch (showErr) {
-            setIsLoaded(false);
-            if (onError) onError(showErr);
-          }
+        // Si une demande d'affichage était en attente
+        if (this.pendingRequest) {
+          if (this.requestTimeout) clearTimeout(this.requestTimeout);
+          const req = this.pendingRequest;
+          this.pendingRequest = null;
+          this.executeShow(ad, req);
         }
       });
 
       const unsubEarned = ad.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
-        if (onRewardCallbackRef.current) {
-          onRewardCallbackRef.current();
-          onRewardCallbackRef.current = null;
+        if (this.pendingRequest) {
+          this.pendingRequest.onEarned();
+          this.pendingRequest = null;
         }
       });
 
       const unsubClosed = ad.addAdEventListener(AdEventType.CLOSED, () => {
-        setIsLoaded(false);
-        isFallbackRef.current = false;
-        // Préchargement de la prochaine publicité
+        this.isLoaded = false;
+        this.rewardedAd = null;
+        this.notify();
+        // Préchargement automatique immédiat de la prochaine vidéo
         setTimeout(() => {
-          loadAd();
-        }, 1000);
+          this.preloadAd();
+        }, 1200);
       });
 
       const unsubError = ad.addAdEventListener(AdEventType.ERROR, (error) => {
-        setIsLoaded(false);
+        this.isLoaded = false;
+        this.isLoading = false;
+        this.rewardedAd = null;
+        this.notify();
 
-        // Si l'identifiant de production échoue (ex: inventaire non encore actif par AdMob), bascule automatique sur l'unité de test
-        if (!isFallbackRef.current) {
-          isFallbackRef.current = true;
-          loadAd(true);
+        // Bascule automatique vers l'unité de test si l'unité de production renvoie un échec
+        if (!this.isFallback) {
+          this.isFallback = true;
+          this.preloadAd(true);
           return;
         }
 
-        setIsLoading(false);
-        if (pendingShowRef.current) {
-          if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
-          const { onError } = pendingShowRef.current;
-          pendingShowRef.current = null;
-          if (onError) onError(error || new Error('Vidéo indisponible. Réessayez.'));
-        } else if (onErrorCallbackRef.current) {
-          onErrorCallbackRef.current(error);
-          onErrorCallbackRef.current = null;
+        // Si l'utilisateur attendait cette pub
+        if (this.pendingRequest) {
+          if (this.requestTimeout) clearTimeout(this.requestTimeout);
+          const req = this.pendingRequest;
+          this.pendingRequest = null;
+          if (req.onError) {
+            req.onError(
+              error || new Error('La vidéo publicitaire est momentanément indisponible.')
+            );
+          }
         }
+
+        // Réessai automatique en arrière-plan avec délai progressif
+        this.scheduleRetry();
       });
 
       ad.load();
-      rewardedAdRef.current = ad;
-
-      return () => {
-        unsubLoaded();
-        unsubEarned();
-        unsubClosed();
-        unsubError();
-      };
+      this.rewardedAd = ad;
     } catch {
-      setIsLoaded(false);
-      setIsLoading(false);
+      this.isLoading = false;
+      this.isLoaded = false;
+      this.notify();
+      this.scheduleRetry();
     }
-  }, []);
+  }
+
+  private scheduleRetry(): void {
+    if (this.retryTimeout) clearTimeout(this.retryTimeout);
+    this.retryAttempt += 1;
+    // Délai progressif : 4s, 8s, 16s, 30s max
+    const delay = Math.min(30000, 4000 * Math.pow(1.8, Math.min(this.retryAttempt, 4)));
+    this.retryTimeout = setTimeout(() => {
+      this.preloadAd();
+    }, delay);
+  }
+
+  private executeShow(ad: RewardedAd, req: PendingShowRequest): void {
+    try {
+      this.pendingRequest = req;
+      ad.show();
+    } catch (err) {
+      this.isLoaded = false;
+      this.pendingRequest = null;
+      this.notify();
+      if (req.onError) req.onError(err);
+      this.preloadAd();
+    }
+  }
+
+  public showAd(onEarned: () => void, onError?: (err: any) => void): void {
+    const req: PendingShowRequest = { onEarned, onError };
+
+    // Cas 1 : La publicité est déjà disponible en mémoire
+    if (this.isLoaded && this.rewardedAd) {
+      this.executeShow(this.rewardedAd, req);
+      return;
+    }
+
+    // Cas 2 : La publicité est en cours de chargement ou doit être initiée
+    this.pendingRequest = req;
+    if (!this.isLoading) {
+      this.preloadAd();
+    }
+
+    // Timeout de sécurité de 10 secondes pour ne pas bloquer l'utilisateur
+    if (this.requestTimeout) clearTimeout(this.requestTimeout);
+    this.requestTimeout = setTimeout(() => {
+      if (this.pendingRequest) {
+        const pending = this.pendingRequest;
+        this.pendingRequest = null;
+        if (pending.onError) {
+          pending.onError(
+            new Error('Délai d’attente dépassé. Veuillez vérifier votre connexion et réessayer.')
+          );
+        }
+      }
+    }, 10000);
+  }
+
+  public getState() {
+    return { isLoaded: this.isLoaded, isLoading: this.isLoading };
+  }
+}
+
+export const useRewardedAd = () => {
+  const manager = useRef(AdRewardManager.getInstance()).current;
+  const [state, setState] = useState(manager.getState());
 
   useEffect(() => {
-    mobileAds()
-      .initialize()
-      .then(() => {
-        loadAd();
-      })
-      .catch(() => {
-        loadAd();
-      });
-
+    const unsubscribe = manager.subscribe((newState) => {
+      setState(newState);
+    });
     return () => {
-      if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
+      unsubscribe();
     };
-  }, [loadAd]);
+  }, [manager]);
 
   const showRewardedAd = useCallback(
     (onEarned: () => void, onError?: (err: any) => void) => {
-      onRewardCallbackRef.current = onEarned;
-      onErrorCallbackRef.current = onError || null;
-
-      // Cas 1 : L'annonce est déjà prête en mémoire
-      if (isLoaded && rewardedAdRef.current) {
-        try {
-          rewardedAdRef.current.show();
-        } catch (err) {
-          setIsLoaded(false);
-          // Tentative de rechargement immédiat
-          pendingShowRef.current = { onEarned, onError };
-          loadAd(true);
-        }
-        return;
-      }
-
-      // Cas 2 : L'annonce est encore en train de se charger
-      pendingShowRef.current = { onEarned, onError };
-      setIsLoading(true);
-      loadAd();
-
-      // Timeout de sécurité de 12 secondes
-      if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
-      loadTimeoutRef.current = setTimeout(() => {
-        if (pendingShowRef.current) {
-          pendingShowRef.current = null;
-          setIsLoading(false);
-          if (onError) {
-            onError(new Error('Le chargement de la vidéo a expiré. Veuillez vérifier votre connexion et réessayer.'));
-          }
-        }
-      }, 12000);
+      manager.showAd(onEarned, onError);
     },
-    [isLoaded, loadAd]
+    [manager]
   );
 
+  const reloadAd = useCallback(() => {
+    manager.preloadAd();
+  }, [manager]);
+
   return {
-    isLoaded,
-    isLoading,
+    isLoaded: state.isLoaded,
+    isLoading: state.isLoading,
     showRewardedAd,
-    reloadAd: loadAd,
+    reloadAd,
   };
 };
+
