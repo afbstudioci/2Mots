@@ -8,6 +8,7 @@ export const colors = {
     mint: '#4ADE80', 
     success: '#4ADE80', 
     error: '#EF4444',   
+    magenta: '#D946EF',
     white: '#FFFFFF',
 };
 

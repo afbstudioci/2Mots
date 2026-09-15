@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { colors, shadows, spacing, borderRadius } from '../../theme/theme';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import { useRewardedAd } from '../../hooks/useRewardedAd';
 import KevIcon from '../common/KevIcon';
 import api from '../../services/api';
@@ -27,6 +28,8 @@ export default function GameOverLimitModal({
   onUseSecondChance,
 }: GameOverLimitModalProps) {
   const { themeColors, isDark } = useTheme();
+  const { user } = useAuth();
+  const isVip = Boolean(user?.isVip);
   const { showRewardedAd } = useRewardedAd();
   const [isClaimingAd, setIsClaimingAd] = useState(false);
   const [adError, setAdError] = useState<string | null>(null);
@@ -64,10 +67,10 @@ export default function GameOverLimitModal({
     ? 'Ashhh ! Trois erreurs consécutives entraînent la fin de la partie.'
     : 'Ashhh ! Vous avez atteint le quota maximal de 5 erreurs.';
 
-  const hasDirectAccess = secondChanceCount > 0 || userKevs >= 30;
+  const hasDirectAccess = isVip || secondChanceCount > 0 || userKevs >= 30;
 
   const handleWatchAdSecondChance = () => {
-    if (isClaimingAd) return;
+    if (isClaimingAd || isVip) return;
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
 
     setIsClaimingAd(true);
@@ -121,14 +124,18 @@ export default function GameOverLimitModal({
             {onUseSecondChance && (
               hasDirectAccess ? (
                 <TouchableOpacity style={styles.secondChanceBtn} onPress={onUseSecondChance} activeOpacity={0.85}>
-                  <Ionicons name="refresh-circle" size={20} color="#1A1A1A" style={{ marginRight: 6 }} />
+                  <Ionicons name={isVip ? "ribbon" : "refresh-circle"} size={20} color="#1A1A1A" style={{ marginRight: 6 }} />
                   <Text style={styles.secondChanceBtnText}>
-                    {secondChanceCount > 0 ? `SECONDE CHANCE (${secondChanceCount} DISPO)` : 'SECONDE CHANCE (-30'}
+                    {isVip
+                      ? 'SECONDE CHANCE (PRIVILÈGE VIP)'
+                      : secondChanceCount > 0
+                      ? `SECONDE CHANCE (${secondChanceCount} DISPO)`
+                      : 'SECONDE CHANCE (-30'}
                   </Text>
-                  {secondChanceCount <= 0 && <KevIcon size={13} style={{ marginLeft: 4, marginRight: 2 }} />}
-                  {secondChanceCount <= 0 && <Text style={styles.secondChanceBtnText}>)</Text>}
+                  {!isVip && secondChanceCount <= 0 && <KevIcon size={13} style={{ marginLeft: 4, marginRight: 2 }} />}
+                  {!isVip && secondChanceCount <= 0 && <Text style={styles.secondChanceBtnText}>)</Text>}
                 </TouchableOpacity>
-              ) : (
+              ) : !isVip ? (
                 <TouchableOpacity
                   style={[styles.secondChanceBtn, { backgroundColor: colors.coral }]}
                   onPress={handleWatchAdSecondChance}
@@ -146,7 +153,7 @@ export default function GameOverLimitModal({
                     </>
                   )}
                 </TouchableOpacity>
-              )
+              ) : null
             )}
 
             <TouchableOpacity style={styles.actionBtn} onPress={onConfirm} activeOpacity={0.85}>

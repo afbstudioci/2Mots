@@ -4,8 +4,10 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius, shadows } from '../../theme/theme';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import { DoubleKevsButton } from './DoubleKevsButton';
 
 interface GameOverFooterActionsProps {
@@ -22,10 +24,21 @@ export const GameOverFooterActions: React.FC<GameOverFooterActionsProps> = ({
   onHome,
 }) => {
   const { themeColors } = useTheme();
+  const { user } = useAuth();
+  const isVip = Boolean(user?.isVip);
 
   return (
     <View style={styles.footer}>
-      <DoubleKevsButton score={score} onClaimed={onDoubleClaimed} />
+      {isVip ? (
+        <View style={[styles.vipBanner, { backgroundColor: 'rgba(74, 222, 128, 0.12)', borderColor: colors.mint }]}>
+          <Ionicons name="ribbon" size={18} color={colors.mint} />
+          <Text style={[styles.vipBannerText, { color: colors.mint }]}>
+            Privilège VIP : Gains ×2 automatiques
+          </Text>
+        </View>
+      ) : (
+        <DoubleKevsButton score={score} onClaimed={onDoubleClaimed} />
+      )}
 
       <TouchableOpacity
         style={styles.replayButton}
@@ -55,6 +68,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     width: '100%',
+  },
+  vipBanner: {
+    width: '100%',
+    height: 44,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1.5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: spacing.sm,
+  },
+  vipBannerText: {
+    fontFamily: 'Poppins_700Bold',
+    fontSize: 13,
   },
   replayButton: {
     backgroundColor: colors.coral,

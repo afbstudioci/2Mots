@@ -4,7 +4,9 @@
 // Standard : Bank Grade (Strict <= 270 lignes, Sans Emojis)
 
 import { useEffect, useRef, useState } from 'react';
+import { Platform, Linking } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { useAuth } from '../context/AuthContext';
 import { navigate } from '../navigation/navigationRef';
 import api from '../services/api';
@@ -12,6 +14,17 @@ import {
   setupNotificationChannelsAsync,
   registerForPushNotificationsAsync,
 } from '../services/notificationService';
+
+const getLocalVersionCode = (): number => {
+  if (Constants.nativeBuildVersion) {
+    const parsed = parseInt(Constants.nativeBuildVersion, 10);
+    if (!isNaN(parsed) && parsed > 0) return parsed;
+  }
+  if (Constants.expoConfig?.android?.versionCode) {
+    return Number(Constants.expoConfig.android.versionCode);
+  }
+  return Platform.OS === 'android' ? 29 : 1;
+};
 
 export const usePushNotifications = () => {
   const { user } = useAuth();
@@ -25,7 +38,7 @@ export const usePushNotifications = () => {
     });
   }, []);
 
-  // 2. Synchronisation du token des qu'un utilisateur est actif
+  // 2. Synchronisation du token et du versionCode des qu'un utilisateur est actif
   useEffect(() => {
     if (!user) {
       tokenSyncedForUser.current = null;
@@ -43,14 +56,23 @@ export const usePushNotifications = () => {
       try {
         const token = await registerForPushNotificationsAsync();
         if (isMounted && token) {
+          const localVersionCode = getLocalVersionCode();
           try {
-            await api.post('/notifications/push-token', {
-              token,
-              platform: 'android',
-            }).catch(() => api.post('/auth/fcm-token', { fcmToken: token }));
+            await api
+              .post('/notifications/push-token', {
+                token,
+                platform: 'android',
+                appVersionCode: localVersionCode,
+              })
+              .catch(() =>
+                api.post('/auth/fcm-token', {
+                  fcmToken: token,
+                  appVersionCode: localVersionCode,
+                })
+              );
 
             tokenSyncedForUser.current = userId;
-            console.log(`[PUSH] Token synchronise pour ${userId}`);
+            console.log(`[PUSH] Token et version (${localVersionCode}) synchronises pour ${userId}`);
           } catch (apiErr: any) {
             console.warn('[PUSH] Erreur API token:', apiErr?.message);
           }
@@ -95,9 +117,19 @@ export const usePushNotifications = () => {
     if (!user || !pendingRouting) return;
 
     const timer = setTimeout(() => {
-      const { type, duelId, friendId, friendName, friendAvatar } = pendingRouting;
+      const { type, duelId, friendId, friendName, friendAvatar, storeUrl } = pendingRouting;
 
       switch (type) {
+        case 'app_update': {
+          const targetUrl =
+            storeUrl || 'https://play.google.com/store/apps/details?id=com.afbstudio.twomots';
+          Linking.canOpenURL(targetUrl)
+            .then((can) => {
+              if (can) Linking.openURL(targetUrl);
+            })
+            .catch(() => {});
+          break;
+        }
         case 'duel_invite':
           navigate('DuelLobby', { initialTab: 'received' });
           break;
@@ -135,3 +167,4 @@ export const usePushNotifications = () => {
     return () => clearTimeout(timer);
   }, [user, pendingRouting]);
 };
+

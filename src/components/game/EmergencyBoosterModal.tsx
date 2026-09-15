@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { colors, spacing, borderRadius, shadows } from '../../theme/theme';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import { useRewardedAd } from '../../hooks/useRewardedAd';
 import api from '../../services/api';
 
@@ -25,11 +26,12 @@ export const EmergencyBoosterModal: React.FC<EmergencyBoosterModalProps> = ({
   onClose,
 }) => {
   const { themeColors, isDark } = useTheme();
+  const { user } = useAuth();
   const { isLoaded, showRewardedAd } = useRewardedAd();
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  if (!visible || !boosterType) return null;
+  if (!visible || !boosterType || user?.isVip) return null;
 
   const boosterLabel =
     boosterType === 'hint'

@@ -2,6 +2,7 @@
 import React, { useRef, useEffect } from 'react';
 import { View, StyleSheet, Dimensions, Animated, ScrollView } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import { colors, spacing } from '../theme/theme';
 import { useAudioContext } from '../context/AudioContext';
 import ScreenWrapper from '../components/layout/ScreenWrapper';
@@ -25,6 +26,8 @@ const { width } = Dimensions.get('window');
 
 export default function GameScreen({ navigation }: any) {
   const { themeColors } = useTheme();
+  const { user } = useAuth();
+  const isVip = Boolean(user?.isVip);
   const { playBgm, stopBgm } = useAudioContext();
   const {
     wordPairs, currentIndex, setCurrentIndex, timeLeft, maxTime, selectedChoice,
@@ -184,7 +187,7 @@ export default function GameScreen({ navigation }: any) {
       />
 
       <EmergencyBoosterModal
-        visible={Boolean(emergencyBoosterType)}
+        visible={Boolean(emergencyBoosterType) && !isVip}
         boosterType={emergencyBoosterType}
         onSuccess={() => {
           if (emergencyBoosterType) {

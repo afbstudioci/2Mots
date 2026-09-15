@@ -1,4 +1,4 @@
-﻿//src/components/auth/AuthInput.tsx
+//src/components/auth/AuthInput.tsx
 import React, { useState } from 'react';
 import {
   StyleSheet,
@@ -18,9 +18,10 @@ interface AuthInputProps {
   onChangeText: (text: string) => void;
   placeholder?: string;
   isPassword?: boolean;
-  keyboardType?: 'default' | 'email-address' | 'numeric';
+  keyboardType?: 'default' | 'email-address' | 'numeric' | 'number-pad' | 'phone-pad';
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   error?: string;
+  maxLength?: number;
   onFocus?: () => void;
   onBlur?: () => void;
 }
@@ -34,6 +35,7 @@ const AuthInput: React.FC<AuthInputProps> = ({
   keyboardType = 'default',
   autoCapitalize = 'none',
   error,
+  maxLength,
   onFocus,
   onBlur,
 }) => {
@@ -73,6 +75,7 @@ const AuthInput: React.FC<AuthInputProps> = ({
           secureTextEntry={isPassword && !showPassword}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
+          maxLength={maxLength}
           underlineColorAndroid="transparent"
           selectionColor={colors.coral}
           onFocus={() => {

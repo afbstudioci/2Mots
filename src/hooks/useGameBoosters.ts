@@ -55,15 +55,19 @@ export const useGameBoosters = ({
     } catch {}
   }, [setUserKevs]);
 
+  const isVip = Boolean(user?.isVip);
+
   const handleUseHint = () => {
     if (isHintUsed || isChecking || hasTriggeredGameOver) return;
-    if (userKevs < 5) {
+    if (userKevs < 5 && !isVip) {
       setEmergencyBoosterType('hint');
       return;
     }
     if (!currentPair?.options || currentPair.options.length < 3) return;
 
-    setUserKevs((prev) => Math.max(0, prev - 5));
+    if (!isVip) {
+      setUserKevs((prev) => Math.max(0, prev - 5));
+    }
     api.post('/game/use-hint', {}, { timeout: 2000 }).catch(() => {});
     const exact = currentPair.exactMatch ? currentPair.exactMatch[0] : currentPair.options[0];
     const wrong = currentPair.options.filter((o: string) => normalizeStr(o) !== normalizeStr(exact));
@@ -75,14 +79,14 @@ export const useGameBoosters = ({
 
   const handleUseTimeFreeze = async () => {
     if (isTimeFrozen || isChecking || hasTriggeredGameOver) return;
-    if (timeFreezeCount <= 0 && userKevs < 15) {
+    if (timeFreezeCount <= 0 && userKevs < 15 && !isVip) {
       setEmergencyBoosterType('timeFreeze');
       return;
     }
 
     try {
       if (timeFreezeCount > 0) setTimeFreezeCount((prev) => prev - 1);
-      else setUserKevs((prev) => Math.max(0, prev - 15));
+      else if (!isVip) setUserKevs((prev) => Math.max(0, prev - 15));
 
       api.post('/shop/use-booster', { boosterType: 'timeFreeze' }).catch(() => {});
       setIsTimeFrozen(true);
@@ -97,7 +101,7 @@ export const useGameBoosters = ({
 
   const handleUseSuperClue = async () => {
     if (isChecking || hasTriggeredGameOver) return;
-    if (superClueCount <= 0 && userKevs < 25) {
+    if (superClueCount <= 0 && userKevs < 25 && !isVip) {
       setEmergencyBoosterType('superClue');
       return;
     }
@@ -105,7 +109,7 @@ export const useGameBoosters = ({
 
     try {
       if (superClueCount > 0) setSuperClueCount((prev) => prev - 1);
-      else setUserKevs((prev) => Math.max(0, prev - 25));
+      else if (!isVip) setUserKevs((prev) => Math.max(0, prev - 25));
 
       api.post('/shop/use-booster', { boosterType: 'superClue' }).catch(() => {});
       const exact = currentPair.exactMatch ? currentPair.exactMatch[0] : currentPair.options[0];
@@ -143,14 +147,14 @@ export const useGameBoosters = ({
   };
 
   const handleUseSecondChance = async (onTransition?: () => void) => {
-    if (secondChanceCount <= 0 && userKevs < 30) {
+    if (secondChanceCount <= 0 && userKevs < 30 && !isVip) {
       setShowNoKevsModal(true);
       return;
     }
 
     try {
       if (secondChanceCount > 0) setSecondChanceCount((prev) => prev - 1);
-      else setUserKevs((prev) => Math.max(0, prev - 30));
+      else if (!isVip) setUserKevs((prev) => Math.max(0, prev - 30));
 
       api.post('/shop/use-booster', { boosterType: 'secondChance' }).catch(() => {});
       setEliminatedChoices([]);

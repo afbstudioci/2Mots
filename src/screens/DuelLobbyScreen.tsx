@@ -13,6 +13,7 @@ import { DuelBetModal } from '../components/duel/DuelBetModal';
 import { DuelSkeleton } from '../components/duel/DuelSkeleton';
 import { DuelAcceptModal } from '../components/duel/DuelAcceptModal';
 import { ActiveDuelBanner } from '../components/duel/ActiveDuelBanner';
+import { DuelHeaderTabs } from '../components/duel/DuelHeaderTabs';
 import { OpponentItem, ReceivedInviteItem, SentInviteItem } from '../components/duel/DuelListItem';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CustomAlert from '../components/common/CustomAlert';
@@ -355,20 +356,13 @@ export default function DuelLobbyScreen({ route }: any) {
         />
       )}
 
-      <View style={styles.tabContainer}>
-        {(['opponents', 'received', 'sent'] as const).map((tabKey) => {
-          const count = tabKey === 'opponents' ? opponents.length : tabKey === 'received' ? invites.received.length : invites.sent.length;
-          const label = tabKey === 'opponents' ? 'ADVERSAIRES' : tabKey === 'received' ? 'REÇUS' : 'ATTENTES';
-          const isActive = activeTab === tabKey;
-          return (
-            <TouchableOpacity key={tabKey} onPress={() => setActiveTab(tabKey)} style={[styles.tabButton, isActive && styles.activeTab]}>
-              <Text style={[styles.tabText, { color: isActive ? colors.coral : themeColors.textSecondary }]}>
-                {label} ({count})
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      <DuelHeaderTabs
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        receivedCount={invites.received.length}
+        sentCount={invites.sent.length}
+        themeColors={themeColors}
+      />
 
       {isLoading && opponents.length === 0 ? (
         <DuelSkeleton />
@@ -471,10 +465,6 @@ const styles = StyleSheet.create({
   headerTitle: { fontFamily: 'Poppins_800ExtraBold', fontSize: 18 },
   balanceTag: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: borderRadius.sm },
   balanceText: { fontFamily: 'Poppins_700Bold', fontSize: 13 },
-  tabContainer: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' },
-  tabButton: { flex: 1, paddingVertical: spacing.md, alignItems: 'center' },
-  activeTab: { borderBottomColor: colors.coral, borderBottomWidth: 3 },
-  tabText: { fontFamily: 'Poppins_700Bold', fontSize: 12 },
   listContent: { padding: spacing.lg, gap: spacing.md },
   emptyText: { textAlign: 'center', fontFamily: 'Poppins_400Regular', fontSize: 13, marginTop: 40 },
   offlineBox: { alignItems: 'center', justifyContent: 'center', padding: spacing.xl, marginTop: 40 },

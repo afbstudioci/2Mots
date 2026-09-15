@@ -63,7 +63,7 @@ export default function ShopScreen() {
         if (d.streakFreezes !== undefined) setStreakFreezes(d.streakFreezes);
         if (d.isVip !== undefined) setIsVip(d.isVip);
       }
-    } catch {} finally {
+    } catch { } finally {
       setIsLoading(false);
     }
   };
@@ -100,7 +100,9 @@ export default function ShopScreen() {
           <VipCard vip={catalog.vip} isVip={isVip} onBuy={() => handleInAppPurchase(catalog.vip)} />
         </TouchableOpacity>
 
-        <FreeKevsCard onRewardClaimed={(newKevs) => setUserKevs(newKevs)} />
+        {!isVip && (
+          <FreeKevsCard onRewardClaimed={(newKevs) => setUserKevs(newKevs)} />
+        )}
 
         <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>PACKS DE KEVS</Text>
         <KevsPacksGrid
