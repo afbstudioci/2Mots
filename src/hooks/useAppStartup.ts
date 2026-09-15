@@ -1,6 +1,7 @@
-﻿//src/hooks/useAppStartup.ts
+//src/hooks/useAppStartup.ts
 import { useEffect, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
+import mobileAds from 'react-native-google-mobile-ads';
 import api from '../services/api';
 import { syncPendingSessions } from '../services/syncService';
 import { useAuth } from '../context/AuthContext';
@@ -13,6 +14,13 @@ export const useAppStartup = () => {
   const appState = useRef<AppStateStatus>(AppState.currentState);
   const isPinging = useRef(false);
   const hasWokenUp = useRef(false);
+
+  useEffect(() => {
+    // Initialisation globale du SDK publicitaire Google Mobile Ads
+    mobileAds()
+      .initialize()
+      .catch(() => {});
+  }, []);
 
   const pingServer = async () => {
     if (!user) return;
