@@ -1,4 +1,4 @@
-﻿//src/types/gameTypes.ts
+//src/types/gameTypes.ts
 export interface EnrichedWordPair {
   _id: string;
   word1: string;
@@ -8,6 +8,7 @@ export interface EnrichedWordPair {
   difficulty?: number;
   exactMatch?: string[];
   options: string[];
+  hasKey?: boolean;
 }
 
 export interface GameAnswer {

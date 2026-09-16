@@ -1,4 +1,7 @@
-//src/hooks/useGameLogic.ts
+// src/hooks/useGameLogic.ts
+// LOGIQUE PRINCIPALE DU JEU AVEC DEMARRAGE ULTRA-RAPIDE (5S MAX) ET CACHE HORS-LIGNE
+// Standard : Bank Grade (Strict <= 270 lignes, Sans Emojis)
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useAudio } from './useAudio';
@@ -6,7 +9,13 @@ import { useGameBoosters } from './useGameBoosters';
 import { useGameTimer } from './useGameTimer';
 import { useLiveRivals } from './useLiveRivals';
 import api from '../services/api';
-import { getLocalGameBatch, shuffleArray } from '../services/offlineVault';
+import { shuffleArray } from '../services/offlineVault';
+import {
+  getCachedGameBatch,
+  saveEnigmasToCache,
+  markEnigmasAsPlayed,
+  triggerSilentWakeup,
+} from '../services/enigmaCacheService';
 import { EnrichedWordPair, GameAnswer } from '../types/gameTypes';
 import * as Haptics from 'expo-haptics';
 
@@ -14,6 +23,7 @@ const normalizeStr = (s: string) => (s || '').normalize('NFD').replace(/[\u0300-
 
 export const useGameLogic = () => {
   const { user } = useAuth();
+  const isVip = Boolean(user?.isVip);
   const { playSuccess, playError, playLevelUp, playHint, playDanger, stopBgm, playChest } = useAudio();
   const liveRivals = useLiveRivals();
 
@@ -84,25 +94,24 @@ export const useGameLogic = () => {
     if (isFetchingNextBatch.current) return;
     isFetchingNextBatch.current = true;
     try {
-      const excludeParam = playedWordIdsRef.current.slice(-20).join(',');
-      const res = await api.get(`/game/batch?exclude=${excludeParam}`, { timeout: 60000 });
+      const excludeParam = playedWordIdsRef.current.slice(-25).join(',');
+      const res = await api.get(`/game/batch?exclude=${excludeParam}`, { timeout: 15000 });
       const d = res.data?.data;
       const { rivals, threatBehind, userRank } = res.data || {};
       if (rivals?.length) liveRivals.setRivalData(rivals, threatBehind, userRank || 1);
 
       let fresh = Array.isArray(d) ? d.filter((p: any) => !new Set(playedWordIdsRef.current.slice(-15)).has(p._id)) : [];
-      if (!fresh.length) fresh = d || getLocalGameBatch(30, userLevel, playedWordIdsRef.current.slice(-20));
-
-      if (fresh.length) {
+      if (fresh.length > 0) {
+        saveEnigmasToCache(fresh).catch(() => {});
         setWordPairs((prev) => [...prev, ...fresh.map((p: any, idx: number) => ({
           ...p,
           options: shuffleArray(p.options || []),
-          hasKey: typeof p.hasKey === 'boolean' ? p.hasKey : (idx === 17)
+          hasKey: typeof p.hasKey === 'boolean' ? p.hasKey : idx === 17,
         }))]);
       }
     } catch {
-      const local = getLocalGameBatch(30, userLevel, playedWordIdsRef.current.slice(-20));
-      if (local.length) setWordPairs((prev) => [...prev, ...(local as any).map((p: any, idx: number) => ({ ...p, hasKey: idx === 17 }))]);
+      const local = await getCachedGameBatch(20, userLevel);
+      if (local.length) setWordPairs((prev) => [...prev, ...local]);
     } finally {
       isFetchingNextBatch.current = false;
     }
@@ -110,26 +119,54 @@ export const useGameLogic = () => {
 
   const loadInitialBatch = useCallback(async () => {
     setIsLoading(true);
+    let resolved = false;
+
+    // Timeout de 5 secondes pour declencher le stock local si le serveur est endormi
+    const fallbackTimer = setTimeout(async () => {
+      if (!resolved) {
+        resolved = true;
+        const local = await getCachedGameBatch(30, user?.level || 1);
+        setWordPairs(local);
+        setIsLoading(false);
+        timer.resetTimer();
+        triggerSilentWakeup(user?.level || 1);
+      }
+    }, 5000);
+
     try {
-      const res = await api.get('/game/batch', { timeout: 90000 });
-      const { data: d, userStats: s, rivals, threatBehind, userRank } = res.data || {};
-      if (rivals?.length) liveRivals.setRivalData(rivals, threatBehind, userRank || 1);
-      if (d?.length) {
-        setWordPairs(d.map((p: any, idx: number) => ({ ...p, options: shuffleArray(p.options || []), hasKey: typeof p.hasKey === 'boolean' ? p.hasKey : (idx === 17) })));
-        if (s) {
-          setUserLevel(s.level || 1); setCurrentXp(s.xp || 0);
-          setXpNeeded(s.xpNeeded || 3 + (s.level || 1) * 2); setUserKevs(s.kevs || 0);
-          if (typeof s.kevyKeys === 'number') { setKevyKeys(s.kevyKeys); kevyKeysRef.current = s.kevyKeys; }
-        }
-      } else { throw new Error('Vide'); }
+      const res = await api.get('/game/batch', { timeout: 12000 });
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(fallbackTimer);
+        const { data: d, userStats: s, rivals, threatBehind, userRank } = res.data || {};
+        if (rivals?.length) liveRivals.setRivalData(rivals, threatBehind, userRank || 1);
+        if (d?.length) {
+          saveEnigmasToCache(d).catch(() => {});
+          setWordPairs(d.map((p: any, idx: number) => ({ ...p, options: shuffleArray(p.options || []), hasKey: typeof p.hasKey === 'boolean' ? p.hasKey : idx === 17 })));
+          if (s) {
+            setUserLevel(s.level || 1); setCurrentXp(s.xp || 0);
+            setXpNeeded(s.xpNeeded || 3 + (s.level || 1) * 2); setUserKevs(s.kevs || 0);
+            if (typeof s.kevyKeys === 'number') { setKevyKeys(s.kevyKeys); kevyKeysRef.current = s.kevyKeys; }
+          }
+        } else { throw new Error('Vide'); }
+        setIsLoading(false);
+        timer.resetTimer();
+      } else {
+        // Le serveur a repondu apres les 5s : on enregistre les enigmes fraiches dans le cache
+        const fresh = res.data?.data;
+        if (fresh?.length) saveEnigmasToCache(fresh).catch(() => {});
+      }
     } catch {
-      const local = getLocalGameBatch(30, 1, []);
-      setWordPairs((local as any).map((p: any, idx: number) => ({ ...p, hasKey: idx === 17 })));
-    } finally {
-      setIsLoading(false);
-      timer.resetTimer();
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(fallbackTimer);
+        const local = await getCachedGameBatch(30, user?.level || 1);
+        setWordPairs(local);
+        setIsLoading(false);
+        timer.resetTimer();
+      }
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => { loadInitialBatch(); boosters.syncInventory(); }, []);
   useEffect(() => { if (wordPairs.length && currentIndex >= wordPairs.length - 4) fetchNextBatch(); }, [currentIndex, wordPairs.length, fetchNextBatch]);
@@ -150,6 +187,7 @@ export const useGameLogic = () => {
     playedPairsHistoryRef.current.set(pair._id, pair);
     sessionAnswersRef.current.push({ wordPairId: pair._id, answer: choice, isCorrect, timeSpent, accuracy: isCorrect ? 100 : 0 });
     playedWordIdsRef.current.push(pair._id);
+    markEnigmasAsPlayed([pair._id]).catch(() => {});
 
     if (currentIndex + 4 >= wordPairs.length) fetchNextBatch();
 
@@ -182,7 +220,9 @@ export const useGameLogic = () => {
       }
 
       const correctCount = sessionAnswersRef.current.filter((a) => a.isCorrect).length;
-      const kevsToAdd = (isFeverMode || isFast) ? 1 : (correctCount % 2 === 0 ? 1 : 0);
+      const vipMultiplier = isVip ? 2 : 1;
+      const baseKev = (isFeverMode || isFast) ? 1 : (correctCount % 2 === 0 ? 1 : 0);
+      const kevsToAdd = baseKev * vipMultiplier;
       const xpToAdd = isFeverMode ? 3 : (isFast ? 2 : 1);
       const bonusMs = isFeverMode ? 12000 : (isFast ? 10000 : 8000);
 
@@ -200,8 +240,9 @@ export const useGameLogic = () => {
           const nextLvl = userLevel + 1;
           setUserLevel(nextLvl); setXpNeeded(3 + nextLvl * 2);
           setShowLevelUpModal(true); playLevelUp();
-          if (user) { user.level = nextLvl; user.xp = 0; user.kevs = (user.kevs || 0) + 5; }
-          api.post('/game/sync-level', { level: nextLvl, xp: 0, kevs: (userKevs || 0) + 5 }, { timeout: 3000 }).catch(() => {});
+          const lvlKevBonus = 5 * vipMultiplier;
+          if (user) { user.level = nextLvl; user.xp = 0; user.kevs = (user.kevs || 0) + lvlKevBonus; }
+          api.post('/game/sync-level', { level: nextLvl, xp: 0, kevs: (userKevs || 0) + lvlKevBonus }, { timeout: 3000 }).catch(() => {});
           return 0;
         }
         return next;

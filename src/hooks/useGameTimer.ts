@@ -1,9 +1,13 @@
-//src/hooks/useGameTimer.ts
+// src/hooks/useGameTimer.ts
+// GESTION DU CHRONOMETRE DE JEU ET FINALISATION SECURISEE DE SESSION
+// Standard : Bank Grade (Strict <= 270 lignes, Sans Emojis)
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import api from '../services/api';
+import { queueOfflineSession } from '../services/syncService';
 import { EnrichedWordPair, GameAnswer } from '../types/gameTypes';
 
 export const getLevelMaxTime = (level: number = 1): number => {
@@ -104,18 +108,34 @@ export const useGameTimer = ({
         };
       });
 
-      api.post(
-        '/game/end',
-        {
-          score: correctCount,
-          answers,
-          kevyKeys: kevyKeysRef?.current || 0,
-          level: userLevelRef?.current || userLevel,
-          xp: currentXpRef?.current || 0,
-          kevs: userKevsRef?.current || 0,
-        },
-        { timeout: 3500 }
-      ).catch(() => {});
+      const sessionPayload = {
+        score: correctCount,
+        answers,
+        kevyKeys: kevyKeysRef?.current || 0,
+        level: userLevelRef?.current || userLevel,
+        xp: currentXpRef?.current || 0,
+        kevs: userKevsRef?.current || 0,
+      };
+
+      api.post('/game/end', sessionPayload, { timeout: 4500 })
+        .catch(() => {
+          // Mise en file d'attente hors-ligne transparente en cas d'indisponibilite reseau
+          queueOfflineSession({
+            score: correctCount,
+            durationMs: 30000,
+            rounds: answers.map((a) => {
+              const p = playedPairsHistoryRef.current.get(a.wordPairId);
+              return {
+                wordPairId: a.wordPairId,
+                word1: p?.word1 || '',
+                word2: p?.word2 || '',
+                answer: a.answer,
+                isCorrect: a.isCorrect,
+                timeSpentMs: (a.timeSpent || 5) * 1000,
+              };
+            }),
+          }).catch(() => {});
+        });
 
       navigation.replace('GameOver', {
         score: correctCount,

@@ -26,6 +26,7 @@ export const GameOverFooterActions: React.FC<GameOverFooterActionsProps> = ({
   const { themeColors } = useTheme();
   const { user } = useAuth();
   const isVip = Boolean(user?.isVip);
+  const earnedKevs = Math.max(1, Math.floor(score / 2)) * 2;
 
   return (
     <View style={styles.footer}>
@@ -33,7 +34,7 @@ export const GameOverFooterActions: React.FC<GameOverFooterActionsProps> = ({
         <View style={[styles.vipBanner, { backgroundColor: 'rgba(74, 222, 128, 0.12)', borderColor: colors.mint }]}>
           <Ionicons name="ribbon" size={18} color={colors.mint} />
           <Text style={[styles.vipBannerText, { color: colors.mint }]}>
-            Privilège VIP : Gains ×2 automatiques
+            Privilège VIP : Gains ×2 appliqués (+{earnedKevs} Kevs)
           </Text>
         </View>
       ) : (

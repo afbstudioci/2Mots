@@ -1,22 +1,26 @@
-//src/screens/HomeScreen.tsx
+// src/screens/HomeScreen.tsx
+// ECRAN D'ACCUEIL PRINCIPAL AVEC PRE-CHARGEMENT SILENCIEUX DES ENIGMES
+// Standard : Bank Grade (Strict <= 270 lignes, Sans Emojis)
+
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, Animated, Image, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Animated } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { colors, spacing, borderRadius, shadows } from '../theme/theme';
+import { spacing } from '../theme/theme';
 import { RootStackParamList } from '../../App';
-import KevIcon from '../components/common/KevIcon';
 import ReferralCelebration from '../components/common/ReferralCelebration';
 import { DuelButton } from '../components/duel/DuelButton';
 import { HappyHourBanner } from '../components/home/HappyHourBanner';
+import { HomeHeader } from '../components/home/HomeHeader';
+import { HomeStatsCards } from '../components/home/HomeStatsCards';
+import { HomePlaySection } from '../components/home/HomePlaySection';
 import { getPendingInvites } from '../services/duelApi';
+import { prefetchEnigmas } from '../services/enigmaCacheService';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -26,7 +30,7 @@ const HomeScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
   const { user, refreshProfile } = useAuth();
-  const { themeColors, isDark } = useTheme();
+  const { themeColors } = useTheme();
   const [showCelebration, setShowCelebration] = useState(false);
   const [pendingDuelCount, setPendingDuelCount] = useState(0);
 
@@ -34,8 +38,6 @@ const HomeScreen = () => {
   const slideAnim = useRef(new Animated.Value(20)).current;
   const breathAnim = useRef(new Animated.Value(1)).current;
   const scalePressAnim = useRef(new Animated.Value(1)).current;
-
-  // Animations d'actualisation manuelle
   const recordSpinAnim = useRef(new Animated.Value(0)).current;
   const kevsBounceAnim = useRef(new Animated.Value(1)).current;
 
@@ -43,10 +45,11 @@ const HomeScreen = () => {
   const halo2Anim = useRef(new Animated.Value(0)).current;
   const halo3Anim = useRef(new Animated.Value(0)).current;
 
-  // Actualisation automatique en temps réel à chaque fois que la page Accueil devient active
+  // Actualisation automatique en temps reel et pre-chargement silencieux des enigmes
   useFocusEffect(
     useCallback(() => {
       refreshProfile();
+      prefetchEnigmas(user?.level || 1).catch(() => {});
       if (user?.level && user.level >= 5) {
         getPendingInvites()
           .then((res) => setPendingDuelCount(res.received.length))
@@ -140,136 +143,38 @@ const HomeScreen = () => {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
-      {/* Hamburger Button vers Menu Screen natif */}
-      <Pressable
-        onPress={() => navigation.navigate('Menu')}
-        style={[styles.hamburgerButton, { top: insets.top + spacing.xs }]}
-      >
-        <View style={styles.hamburgerContainer}>
-          <View style={[styles.hamburgerLine, { backgroundColor: themeColors.text }]} />
-          <View style={[styles.hamburgerLine, { backgroundColor: themeColors.text, width: 16 }]} />
-          <View style={[styles.hamburgerLine, { backgroundColor: themeColors.text }]} />
-        </View>
-      </Pressable>
+      <HomeHeader
+        user={user}
+        insetsTop={insets.top}
+        fadeAnim={fadeAnim}
+        slideAnim={slideAnim}
+        onOpenMenu={() => navigation.navigate('Menu')}
+        onOpenProfile={() => navigation.navigate('Profile')}
+      />
 
       <View style={styles.container}>
-        <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-          <Text style={[styles.greetingText, { color: themeColors.textSecondary }]}>BONJOUR</Text>
-          <View style={styles.userRow}>
-            <Pressable onPress={() => navigation.navigate('Profile')} style={styles.avatarPressable}>
-              <View
-                style={[
-                  styles.avatarContainer,
-                  { backgroundColor: themeColors.card, borderColor: colors.coral },
-                ]}
-              >
-                {user?.avatar ? (
-                  <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
-                ) : (
-                  <Text style={[styles.avatarPlaceholder, { color: colors.coral }]}>
-                    {(user?.login || 'U')[0].toUpperCase()}
-                  </Text>
-                )}
-              </View>
-            </Pressable>
-            <Text style={[styles.userNameText, { color: themeColors.text }]}>{user?.login}</Text>
-          </View>
-        </Animated.View>
-
         <View style={styles.centerContainer}>
           <HappyHourBanner />
-          <Animated.View
-            style={[styles.statsContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
-          >
-            {/* CARTE RECORD ACTUALISABLE */}
-            <TouchableOpacity
-              activeOpacity={0.75}
-              onPress={handleRefreshRecord}
-              style={[
-                styles.statCard,
-                { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1 },
-                shadows.soft(isDark),
-              ]}
-            >
-              <Animated.View
-                style={[
-                  styles.statIconContainer,
-                  { backgroundColor: 'rgba(255, 184, 77, 0.15)', transform: [{ rotate: spin }] },
-                ]}
-              >
-                <Ionicons name="trophy" size={20} color="#FFB84D" />
-              </Animated.View>
-              <View>
-                <Text style={[styles.statLabelText, { color: themeColors.textSecondary }]}>RECORD</Text>
-                <Text style={[styles.statValueText, { color: themeColors.text }]}>
-                  {user?.bestScore || 0}
-                </Text>
-              </View>
-            </TouchableOpacity>
+          <HomeStatsCards
+            bestScore={user?.bestScore || 0}
+            kevs={user?.kevs || 0}
+            fadeAnim={fadeAnim}
+            slideAnim={slideAnim}
+            spin={spin}
+            kevsBounceAnim={kevsBounceAnim}
+            onRefreshRecord={handleRefreshRecord}
+            onRefreshKevs={handleRefreshKevs}
+          />
 
-            {/* CARTE KEVS ACTUALISABLE */}
-            <TouchableOpacity
-              activeOpacity={0.75}
-              onPress={handleRefreshKevs}
-              style={[
-                styles.statCard,
-                { backgroundColor: themeColors.card, borderColor: themeColors.border, borderWidth: 1 },
-                shadows.soft(isDark),
-              ]}
-            >
-              <Animated.View
-                style={[
-                  styles.statIconContainer,
-                  { backgroundColor: 'rgba(129, 230, 217, 0.15)', transform: [{ scale: kevsBounceAnim }] },
-                ]}
-              >
-                <KevIcon size={20} />
-              </Animated.View>
-              <View>
-                <Text style={[styles.statLabelText, { color: themeColors.textSecondary }]}>KEVS</Text>
-                <Text style={[styles.statValueText, { color: themeColors.text }]}>{user?.kevs || 0}</Text>
-              </View>
-            </TouchableOpacity>
-          </Animated.View>
+          <HomePlaySection
+            halo1Anim={halo1Anim}
+            halo2Anim={halo2Anim}
+            halo3Anim={halo3Anim}
+            breathAnim={breathAnim}
+            scalePressAnim={scalePressAnim}
+            onPlayPress={handlePlayPress}
+          />
 
-          {[halo1Anim, halo2Anim, halo3Anim].map((anim, i) => (
-            <Animated.View
-              key={i}
-              style={[
-                styles.halo,
-                {
-                  transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [1, 2.2] }) }],
-                  opacity: anim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0.35, 0] }),
-                },
-              ]}
-            />
-          ))}
-
-          <Animated.View style={{ transform: [{ scale: breathAnim }] }}>
-            <Animated.View style={{ transform: [{ scale: scalePressAnim }] }}>
-              <Pressable
-                onPressIn={() => Animated.spring(scalePressAnim, { toValue: 0.94, useNativeDriver: true }).start()}
-                onPressOut={() =>
-                  Animated.spring(scalePressAnim, { toValue: 1, friction: 4, tension: 40, useNativeDriver: true }).start()
-                }
-                onPress={handlePlayPress}
-              >
-                <LinearGradient
-                  colors={[colors.coral, '#FF8C66']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.playButton}
-                >
-                  <View style={styles.playButtonContent}>
-                    <Ionicons name="play" size={30} color="#FFFFFF" style={styles.playIcon} />
-                    <Text style={[styles.playButtonText, { color: '#FFFFFF' }]}>JOUER</Text>
-                  </View>
-                </LinearGradient>
-              </Pressable>
-            </Animated.View>
-          </Animated.View>
-
-          {/* BOUTON DUEL 1v1 (Visible uniquement si niveau >= 5) */}
           <DuelButton
             userLevel={user?.level || 1}
             pendingCount={pendingDuelCount}
@@ -286,88 +191,7 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   container: { flex: 1, paddingHorizontal: spacing.lg, paddingBottom: 100, justifyContent: 'space-between' },
-  hamburgerButton: {
-    position: 'absolute',
-    right: spacing.lg,
-    width: 48,
-    height: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 100,
-    borderRadius: 24,
-  },
-  hamburgerContainer: { alignItems: 'flex-end', width: 24 },
-  hamburgerLine: { width: 24, height: 2.5, borderRadius: 2, marginVertical: 3 },
-  header: { marginTop: spacing.xl, width: '100%' },
-  userRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs },
-  avatarPressable: { marginRight: spacing.sm },
-  avatarContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-    ...shadows.soft(false),
-  },
-  avatarImage: { width: '100%', height: '100%' },
-  avatarPlaceholder: { fontFamily: 'Poppins_700Bold', fontSize: 20 },
-  greetingText: { fontFamily: 'Poppins_500Medium', fontSize: 15, letterSpacing: 1 },
-  userNameText: { fontFamily: 'Poppins_800ExtraBold', fontSize: 28, letterSpacing: 0.5, flexShrink: 1 },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' },
-  statsContainer: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.xxl,
-    width: '100%',
-    justifyContent: 'center',
-  },
-  statCard: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.xl,
-    maxWidth: 160,
-  },
-  statIconContainer: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.sm,
-  },
-  statLabelText: { fontFamily: 'Poppins_700Bold', fontSize: 10, letterSpacing: 1, marginBottom: -2 },
-  statValueText: { fontFamily: 'Poppins_800ExtraBold', fontSize: 17 },
-  halo: {
-    position: 'absolute',
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: colors.coral,
-    zIndex: 0,
-    marginTop: 60,
-  },
-  playButton: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: 48,
-    borderRadius: 30,
-    zIndex: 10,
-    shadowColor: colors.coral,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.55,
-    shadowRadius: 14,
-    elevation: 12,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
-    marginTop: 60,
-  },
-  playButtonContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  playIcon: { marginRight: spacing.sm },
-  playButtonText: { fontFamily: 'Poppins_900Black', fontSize: 32, letterSpacing: 2 },
 });
 
 export default HomeScreen;
