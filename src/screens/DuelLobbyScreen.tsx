@@ -193,18 +193,12 @@ export default function DuelLobbyScreen({ route }: any) {
   }, []);
 
   const handleSendInvite = async (betAmount: number) => {
-    if (!selectedOpponent) return;
+    if (!selectedOpponent || isSendingInvite) return;
     const targetOpponent = selectedOpponent;
     try {
       setIsSendingInvite(true);
       const res = await sendDuelInvite(targetOpponent._id, betAmount);
       const createdId = String(res?._id || '');
-      emit('duel_send_invite', {
-        opponentId: String(targetOpponent._id),
-        challengerName: user?.login,
-        betAmount,
-        duelId: createdId,
-      });
       setSelectedOpponent(null);
       setAlertConfig({
         visible: true,
@@ -235,6 +229,7 @@ export default function DuelLobbyScreen({ route }: any) {
   };
 
   const handleRespond = async (duelId: string, accept: boolean) => {
+    if (respondingInviteId) return;
     try {
       setRespondingInviteId(duelId);
       try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}

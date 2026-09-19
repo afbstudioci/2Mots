@@ -34,9 +34,12 @@ export const useGameLogic = () => {
   const [isCorrectState, setIsCorrectState] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isChecking, setIsChecking] = useState(false);
-  const [userLevel, setUserLevel] = useState(user?.level || 1);
-  const [currentXp, setCurrentXp] = useState(user?.xp || 0);
-  const [xpNeeded, setXpNeeded] = useState(3 + (user?.level || 1) * 2);
+  const initialLevel = user?.level || 1;
+  const initialNeeded = 3 + initialLevel * 2;
+  const initialXp = Math.max(0, typeof user?.xp === 'number' && user.xp < initialNeeded ? user.xp : 0);
+  const [userLevel, setUserLevel] = useState(initialLevel);
+  const [currentXp, setCurrentXp] = useState(initialXp);
+  const [xpNeeded, setXpNeeded] = useState(initialNeeded);
   const [userKevs, setUserKevs] = useState(user?.kevs || 0);
   const [kevyKeys, setKevyKeys] = useState(user?.kevyKeys || 0);
   const [showKevyChest, setShowKevyChest] = useState(false);
@@ -234,18 +237,34 @@ export const useGameLogic = () => {
       timer.addTimeMs(bonusMs);
 
       setCurrentXp((prev: number) => {
-        const next = prev + xpToAdd;
-        const needed = 3 + userLevel * 2;
-        if (next >= needed) {
-          const nextLvl = userLevel + 1;
-          setUserLevel(nextLvl); setXpNeeded(3 + nextLvl * 2);
-          setShowLevelUpModal(true); playLevelUp();
-          const lvlKevBonus = 5 * vipMultiplier;
-          if (user) { user.level = nextLvl; user.xp = 0; user.kevs = (user.kevs || 0) + lvlKevBonus; }
-          api.post('/game/sync-level', { level: nextLvl, xp: 0, kevs: (userKevs || 0) + lvlKevBonus }, { timeout: 3000 }).catch(() => {});
-          return 0;
+        let currentLvl = userLevelRef.current || userLevel;
+        let nextXp = prev + xpToAdd;
+        let needed = 3 + currentLvl * 2;
+        let leveledUp = false;
+
+        while (nextXp >= needed) {
+          nextXp -= needed;
+          currentLvl += 1;
+          needed = 3 + currentLvl * 2;
+          leveledUp = true;
         }
-        return next;
+
+        if (leveledUp) {
+          setUserLevel(currentLvl);
+          setXpNeeded(needed);
+          setShowLevelUpModal(true);
+          playLevelUp();
+          const lvlKevBonus = 5 * vipMultiplier;
+          if (user) {
+            user.level = currentLvl;
+            user.xp = nextXp;
+            user.kevs = (user.kevs || 0) + lvlKevBonus;
+          }
+          api.post('/game/sync-level', { level: currentLvl, xp: nextXp, kevs: (userKevs || 0) + lvlKevBonus }, { timeout: 3000 }).catch(() => {});
+        } else if (user) {
+          user.xp = nextXp;
+        }
+        return nextXp;
       });
     } else {
       setIsFastCombo(false); setIsFeverMode(false); feverStreakRef.current = 0;

@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
   },
   hamburgerContainer: { alignItems: 'flex-end', width: 24 },
   hamburgerLine: { width: 24, height: 2.5, borderRadius: 2, marginVertical: 3 },
-  header: { marginTop: spacing.xl, width: '100%' },
+  header: { marginTop: spacing.xl, width: '100%', paddingHorizontal: spacing.lg },
   userRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs },
   avatarPressable: { marginRight: spacing.sm },
   avatarContainer: {
