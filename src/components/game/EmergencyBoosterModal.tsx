@@ -1,6 +1,6 @@
 // src/components/game/EmergencyBoosterModal.tsx
 // MODALE DE DEBLOCAGE D'URGENCE DE JOKER VIA REWARDED AD
-// Standard : Bank Grade (Strict <= 270 lignes, Sans Emojis)
+// Standard : Bank Grade (Strict <= 270 lignes, Sans Emojis, Typographie Soignée)
 
 import React, { useState } from 'react';
 import { Modal, View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
@@ -27,7 +27,7 @@ export const EmergencyBoosterModal: React.FC<EmergencyBoosterModalProps> = ({
 }) => {
   const { themeColors, isDark } = useTheme();
   const { user } = useAuth();
-  const { isLoaded, showRewardedAd } = useRewardedAd();
+  const { showRewardedAd, reloadAd } = useRewardedAd();
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -38,7 +38,7 @@ export const EmergencyBoosterModal: React.FC<EmergencyBoosterModalProps> = ({
       ? 'un Indice Simple'
       : boosterType === 'timeFreeze'
       ? 'le Gel du Temps (+5s)'
-      : 'le Super Indice';
+      : 'le Super-Indice';
 
   const boosterIcon =
     boosterType === 'timeFreeze' ? 'snow-outline' : 'bulb-outline';
@@ -63,7 +63,7 @@ export const EmergencyBoosterModal: React.FC<EmergencyBoosterModalProps> = ({
           onSuccess();
           onClose();
         } catch {
-          // Si le backend échoue en mode dégradé, on accorde quand même le joker
+          // Mode dégradé sécurisé : accorde le joker au joueur
           setIsProcessing(false);
           onSuccess();
           onClose();
@@ -71,13 +71,14 @@ export const EmergencyBoosterModal: React.FC<EmergencyBoosterModalProps> = ({
       },
       (error: any) => {
         setIsProcessing(false);
-        setErrorMessage(error?.message || 'Vidéo indisponible. Veuillez réessayer.');
+        reloadAd();
+        setErrorMessage(error?.message || 'Vidéo momentanément indisponible. Veuillez réessayer.');
       }
     );
   };
 
   return (
-    <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
+    <Modal transparent visible={visible} animationType="fade" onRequestClose={() => { if (!isProcessing) onClose(); }}>
       <View style={styles.overlay}>
         <View
           style={[
@@ -90,7 +91,7 @@ export const EmergencyBoosterModal: React.FC<EmergencyBoosterModalProps> = ({
             <Ionicons name={boosterIcon as any} size={28} color={colors.white} />
           </View>
 
-          <Text style={[styles.title, { color: themeColors.text }]}>KEVS INSUFFISANTS</Text>
+          <Text style={[styles.title, { color: themeColors.text }]}>SOLDE DE KEVS INSUFFISANT</Text>
           <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
             Débloquez {boosterLabel} immédiatement et gratuitement en regardant une courte vidéo !
           </Text>
@@ -104,7 +105,7 @@ export const EmergencyBoosterModal: React.FC<EmergencyBoosterModalProps> = ({
               activeOpacity={0.85}
               disabled={isProcessing}
               onPress={handleWatchAd}
-              style={[styles.watchButton, { backgroundColor: colors.coral }]}
+              style={[styles.watchButton, { backgroundColor: colors.coral, opacity: isProcessing ? 0.75 : 1 }]}
             >
               {isProcessing ? (
                 <ActivityIndicator color={colors.white} size="small" />
@@ -161,9 +162,10 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: 'Poppins_800ExtraBold',
-    fontSize: 17,
+    fontSize: 16,
     textAlign: 'center',
     marginBottom: spacing.xs,
+    letterSpacing: 0.3,
   },
   subtitle: {
     fontFamily: 'Poppins_500Medium',
@@ -174,7 +176,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontFamily: 'Poppins_500Medium',
-    fontSize: 11,
+    fontSize: 11.5,
     textAlign: 'center',
     marginBottom: spacing.sm,
   },

@@ -25,6 +25,7 @@ export function useShopPayment(
     type?: 'success' | 'error' | 'info';
     buttonText?: string;
     confirmText?: string;
+    isLoading?: boolean;
     onConfirm?: () => void;
   }>({ visible: false, title: '', message: '' });
 
@@ -54,6 +55,7 @@ export function useShopPayment(
             message: 'Votre compte a été crédité avec succès.',
             type: 'success',
             buttonText: 'Parfait',
+            isLoading: false,
           });
         } catch {
           setAlertConfig({
@@ -62,6 +64,7 @@ export function useShopPayment(
             message: 'Erreur lors de la validation du reçu Google Play. Veuillez contacter le support.',
             type: 'error',
             buttonText: 'Fermer',
+            isLoading: false,
           });
         } finally {
           setIsProcessingPayment(false);
@@ -81,6 +84,7 @@ export function useShopPayment(
           message: 'La commande Google Play a été annulée ou interrompue.',
           type: 'error',
           buttonText: 'Fermer',
+          isLoading: false,
         });
       }
     );
@@ -98,6 +102,7 @@ export function useShopPayment(
         message: `Il vous manque ${item.priceKevs - userKevs} Kevs pour obtenir « ${item.title} ».`,
         type: 'error',
         buttonText: 'Compris',
+        isLoading: false,
       });
       return;
     }
@@ -107,10 +112,12 @@ export function useShopPayment(
       message: `Voulez-vous acquérir « ${item.title} » pour ${item.priceKevs} Kevs ?`,
       buttonText: 'Annuler',
       confirmText: 'Confirmer',
+      isLoading: false,
       onConfirm: async () => {
         try {
           setIsProcessingPayment(true);
           setProcessingItemId(item.id);
+          setAlertConfig((prev) => ({ ...prev, isLoading: true }));
           const res = await api.post('/shop/buy-with-kevs', { itemId: item.id, category: cat });
           const d = res.data?.data;
           if (d) {
@@ -127,6 +134,7 @@ export function useShopPayment(
             message: `« ${item.title} » a été ajouté à votre inventaire avec succès.`,
             type: 'success',
             buttonText: 'Super',
+            isLoading: false,
           });
         } catch (e: any) {
           setAlertConfig({
@@ -135,6 +143,7 @@ export function useShopPayment(
             message: e.response?.data?.message || "Une erreur est survenue lors de l'achat.",
             type: 'error',
             buttonText: 'Fermer',
+            isLoading: false,
           });
         } finally {
           setIsProcessingPayment(false);
@@ -159,11 +168,12 @@ export function useShopPayment(
         message: 'Google Play Billing est momentanément inaccessible. Veuillez vérifier votre connexion.',
         type: 'error',
         buttonText: 'Fermer',
+        isLoading: false,
       });
     }
   };
 
-  const closeAlert = () => setAlertConfig({ visible: false, title: '', message: '' });
+  const closeAlert = () => setAlertConfig({ visible: false, title: '', message: '', isLoading: false });
 
   return {
     isProcessingPayment,

@@ -1,5 +1,6 @@
+//src/components/common/CustomAlert.tsx
 import React, { useEffect, useRef } from 'react';
-import { Modal, View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { Modal, View, Text, StyleSheet, TouchableOpacity, Animated, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, shadows, spacing } from '../../theme/theme';
 import { useTheme } from '../../context/ThemeContext';
@@ -13,6 +14,7 @@ interface CustomAlertProps {
   type?: 'info' | 'success' | 'error';
   buttonText?: string;
   confirmText?: string;
+  isLoading?: boolean;
 }
 
 export default function CustomAlert({
@@ -24,6 +26,7 @@ export default function CustomAlert({
   type = 'info',
   buttonText = 'Fermer',
   confirmText = 'Confirmer',
+  isLoading = false,
 }: CustomAlertProps) {
   const { themeColors, isDark } = useTheme();
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -72,7 +75,7 @@ export default function CustomAlert({
   };
 
   return (
-    <Modal transparent visible={visible} animationType="none" onRequestClose={onClose}>
+    <Modal transparent visible={visible} animationType="none" onRequestClose={() => { if (!isLoading) onClose(); }}>
       <View style={styles.overlay}>
         <Animated.View
           style={[
@@ -93,9 +96,10 @@ export default function CustomAlert({
                 <TouchableOpacity
                   style={[
                     styles.button,
-                    { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0' },
+                    { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0', opacity: isLoading ? 0.6 : 1 },
                   ]}
                   onPress={onClose}
+                  disabled={isLoading}
                   activeOpacity={0.85}
                 >
                   <Text
@@ -108,35 +112,45 @@ export default function CustomAlert({
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.button, { backgroundColor: getConfirmBgColor() }]}
+                  style={[styles.button, { backgroundColor: getConfirmBgColor(), opacity: isLoading ? 0.75 : 1 }]}
                   onPress={onConfirm}
+                  disabled={isLoading}
                   activeOpacity={0.85}
                 >
-                  <Text
-                    style={[styles.buttonText, { color: '#FFFFFF' }]}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                  >
-                    {confirmText}
-                  </Text>
+                  {isLoading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text
+                      style={[styles.buttonText, { color: '#FFFFFF' }]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                    >
+                      {confirmText}
+                    </Text>
+                  )}
                 </TouchableOpacity>
               </>
             ) : (
               <TouchableOpacity
                 style={[
                   styles.button,
-                  { backgroundColor: getConfirmBgColor() },
+                  { backgroundColor: getConfirmBgColor(), opacity: isLoading ? 0.75 : 1 },
                 ]}
                 onPress={onClose}
+                disabled={isLoading}
                 activeOpacity={0.85}
               >
-                <Text
-                  style={[styles.buttonText, { color: '#FFFFFF' }]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                >
-                  {buttonText}
-                </Text>
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text
+                    style={[styles.buttonText, { color: '#FFFFFF' }]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                  >
+                    {buttonText}
+                  </Text>
+                )}
               </TouchableOpacity>
             )}
           </View>

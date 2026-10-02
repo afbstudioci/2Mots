@@ -61,24 +61,19 @@ export const useGameLogic = () => {
 
   const currentPairRef = useRef<EnrichedWordPair | null>(null);
   currentPairRef.current = wordPairs[currentIndex] || null;
-
-  const timer = useGameTimer({
-    isLoading: false, showLevelUpModal, showKevyChest, errorLimitData, userLevel,
-    userLevelRef, currentXpRef, userKevsRef, currentPairRef, sessionAnswersRef,
-    playedPairsHistoryRef, kevyKeysRef, stopBgm, playDanger,
-  });
-
-  const batches = useGameBatches({
-    user, userLevel, setUserLevel, setCurrentXp, setXpNeeded, setUserKevs,
-    setKevyKeys, kevyKeysRef, playedWordIdsRef, setWordPairs, liveRivals,
-    onBatchLoaded: () => timer.resetTimer(),
-  });
+  const timerRef = useRef<any>(null);
 
   const boosters = useGameBoosters({
-    user, userKevs, setUserKevs, currentPair: currentPairRef.current, isChecking,
-    isTimeFrozen: timer.isTimeFrozen,
-    hasTriggeredGameOver: timer.hasTriggeredGameOver, playHint, playSuccess,
-    onTimeFreezeActivated: () => timer.freezeTimer(5),
+    user,
+    userKevs,
+    setUserKevs,
+    currentPair: currentPairRef.current,
+    isChecking,
+    isTimeFrozen: timerRef.current?.isTimeFrozen ?? false,
+    hasTriggeredGameOver: timerRef.current?.hasTriggeredGameOver ?? false,
+    playHint,
+    playSuccess,
+    onTimeFreezeActivated: () => timerRef.current?.freezeTimer(5),
     onSecondChanceReset: () => {
       consecutiveErrorsRef.current = 0;
       totalErrorsRef.current = 0;
@@ -89,8 +84,34 @@ export const useGameLogic = () => {
       setCorrectChoice(null);
       setIsCorrectState(null);
       setIsChecking(false);
-      timer.resetTimer();
+      timerRef.current?.resetTimer();
     },
+  });
+
+  const timer = useGameTimer({
+    isLoading: false,
+    showLevelUpModal,
+    showKevyChest,
+    errorLimitData,
+    emergencyBoosterVisible: Boolean(boosters.emergencyBoosterType),
+    isPaused: Boolean(boosters.emergencyBoosterType) || Boolean(errorLimitData?.visible) || showLevelUpModal || showKevyChest,
+    userLevel,
+    userLevelRef,
+    currentXpRef,
+    userKevsRef,
+    currentPairRef,
+    sessionAnswersRef,
+    playedPairsHistoryRef,
+    kevyKeysRef,
+    stopBgm,
+    playDanger,
+  });
+  timerRef.current = timer;
+
+  const batches = useGameBatches({
+    user, userLevel, setUserLevel, setCurrentXp, setXpNeeded, setUserKevs,
+    setKevyKeys, kevyKeysRef, playedWordIdsRef, setWordPairs, liveRivals,
+    onBatchLoaded: () => timer.resetTimer(),
   });
 
   useEffect(() => { batches.loadInitialBatch(); boosters.syncInventory(); }, []);

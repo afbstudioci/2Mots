@@ -1,6 +1,6 @@
 // src/hooks/useGameTimer.ts
 // GESTION DU CHRONOMETRE DE JEU ET FINALISATION SECURISEE DE SESSION
-// Standard : Bank Grade (Strict <= 270 lignes, Sans Emojis)
+// Standard : Bank Grade (Strict <= 270 lignes, Sans Emojis, Typographie Soignée)
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
@@ -23,6 +23,8 @@ interface UseGameTimerProps {
   showLevelUpModal: boolean;
   showKevyChest?: boolean;
   errorLimitData: any;
+  emergencyBoosterVisible?: boolean;
+  isPaused?: boolean;
   userLevel?: number;
   userLevelRef?: React.MutableRefObject<number>;
   currentXpRef?: React.MutableRefObject<number>;
@@ -40,6 +42,8 @@ export const useGameTimer = ({
   showLevelUpModal,
   showKevyChest = false,
   errorLimitData,
+  emergencyBoosterVisible = false,
+  isPaused = false,
   userLevel = 1,
   userLevelRef,
   currentXpRef,
@@ -67,6 +71,17 @@ export const useGameTimer = ({
   const hasTriggeredGameOver = useRef<boolean>(false);
   const backgroundTimeRef = useRef<number | null>(null);
   const appState = useRef<AppStateStatus>(AppState.currentState);
+
+  const isTimerPaused = Boolean(
+    isLoading ||
+    showLevelUpModal ||
+    showKevyChest ||
+    errorLimitData?.visible ||
+    emergencyBoosterVisible ||
+    isPaused
+  );
+  const isTimerPausedRef = useRef<boolean>(isTimerPaused);
+  isTimerPausedRef.current = isTimerPaused;
 
   const triggerGameOver = useCallback(
     (reason?: string) => {
@@ -152,7 +167,7 @@ export const useGameTimer = ({
     lastTickTimeRef.current = Date.now();
 
     timerIntervalRef.current = setInterval(() => {
-      if (hasTriggeredGameOver.current || errorLimitData?.visible || showLevelUpModal || showKevyChest) {
+      if (hasTriggeredGameOver.current || isTimerPausedRef.current) {
         lastTickTimeRef.current = Date.now();
         return;
       }
@@ -183,15 +198,18 @@ export const useGameTimer = ({
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
-  }, [isLoading, playDanger, triggerGameOver, errorLimitData?.visible, showLevelUpModal, showKevyChest]);
+  }, [isLoading, playDanger, triggerGameOver, isTimerPaused]);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
-      if (appState.current.match(/inactive|background/) && next === 'active' && backgroundTimeRef.current) {
-        const elapsed = Date.now() - backgroundTimeRef.current;
+      if (appState.current.match(/inactive|background/) && next === 'active') {
+        const bgTime = backgroundTimeRef.current;
         backgroundTimeRef.current = null;
         lastTickTimeRef.current = Date.now();
-        if (!showLevelUpModal && !errorLimitData?.visible && Date.now() >= frozenUntilRef.current) {
+
+        // Ne soustrait pas le temps ecoule si le jeu etait en pause (pub, modale joker, niveau franchi)
+        if (bgTime && !isTimerPausedRef.current && Date.now() >= frozenUntilRef.current) {
+          const elapsed = Date.now() - bgTime;
           timeLeftMsRef.current = Math.max(0, timeLeftMsRef.current - elapsed);
           const rem = Math.ceil(timeLeftMsRef.current / 1000);
           setTimeLeft(rem);
@@ -200,14 +218,15 @@ export const useGameTimer = ({
           }
         }
       }
-      if (next.match(/inactive|background/)) backgroundTimeRef.current = Date.now();
+      if (next.match(/inactive|background/)) {
+        backgroundTimeRef.current = Date.now();
+      }
       appState.current = next;
     });
     return () => sub.remove();
-  }, [triggerGameOver, showLevelUpModal, errorLimitData?.visible]);
+  }, [triggerGameOver]);
 
   const addTimeMs = (extraMs: number) => {
-    // Immunite complete contre les penalites de temps si le chrono est gele
     if (extraMs < 0 && Date.now() < frozenUntilRef.current) {
       return;
     }

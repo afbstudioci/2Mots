@@ -202,6 +202,7 @@ export default function ShopScreen() {
         title={alertConfig.title}
         message={alertConfig.message}
         type={alertConfig.type}
+        isLoading={alertConfig.isLoading || isProcessingPayment}
         buttonText={alertConfig.buttonText}
         confirmText={alertConfig.confirmText}
         onConfirm={alertConfig.onConfirm}
