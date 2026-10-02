@@ -1,4 +1,4 @@
-﻿//src/screens/ContactScreen.tsx
+//src/screens/ContactScreen.tsx
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,7 +23,7 @@ const DEFAULT_CONFIG: ContactConfig = {
 };
 
 export default function ContactScreen() {
-  const { themeColors, isDark } = useTheme();
+  const { themeColors } = useTheme();
   const navigation = useNavigation();
   const [config, setConfig] = useState<ContactConfig>(DEFAULT_CONFIG);
   const [loading, setLoading] = useState(false);
@@ -34,15 +34,20 @@ export default function ContactScreen() {
 
   const fetchConfig = async () => {
     try {
+      setLoading(true);
       const response = await api.get('/config');
       if (response.data?.data?.contact) {
-        setConfig((prev) => ({
-          ...prev,
-          ...response.data.data.contact,
-        }));
+        setConfig({
+          facebook: response.data.data.contact.facebook || DEFAULT_CONFIG.facebook,
+          whatsapp: response.data.data.contact.whatsapp || DEFAULT_CONFIG.whatsapp,
+          phone: response.data.data.contact.phone || DEFAULT_CONFIG.phone,
+          email: response.data.data.contact.email || DEFAULT_CONFIG.email,
+        });
       }
     } catch {
-      // Conserve la configuration par défaut en cas d'absence de réseau
+      // Conserve la configuration par defaut
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -51,16 +56,16 @@ export default function ContactScreen() {
 
     switch (type) {
       case 'whatsapp':
-        targetUrl = config.whatsapp || 'https://wa.me/2250700000000';
+        targetUrl = config.whatsapp || DEFAULT_CONFIG.whatsapp;
         break;
       case 'facebook':
-        targetUrl = config.facebook || 'https://www.facebook.com';
+        targetUrl = config.facebook || DEFAULT_CONFIG.facebook;
         break;
       case 'phone':
-        targetUrl = `tel:${config.phone || '+2250700000000'}`;
+        targetUrl = `tel:${config.phone || DEFAULT_CONFIG.phone}`;
         break;
       case 'email':
-        targetUrl = `mailto:${config.email || 'afbstudio@gmail.com'}?subject=Support%202Mots`;
+        targetUrl = `mailto:${config.email || DEFAULT_CONFIG.email}?subject=Support%202Mots`;
         break;
       default:
         return;
@@ -116,7 +121,7 @@ export default function ContactScreen() {
         </Text>
 
         {loading ? (
-          <ActivityIndicator size="large" color={themeColors.primary} style={styles.loader} />
+          <ActivityIndicator size="large" color={colors.coral} style={styles.loader} />
         ) : (
           <View style={styles.cardsContainer}>
             <ContactCard
@@ -129,7 +134,7 @@ export default function ContactScreen() {
             <ContactCard
               icon="mail"
               title="Email officiel"
-              subtitle="afbstudio@gmail.com"
+              subtitle={config.email || 'contact2mots@gmail.com'}
               type="email"
               color={colors.coral}
             />
@@ -143,7 +148,7 @@ export default function ContactScreen() {
             <ContactCard
               icon="call"
               title="Téléphone"
-              subtitle="Appel direct"
+              subtitle={config.phone || '+2250768388770'}
               type="phone"
               color={colors.mint}
             />
