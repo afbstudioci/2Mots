@@ -16,10 +16,10 @@ interface ContactConfig {
 }
 
 const DEFAULT_CONFIG: ContactConfig = {
-  facebook: 'https://www.facebook.com',
-  whatsapp: 'https://wa.me/2250700000000',
-  phone: '+2250700000000',
-  email: 'afbstudio@gmail.com',
+  facebook: 'https://www.facebook.com/profile.php?id=61572155674109',
+  whatsapp: 'https://wa.me/qr/DLQCUHPIVBYLE1',
+  phone: '+2250768388770',
+  email: 'contact2mots@gmail.com',
 };
 
 export default function ContactScreen() {

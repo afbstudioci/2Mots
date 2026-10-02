@@ -1,6 +1,6 @@
-﻿//src/components/shop/ShopRowItem.tsx
+//src/components/shop/ShopRowItem.tsx
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { spacing, shadows, borderRadius, colors } from '../../theme/theme';
@@ -12,6 +12,7 @@ interface ShopRowItemProps {
   priceKevs: number;
   icon: any;
   accentColor?: string;
+  isLoading?: boolean;
   onPressItem?: () => void;
   onBuy: () => void;
 }
@@ -31,6 +32,7 @@ export default function ShopRowItem({
   priceKevs,
   icon,
   accentColor,
+  isLoading = false,
   onPressItem,
   onBuy,
 }: ShopRowItemProps) {
@@ -55,6 +57,7 @@ export default function ShopRowItem({
         shadows.soft(isDark),
       ]}
       onPress={onPressItem || onBuy}
+      disabled={isLoading}
       activeOpacity={0.88}
     >
       <View style={[styles.itemIconBox, { backgroundColor: finalBg }]}>
@@ -69,12 +72,19 @@ export default function ShopRowItem({
         </Text>
       </View>
       <TouchableOpacity
-        style={[styles.kevsBuyBtn, { backgroundColor: finalColor }]}
+        style={[styles.kevsBuyBtn, { backgroundColor: finalColor, opacity: isLoading ? 0.75 : 1 }]}
         onPress={onBuy}
+        disabled={isLoading}
         activeOpacity={0.85}
       >
-        <Text style={styles.kevsBuyBtnText}>{priceKevs}</Text>
-        <KevIcon size={14} style={{ marginLeft: 5 }} />
+        {isLoading ? (
+          <ActivityIndicator size="small" color="#FFF" />
+        ) : (
+          <>
+            <Text style={styles.kevsBuyBtnText}>{priceKevs}</Text>
+            <KevIcon size={14} style={{ marginLeft: 5 }} />
+          </>
+        )}
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -122,6 +132,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     flexShrink: 0,
     minWidth: 70,
+    minHeight: 38,
   },
   kevsBuyBtnText: {
     color: '#FFF',

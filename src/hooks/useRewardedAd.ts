@@ -3,6 +3,7 @@
 // Standard : Bank Grade / Clean Architecture (Strict <= 270 lignes, Sans Emojis)
 
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { AppState } from 'react-native';
 import mobileAds, {
   RewardedAd,
   RewardedAdEventType,
@@ -32,6 +33,7 @@ class AdRewardManager {
 
   private constructor() {
     this.initSdk();
+    this.setupAppStateListener();
   }
 
   public static getInstance(): AdRewardManager {
@@ -52,6 +54,14 @@ class AdRewardManager {
         this.isInitialized = true;
         this.preloadAd();
       });
+  }
+
+  private setupAppStateListener(): void {
+    AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active' && !this.isLoaded && !this.isLoading) {
+        this.preloadAd();
+      }
+    });
   }
 
   public subscribe(subscriber: AdStateSubscriber): () => void {
@@ -76,10 +86,7 @@ class AdRewardManager {
     }
 
     this.isLoading = true;
-    if (forceTest) {
-      this.isFallback = true;
-    }
-
+    if (forceTest) this.isFallback = true;
     this.notify();
 
     try {
@@ -91,7 +98,7 @@ class AdRewardManager {
         requestNonPersonalizedAdsOnly: false,
       });
 
-      const unsubLoaded = ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
+      ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
         this.isLoaded = true;
         this.isLoading = false;
         this.retryAttempt = 0;
@@ -105,23 +112,21 @@ class AdRewardManager {
         }
       });
 
-      const unsubEarned = ad.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
+      ad.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
         if (this.pendingRequest) {
           this.pendingRequest.onEarned();
           this.pendingRequest = null;
         }
       });
 
-      const unsubClosed = ad.addAdEventListener(AdEventType.CLOSED, () => {
+      ad.addAdEventListener(AdEventType.CLOSED, () => {
         this.isLoaded = false;
         this.rewardedAd = null;
         this.notify();
-        setTimeout(() => {
-          this.preloadAd();
-        }, 1200);
+        setTimeout(() => this.preloadAd(), 800);
       });
 
-      const unsubError = ad.addAdEventListener(AdEventType.ERROR, (error) => {
+      ad.addAdEventListener(AdEventType.ERROR, (error) => {
         this.isLoaded = false;
         this.isLoading = false;
         this.rewardedAd = null;
@@ -138,9 +143,7 @@ class AdRewardManager {
           const req = this.pendingRequest;
           this.pendingRequest = null;
           if (req.onError) {
-            req.onError(
-              error || new Error('La vidéo publicitaire est momentanément indisponible.')
-            );
+            req.onError(error || new Error('La vidéo publicitaire est momentanément indisponible.'));
           }
         }
 
@@ -160,10 +163,8 @@ class AdRewardManager {
   private scheduleRetry(): void {
     if (this.retryTimeout) clearTimeout(this.retryTimeout);
     this.retryAttempt += 1;
-    const delay = Math.min(30000, 4000 * Math.pow(1.8, Math.min(this.retryAttempt, 4)));
-    this.retryTimeout = setTimeout(() => {
-      this.preloadAd();
-    }, delay);
+    const delay = Math.min(15000, 2000 * Math.pow(1.5, Math.min(this.retryAttempt, 4)));
+    this.retryTimeout = setTimeout(() => this.preloadAd(), delay);
   }
 
   private executeShow(ad: RewardedAd, req: PendingShowRequest): void {
@@ -188,9 +189,7 @@ class AdRewardManager {
     }
 
     this.pendingRequest = req;
-    if (!this.isLoading) {
-      this.preloadAd();
-    }
+    if (!this.isLoading) this.preloadAd();
 
     if (this.requestTimeout) clearTimeout(this.requestTimeout);
     this.requestTimeout = setTimeout(() => {
@@ -216,12 +215,8 @@ export const useRewardedAd = () => {
   const [state, setState] = useState(manager.getState());
 
   useEffect(() => {
-    const unsubscribe = manager.subscribe((newState) => {
-      setState(newState);
-    });
-    return () => {
-      unsubscribe();
-    };
+    const unsubscribe = manager.subscribe((newState) => setState(newState));
+    return () => unsubscribe();
   }, [manager]);
 
   const showRewardedAd = useCallback(

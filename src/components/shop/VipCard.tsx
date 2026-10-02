@@ -1,6 +1,6 @@
-﻿//src/components/shop/VipCard.tsx
+//src/components/shop/VipCard.tsx
 import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { borderRadius, spacing, shadows } from '../../theme/theme';
@@ -13,10 +13,11 @@ interface VipCardProps {
     perks: string[];
   };
   isVip: boolean;
+  isLoading?: boolean;
   onBuy: () => void;
 }
 
-export default function VipCard({ vip, isVip, onBuy }: VipCardProps) {
+export default function VipCard({ vip, isVip, isLoading = false, onBuy }: VipCardProps) {
   const { themeColors, isDark } = useTheme();
   const glowAnim = useRef(new Animated.Value(0.4)).current;
 
@@ -64,14 +65,21 @@ export default function VipCard({ vip, isVip, onBuy }: VipCardProps) {
       </View>
 
       <TouchableOpacity
-        style={[styles.vipButton, { backgroundColor: '#F59E0B' }]}
+        style={[styles.vipButton, { backgroundColor: '#F59E0B', opacity: isLoading ? 0.75 : 1 }]}
         onPress={onBuy}
+        disabled={isLoading || isVip}
         activeOpacity={0.85}
       >
-        <Ionicons name={isVip ? "shield-checkmark" : "ribbon"} size={18} color="#FFF" style={{ marginRight: 6 }} />
-        <Text style={styles.vipButtonText}>
-          {isVip ? 'MEMBRE VIP ACTIF' : 'DEVENIR VIP (2,99 €)'}
-        </Text>
+        {isLoading ? (
+          <ActivityIndicator size="small" color="#FFF" />
+        ) : (
+          <>
+            <Ionicons name={isVip ? "shield-checkmark" : "ribbon"} size={18} color="#FFF" style={{ marginRight: 6 }} />
+            <Text style={styles.vipButtonText}>
+              {isVip ? 'MEMBRE VIP ACTIF' : 'DEVENIR VIP (2,99 €)'}
+            </Text>
+          </>
+        )}
       </TouchableOpacity>
     </Animated.View>
   );

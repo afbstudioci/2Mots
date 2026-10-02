@@ -1,59 +1,69 @@
-﻿//src/components/shop/KevsPacksGrid.tsx
+//src/components/shop/KevsPacksGrid.tsx
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { colors, spacing, shadows, borderRadius } from '../../theme/theme';
 import KevIcon from '../common/KevIcon';
 
 interface KevsPacksGridProps {
   packs: any[];
+  processingPackId?: string | null;
   onPressPack?: (pack: any) => void;
   onBuy: (pack: any) => void;
 }
 
-export default function KevsPacksGrid({ packs, onPressPack, onBuy }: KevsPacksGridProps) {
+export default function KevsPacksGrid({ packs, processingPackId, onPressPack, onBuy }: KevsPacksGridProps) {
   const { themeColors } = useTheme();
 
   return (
     <View style={styles.packsGrid}>
-      {packs?.map((pack) => (
-        <TouchableOpacity
-          key={pack.id}
-          style={[
-            styles.packCard,
-            { backgroundColor: themeColors.card, borderColor: pack.tag ? colors.coral : themeColors.cardBorder },
-          ]}
-          onPress={() => (onPressPack ? onPressPack(pack) : onBuy(pack))}
-          activeOpacity={0.88}
-        >
-          {pack.tag && (
-            <View style={[styles.tagBadge, { backgroundColor: colors.coral }]}>
-              <Text style={styles.tagText}>{pack.tag}</Text>
-            </View>
-          )}
-          <View style={[styles.packIconBox, { backgroundColor: colors.coral + '15' }]}>
-            <KevIcon size={28} />
-          </View>
-          <Text style={[styles.packTitle, { color: themeColors.text }]} numberOfLines={1}>
-            {pack.title}
-          </Text>
-          <Text style={[styles.packAmount, { color: colors.coral }]}>
-            {pack.amount?.toLocaleString()}
-          </Text>
-          {pack.bonus > 0 ? (
-            <Text style={styles.packBonus}>+{pack.bonus} OFFERTS</Text>
-          ) : (
-            <View style={{ height: 16 }} />
-          )}
+      {packs?.map((pack) => {
+        const isThisPackProcessing = processingPackId === pack.id;
+        return (
           <TouchableOpacity
-            style={styles.priceBtn}
-            onPress={() => onBuy(pack)}
-            activeOpacity={0.85}
+            key={pack.id}
+            style={[
+              styles.packCard,
+              { backgroundColor: themeColors.card, borderColor: pack.tag ? colors.coral : themeColors.cardBorder },
+            ]}
+            onPress={() => (onPressPack ? onPressPack(pack) : onBuy(pack))}
+            disabled={Boolean(processingPackId)}
+            activeOpacity={0.88}
           >
-            <Text style={styles.priceBtnText}>{pack.priceEur}</Text>
+            {pack.tag && (
+              <View style={[styles.tagBadge, { backgroundColor: colors.coral }]}>
+                <Text style={styles.tagText}>{pack.tag}</Text>
+              </View>
+            )}
+            <View style={[styles.packIconBox, { backgroundColor: colors.coral + '15' }]}>
+              <KevIcon size={28} />
+            </View>
+            <Text style={[styles.packTitle, { color: themeColors.text }]} numberOfLines={1}>
+              {pack.title}
+            </Text>
+            <Text style={[styles.packAmount, { color: colors.coral }]}>
+              {pack.amount?.toLocaleString()}
+            </Text>
+            {pack.bonus > 0 ? (
+              <Text style={styles.packBonus}>+{pack.bonus} OFFERTS</Text>
+            ) : (
+              <View style={{ height: 16 }} />
+            )}
+            <TouchableOpacity
+              style={[styles.priceBtn, { opacity: isThisPackProcessing ? 0.75 : 1 }]}
+              onPress={() => onBuy(pack)}
+              disabled={Boolean(processingPackId)}
+              activeOpacity={0.85}
+            >
+              {isThisPackProcessing ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <Text style={styles.priceBtnText}>{pack.priceEur}</Text>
+              )}
+            </TouchableOpacity>
           </TouchableOpacity>
-        </TouchableOpacity>
-      ))}
+        );
+      })}
     </View>
   );
 }
@@ -116,6 +126,8 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     width: '100%',
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 28,
     marginTop: 4,
   },
   priceBtnText: {

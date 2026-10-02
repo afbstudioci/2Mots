@@ -1,6 +1,6 @@
-﻿//src/components/shop/ShopItemDetailModal.tsx
+//src/components/shop/ShopItemDetailModal.tsx
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Animated, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { colors, spacing, borderRadius } from '../../theme/theme';
@@ -8,6 +8,7 @@ import KevIcon from '../common/KevIcon';
 
 interface ShopItemDetailModalProps {
   visible: boolean;
+  isLoading?: boolean;
   item: {
     id: string;
     title: string;
@@ -28,6 +29,7 @@ interface ShopItemDetailModalProps {
 
 export default function ShopItemDetailModal({
   visible,
+  isLoading = false,
   item,
   onClose,
   onBuy,
@@ -112,7 +114,7 @@ export default function ShopItemDetailModal({
             </View>
           ) : (
             <Text style={[styles.desc, { color: themeColors.textSecondary }]}>
-              {item.desc || "Article exclusif 2Mots pour améliorer vos performances en partie."}
+              {item.desc || "Article exclusif 2Mots pour booster vos parties."}
             </Text>
           )}
 
@@ -131,24 +133,26 @@ export default function ShopItemDetailModal({
           </View>
 
           <TouchableOpacity
-            style={[styles.buyBtn, { backgroundColor: accent }]}
-            onPress={() => {
-              onClose();
-              onBuy(item);
-            }}
+            style={[styles.buyBtn, { backgroundColor: accent, opacity: isLoading ? 0.75 : 1 }]}
+            onPress={() => onBuy(item)}
+            disabled={isLoading}
             activeOpacity={0.88}
           >
-            <View style={styles.buyBtnContent}>
-              {item.priceEur ? (
-                <Text style={styles.buyBtnText}>{`COMMANDER (${item.priceEur})`}</Text>
-              ) : (
-                <>
-                  <Text style={styles.buyBtnText}>{`OBTENIR (${item.priceKevs}`}</Text>
-                  <KevIcon size={16} style={{ marginLeft: 4, marginRight: 2 }} />
-                  <Text style={styles.buyBtnText}>{`)`}</Text>
-                </>
-              )}
-            </View>
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : (
+              <View style={styles.buyBtnContent}>
+                {item.priceEur ? (
+                  <Text style={styles.buyBtnText}>{`COMMANDER (${item.priceEur})`}</Text>
+                ) : (
+                  <>
+                    <Text style={styles.buyBtnText}>{`OBTENIR (${item.priceKevs}`}</Text>
+                    <KevIcon size={16} style={{ marginLeft: 4, marginRight: 2 }} />
+                    <Text style={styles.buyBtnText}>{`)`}</Text>
+                  </>
+                )}
+              </View>
+            )}
           </TouchableOpacity>
         </Animated.View>
       </TouchableOpacity>
@@ -172,9 +176,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     elevation: 12,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
   },
   closeBtn: {
     position: 'absolute',

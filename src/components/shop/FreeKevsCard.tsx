@@ -1,6 +1,6 @@
 // src/components/shop/FreeKevsCard.tsx
 // CARTE BOUTIQUE "KEVS GRATUITS" AVEC RECOMPENSE PUBLICITAIRE ADMOB
-// Standard : Bank Grade (Strict <= 270 lignes, Sans Emojis)
+// Standard : Bank Grade (Strict <= 270 lignes, Sans Emojis, Typographie Française Soignée)
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
@@ -10,6 +10,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { colors, spacing, borderRadius } from '../../theme/theme';
 import { useRewardedAd } from '../../hooks/useRewardedAd';
 import KevIcon from '../common/KevIcon';
+import CustomAlert from '../common/CustomAlert';
 import api from '../../services/api';
 
 interface FreeKevsCardProps {
@@ -36,11 +37,22 @@ const DEFAULT_STATUS: AdStatus = {
 
 export const FreeKevsCard: React.FC<FreeKevsCardProps> = ({ onRewardClaimed }) => {
   const { themeColors } = useTheme();
-  const { showRewardedAd } = useRewardedAd();
+  const { showRewardedAd, reloadAd } = useRewardedAd();
   const [status, setStatus] = useState<AdStatus>(DEFAULT_STATUS);
   const [cooldownSec, setCooldownSec] = useState<number>(0);
   const [isClaiming, setIsClaiming] = useState<boolean>(false);
-  const [feedback, setFeedback] = useState<{ message: string; isError: boolean } | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type?: 'info' | 'error' | 'success';
+    buttonText?: string;
+    confirmText?: string;
+    onConfirm?: () => void;
+  }>({ visible: false, title: '', message: '' });
+
   const timerRef = useRef<any>(null);
 
   const fetchStatus = useCallback(async () => {
@@ -50,9 +62,7 @@ export const FreeKevsCard: React.FC<FreeKevsCardProps> = ({ onRewardClaimed }) =
         setStatus(res.data.data);
         setCooldownSec(res.data.data.remainingCooldownSeconds || 0);
       }
-    } catch {
-      // Mode dégradé sans blocage de l'interface
-    }
+    } catch { }
   }, []);
 
   useEffect(() => {
@@ -84,7 +94,7 @@ export const FreeKevsCard: React.FC<FreeKevsCardProps> = ({ onRewardClaimed }) =
     } catch {}
 
     setIsClaiming(true);
-    setFeedback(null);
+    setSuccessMsg(null);
 
     showRewardedAd(
       async () => {
@@ -95,23 +105,35 @@ export const FreeKevsCard: React.FC<FreeKevsCardProps> = ({ onRewardClaimed }) =
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } catch {}
             onRewardClaimed(res.data.data.totalKevs);
-            setFeedback({ message: '+25 Kevs crédités avec succès !', isError: false });
+            setSuccessMsg('+25 Kevs crédités avec succès !');
             fetchStatus();
           }
         } catch (error: any) {
-          setFeedback({
-            message: error.response?.data?.message || 'Erreur lors de la réclamation.',
-            isError: true,
+          setAlertConfig({
+            visible: true,
+            title: 'Erreur de réclamation',
+            message: error.response?.data?.message || 'Impossible de créditer votre récompense pour le moment.',
+            type: 'error',
+            buttonText: 'Fermer',
           });
         } finally {
           setIsClaiming(false);
         }
       },
-      (error: any) => {
+      () => {
         setIsClaiming(false);
-        setFeedback({
-          message: error?.message || 'Vidéo momentanément indisponible. Réessayez.',
-          isError: true,
+        reloadAd();
+        setAlertConfig({
+          visible: true,
+          title: 'Vidéo indisponible',
+          message: "La vidéo publicitaire n'a pas pu se charger à temps. Vérifiez votre connexion Internet et réessayez.",
+          type: 'error',
+          buttonText: 'Plus tard',
+          confirmText: 'Réessayer',
+          onConfirm: () => {
+            setAlertConfig({ visible: false, title: '', message: '' });
+            setTimeout(() => handleWatchAd(), 300);
+          },
         });
       }
     );
@@ -153,10 +175,8 @@ export const FreeKevsCard: React.FC<FreeKevsCardProps> = ({ onRewardClaimed }) =
         </View>
       </View>
 
-      {feedback ? (
-        <Text style={[styles.feedback, { color: feedback.isError ? colors.coral : colors.mint }]}>
-          {feedback.message}
-        </Text>
+      {successMsg ? (
+        <Text style={[styles.feedback, { color: colors.mint }]}>{successMsg}</Text>
       ) : null}
 
       <TouchableOpacity
@@ -167,7 +187,7 @@ export const FreeKevsCard: React.FC<FreeKevsCardProps> = ({ onRewardClaimed }) =
           styles.actionButton,
           {
             backgroundColor: isInCooldown || isCompleted ? themeColors.surface : colors.coral,
-            opacity: isClaiming ? 0.7 : 1,
+            opacity: isClaiming ? 0.75 : 1,
           },
         ]}
       >
@@ -192,6 +212,17 @@ export const FreeKevsCard: React.FC<FreeKevsCardProps> = ({ onRewardClaimed }) =
           </View>
         )}
       </TouchableOpacity>
+
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        buttonText={alertConfig.buttonText}
+        confirmText={alertConfig.confirmText}
+        onConfirm={alertConfig.onConfirm}
+        onClose={() => setAlertConfig({ visible: false, title: '', message: '' })}
+      />
     </View>
   );
 };
@@ -239,7 +270,7 @@ const styles = StyleSheet.create({
   },
   feedback: {
     fontFamily: 'Poppins_600SemiBold',
-    fontSize: 11,
+    fontSize: 12,
     textAlign: 'center',
     marginBottom: spacing.sm,
   },
@@ -248,6 +279,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm + 4,
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 44,
   },
   buttonContent: {
     flexDirection: 'row',
@@ -259,5 +291,3 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 });
-
-

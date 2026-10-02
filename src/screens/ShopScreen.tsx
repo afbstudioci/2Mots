@@ -1,6 +1,6 @@
 // src/screens/ShopScreen.tsx
 // ECRAN DE BOUTIQUE AVEC SYNCHRONISATION EN TEMPS REEL DU SOLDE DE KEVS
-// Standard : Bank Grade (Strict <= 270 lignes, Sans Emojis)
+// Standard : Bank Grade (Strict <= 270 lignes, Sans Emojis, Typographie Française Soignée)
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
@@ -33,7 +33,14 @@ export default function ShopScreen() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [selectedDetailItem, setSelectedDetailItem] = useState<any>(null);
 
-  const { alertConfig, handleBuyWithKevs, handleInAppPurchase, closeAlert } = useShopPayment(
+  const {
+    isProcessingPayment,
+    processingItemId,
+    alertConfig,
+    handleBuyWithKevs,
+    handleInAppPurchase,
+    closeAlert,
+  } = useShopPayment(
     user,
     userKevs,
     (k) => updateUser({ kevs: k }),
@@ -104,8 +111,17 @@ export default function ShopScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={fetchShop} tintColor={colors.coral} />}
       >
-        <TouchableOpacity activeOpacity={0.9} onPress={() => setSelectedDetailItem(catalog.vip)}>
-          <VipCard vip={catalog.vip} isVip={isVip} onBuy={() => handleInAppPurchase(catalog.vip)} />
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => setSelectedDetailItem(catalog.vip)}
+          disabled={isProcessingPayment}
+        >
+          <VipCard
+            vip={catalog.vip}
+            isVip={isVip}
+            isLoading={isProcessingPayment && processingItemId === catalog.vip?.id}
+            onBuy={() => handleInAppPurchase(catalog.vip)}
+          />
         </TouchableOpacity>
 
         {!isVip && (
@@ -115,11 +131,12 @@ export default function ShopScreen() {
         <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>PACKS DE KEVS</Text>
         <KevsPacksGrid
           packs={catalog.kevsPacks}
+          processingPackId={isProcessingPayment ? processingItemId : null}
           onPressPack={(pack) => setSelectedDetailItem(pack)}
           onBuy={handleInAppPurchase}
         />
 
-        <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>BOUCLIERS DE SERIE</Text>
+        <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>BOUCLIERS DE SÉRIE</Text>
         {catalog.streaks?.map((item: any) => (
           <ShopRowItem
             key={item.id}
@@ -128,6 +145,7 @@ export default function ShopScreen() {
             priceKevs={item.priceKevs}
             icon={item.icon}
             accentColor={item.accentColor}
+            isLoading={isProcessingPayment && processingItemId === item.id}
             onPressItem={() => setSelectedDetailItem(item)}
             onBuy={() => handleBuyWithKevs(item, 'streaks')}
           />
@@ -142,6 +160,7 @@ export default function ShopScreen() {
             priceKevs={item.priceKevs}
             icon={item.icon}
             accentColor={item.accentColor}
+            isLoading={isProcessingPayment && processingItemId === item.id}
             onPressItem={() => setSelectedDetailItem(item)}
             onBuy={() => handleBuyWithKevs(item, 'boosters')}
           />
@@ -149,7 +168,7 @@ export default function ShopScreen() {
 
         {catalog.combos && catalog.combos.length > 0 && (
           <>
-            <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>PACKS COMBOS ECONOMIQUES</Text>
+            <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>PACKS COMBOS ÉCONOMIQUES</Text>
             {catalog.combos.map((item: any) => (
               <ShopRowItem
                 key={item.id}
@@ -158,6 +177,7 @@ export default function ShopScreen() {
                 priceKevs={item.priceKevs}
                 icon={item.icon}
                 accentColor={item.accentColor}
+                isLoading={isProcessingPayment && processingItemId === item.id}
                 onPressItem={() => setSelectedDetailItem(item)}
                 onBuy={() => handleBuyWithKevs(item, 'combos')}
               />
@@ -169,6 +189,7 @@ export default function ShopScreen() {
       <ShopItemDetailModal
         visible={Boolean(selectedDetailItem)}
         item={selectedDetailItem}
+        isLoading={isProcessingPayment && processingItemId === selectedDetailItem?.id}
         onClose={() => setSelectedDetailItem(null)}
         onBuy={(item) => {
           if (item.priceEur) handleInAppPurchase(item);
