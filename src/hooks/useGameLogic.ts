@@ -1,28 +1,23 @@
 // src/hooks/useGameLogic.ts
-// LOGIQUE PRINCIPALE DU JEU AVEC DEMARRAGE ULTRA-RAPIDE (5S MAX) ET CACHE HORS-LIGNE
+// LOGIQUE PRINCIPALE DU JEU AVEC GESTION SECURISEE ET FLUIDE DES ENIGMES
 // Standard : Bank Grade (Strict <= 270 lignes, Sans Emojis)
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useAudio } from './useAudio';
 import { useGameBoosters } from './useGameBoosters';
 import { useGameTimer } from './useGameTimer';
 import { useLiveRivals } from './useLiveRivals';
+import { useGameBatches } from './useGameBatches';
 import api from '../services/api';
-import { shuffleArray } from '../services/offlineVault';
-import {
-  getCachedGameBatch,
-  saveEnigmasToCache,
-  markEnigmasAsPlayed,
-  triggerSilentWakeup,
-} from '../services/enigmaCacheService';
+import { markEnigmasAsPlayed } from '../services/enigmaCacheService';
 import { EnrichedWordPair, GameAnswer } from '../types/gameTypes';
 import * as Haptics from 'expo-haptics';
 
 const normalizeStr = (s: string) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
 export const useGameLogic = () => {
-  const { user } = useAuth();
+  const { user, updateUser, updateKevs } = useAuth();
   const isVip = Boolean(user?.isVip);
   const { playSuccess, playError, playLevelUp, playHint, playDanger, stopBgm, playChest } = useAudio();
   const liveRivals = useLiveRivals();
@@ -32,7 +27,6 @@ export const useGameLogic = () => {
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [correctChoice, setCorrectChoice] = useState<string | null>(null);
   const [isCorrectState, setIsCorrectState] = useState<boolean | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isChecking, setIsChecking] = useState(false);
   const initialLevel = user?.level || 1;
   const initialNeeded = 3 + initialLevel * 2;
@@ -57,7 +51,6 @@ export const useGameLogic = () => {
   const playedWordIdsRef = useRef<string[]>([]);
   const sessionAnswersRef = useRef<GameAnswer[]>([]);
   const playedPairsHistoryRef = useRef<Map<string, any>>(new Map());
-  const isFetchingNextBatch = useRef(false);
 
   const userLevelRef = useRef(userLevel);
   userLevelRef.current = userLevel;
@@ -70,13 +63,20 @@ export const useGameLogic = () => {
   currentPairRef.current = wordPairs[currentIndex] || null;
 
   const timer = useGameTimer({
-    isLoading, showLevelUpModal, showKevyChest, errorLimitData, userLevel,
+    isLoading: false, showLevelUpModal, showKevyChest, errorLimitData, userLevel,
     userLevelRef, currentXpRef, userKevsRef, currentPairRef, sessionAnswersRef,
     playedPairsHistoryRef, kevyKeysRef, stopBgm, playDanger,
   });
 
+  const batches = useGameBatches({
+    user, userLevel, setUserLevel, setCurrentXp, setXpNeeded, setUserKevs,
+    setKevyKeys, kevyKeysRef, playedWordIdsRef, setWordPairs, liveRivals,
+    onBatchLoaded: () => timer.resetTimer(),
+  });
+
   const boosters = useGameBoosters({
     user, userKevs, setUserKevs, currentPair: currentPairRef.current, isChecking,
+    isTimeFrozen: timer.isTimeFrozen,
     hasTriggeredGameOver: timer.hasTriggeredGameOver, playHint, playSuccess,
     onTimeFreezeActivated: () => timer.freezeTimer(5),
     onSecondChanceReset: () => {
@@ -93,86 +93,8 @@ export const useGameLogic = () => {
     },
   });
 
-  const fetchNextBatch = useCallback(async () => {
-    if (isFetchingNextBatch.current) return;
-    isFetchingNextBatch.current = true;
-    try {
-      const excludeParam = playedWordIdsRef.current.slice(-25).join(',');
-      const res = await api.get(`/game/batch?exclude=${excludeParam}`, { timeout: 15000 });
-      const d = res.data?.data;
-      const { rivals, threatBehind, userRank } = res.data || {};
-      if (rivals?.length) liveRivals.setRivalData(rivals, threatBehind, userRank || 1);
-
-      let fresh = Array.isArray(d) ? d.filter((p: any) => !new Set(playedWordIdsRef.current.slice(-15)).has(p._id)) : [];
-      if (fresh.length > 0) {
-        saveEnigmasToCache(fresh).catch(() => {});
-        setWordPairs((prev) => [...prev, ...fresh.map((p: any, idx: number) => ({
-          ...p,
-          options: shuffleArray(p.options || []),
-          hasKey: typeof p.hasKey === 'boolean' ? p.hasKey : idx === 17,
-        }))]);
-      }
-    } catch {
-      const local = await getCachedGameBatch(20, userLevel);
-      if (local.length) setWordPairs((prev) => [...prev, ...local]);
-    } finally {
-      isFetchingNextBatch.current = false;
-    }
-  }, [userLevel]);
-
-  const loadInitialBatch = useCallback(async () => {
-    setIsLoading(true);
-    let resolved = false;
-
-    // Timeout de 5 secondes pour declencher le stock local si le serveur est endormi
-    const fallbackTimer = setTimeout(async () => {
-      if (!resolved) {
-        resolved = true;
-        const local = await getCachedGameBatch(30, user?.level || 1);
-        setWordPairs(local);
-        setIsLoading(false);
-        timer.resetTimer();
-        triggerSilentWakeup(user?.level || 1);
-      }
-    }, 5000);
-
-    try {
-      const res = await api.get('/game/batch', { timeout: 12000 });
-      if (!resolved) {
-        resolved = true;
-        clearTimeout(fallbackTimer);
-        const { data: d, userStats: s, rivals, threatBehind, userRank } = res.data || {};
-        if (rivals?.length) liveRivals.setRivalData(rivals, threatBehind, userRank || 1);
-        if (d?.length) {
-          saveEnigmasToCache(d).catch(() => {});
-          setWordPairs(d.map((p: any, idx: number) => ({ ...p, options: shuffleArray(p.options || []), hasKey: typeof p.hasKey === 'boolean' ? p.hasKey : idx === 17 })));
-          if (s) {
-            setUserLevel(s.level || 1); setCurrentXp(s.xp || 0);
-            setXpNeeded(s.xpNeeded || 3 + (s.level || 1) * 2); setUserKevs(s.kevs || 0);
-            if (typeof s.kevyKeys === 'number') { setKevyKeys(s.kevyKeys); kevyKeysRef.current = s.kevyKeys; }
-          }
-        } else { throw new Error('Vide'); }
-        setIsLoading(false);
-        timer.resetTimer();
-      } else {
-        // Le serveur a repondu apres les 5s : on enregistre les enigmes fraiches dans le cache
-        const fresh = res.data?.data;
-        if (fresh?.length) saveEnigmasToCache(fresh).catch(() => {});
-      }
-    } catch {
-      if (!resolved) {
-        resolved = true;
-        clearTimeout(fallbackTimer);
-        const local = await getCachedGameBatch(30, user?.level || 1);
-        setWordPairs(local);
-        setIsLoading(false);
-        timer.resetTimer();
-      }
-    }
-  }, [user]);
-
-  useEffect(() => { loadInitialBatch(); boosters.syncInventory(); }, []);
-  useEffect(() => { if (wordPairs.length && currentIndex >= wordPairs.length - 4) fetchNextBatch(); }, [currentIndex, wordPairs.length, fetchNextBatch]);
+  useEffect(() => { batches.loadInitialBatch(); boosters.syncInventory(); }, []);
+  useEffect(() => { if (wordPairs.length && currentIndex >= wordPairs.length - 4) batches.fetchNextBatch(); }, [currentIndex, wordPairs.length]);
 
   const selectChoice = (choice: string, onSuccessTransition: () => void) => {
     if (isChecking || selectedChoice !== null || timer.hasTriggeredGameOver || showKevyChest) return;
@@ -192,7 +114,7 @@ export const useGameLogic = () => {
     playedWordIdsRef.current.push(pair._id);
     markEnigmasAsPlayed([pair._id]).catch(() => {});
 
-    if (currentIndex + 4 >= wordPairs.length) fetchNextBatch();
+    if (currentIndex + 4 >= wordPairs.length) batches.fetchNextBatch();
 
     if (isCorrect) {
       consecutiveErrorsRef.current = 0;
@@ -215,7 +137,7 @@ export const useGameLogic = () => {
         setKevyKeys((prev: number) => {
           const next = Math.min(3, prev + 1);
           kevyKeysRef.current = next;
-          if (user) user.kevyKeys = next;
+          updateUser({ kevyKeys: next });
           api.post('/game/sync-keys', { kevyKeys: next }, { timeout: 3000 }).catch(() => {});
           if (next >= 3) { setTimeout(() => { setShowKevyChest(true); playChest(); }, 300); }
           return next;
@@ -230,8 +152,9 @@ export const useGameLogic = () => {
       const bonusMs = isFeverMode ? 12000 : (isFast ? 10000 : 8000);
 
       if (kevsToAdd > 0) {
-        setUserKevs((prev: number) => prev + kevsToAdd);
-        if (user) user.kevs = (user.kevs || 0) + kevsToAdd;
+        const nextKevs = (user?.kevs || userKevs || 0) + kevsToAdd;
+        setUserKevs(nextKevs);
+        updateKevs(nextKevs);
       }
       timer.setTimeWon(Math.floor(bonusMs / 1000));
       timer.addTimeMs(bonusMs);
@@ -255,14 +178,12 @@ export const useGameLogic = () => {
           setShowLevelUpModal(true);
           playLevelUp();
           const lvlKevBonus = 5 * vipMultiplier;
-          if (user) {
-            user.level = currentLvl;
-            user.xp = nextXp;
-            user.kevs = (user.kevs || 0) + lvlKevBonus;
-          }
-          api.post('/game/sync-level', { level: currentLvl, xp: nextXp, kevs: (userKevs || 0) + lvlKevBonus }, { timeout: 3000 }).catch(() => {});
-        } else if (user) {
-          user.xp = nextXp;
+          const nextKevs = (user?.kevs || userKevs || 0) + lvlKevBonus;
+          setUserKevs(nextKevs);
+          updateUser({ level: currentLvl, xp: nextXp, kevs: nextKevs });
+          api.post('/game/sync-level', { level: currentLvl, xp: nextXp, kevs: nextKevs }, { timeout: 3000 }).catch(() => {});
+        } else {
+          updateUser({ xp: nextXp });
         }
         return nextXp;
       });
@@ -298,8 +219,13 @@ export const useGameLogic = () => {
   const handleCloseLevelUp = () => { setShowLevelUpModal(false); timer.resetTimer(); };
   const handleCloseKevyChest = (gains: { kevs: number; freeze: number; hint: number; shield: number }) => {
     setShowKevyChest(false); setKevyKeys(0); kevyKeysRef.current = 0;
-    if (user) { user.kevyKeys = 0; if (gains.kevs > 0) user.kevs = (user.kevs || 0) + gains.kevs; }
-    if (gains.kevs > 0) setUserKevs((prev: number) => prev + gains.kevs);
+    const addedKevs = gains.kevs > 0 ? gains.kevs : 0;
+    const nextKevs = (user?.kevs || userKevs || 0) + addedKevs;
+    if (addedKevs > 0) setUserKevs(nextKevs);
+    updateUser({
+      kevyKeys: 0,
+      ...(addedKevs > 0 ? { kevs: nextKevs } : {}),
+    });
     if (gains.freeze > 0) boosters.addBooster('freeze', gains.freeze);
     if (gains.hint > 0) boosters.addBooster('hint', gains.hint);
     if (gains.shield > 0) boosters.addBooster('shield', gains.shield);
@@ -309,11 +235,11 @@ export const useGameLogic = () => {
 
   return {
     wordPairs, currentIndex, setCurrentIndex, timeLeft: timer.timeLeft, maxTime: timer.maxTime,
-    selectedChoice, correctChoice, isCorrectState, isFastCombo, isFeverMode, isLoading, errorMessage: null, isChecking,
-    eliminatedChoices: boosters.eliminatedChoices, isHintUsed: boosters.isHintUsed,
+    selectedChoice, correctChoice, isCorrectState, isFastCombo, isFeverMode, isLoading: batches.isLoading,
+    errorMessage: null, isChecking, eliminatedChoices: boosters.eliminatedChoices, isHintUsed: boosters.isHintUsed,
     handleUseHint: boosters.handleUseHint, handleUseTimeFreeze: boosters.handleUseTimeFreeze,
     handleUseSuperClue: boosters.handleUseSuperClue, handleUseSecondChance: boosters.handleUseSecondChance,
-    isTimeFrozen: timer.isTimeFrozen || boosters.isTimeFrozen, timeFreezeCount: boosters.timeFreezeCount,
+    isTimeFrozen: timer.isTimeFrozen, timeFreezeCount: boosters.timeFreezeCount,
     superClueCount: boosters.superClueCount, secondChanceCount: boosters.secondChanceCount,
     showNoKevsModal: boosters.showNoKevsModal, setShowNoKevsModal: boosters.setShowNoKevsModal,
     emergencyBoosterType: boosters.emergencyBoosterType,

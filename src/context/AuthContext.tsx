@@ -1,10 +1,13 @@
-//src/context/AuthContext.tsx
-import React, { createContext, useState, useEffect, useContext } from 'react';
+// src/context/AuthContext.tsx
+// CONTEXTE D'AUTHENTIFICATION ET SOURCE DE VERITE UTILISATEUR TEMPS REEL
+// Standard : Bank Grade (Strict <= 270 lignes, Sans Emojis)
+
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import { DeviceEventEmitter } from 'react-native';
 import api from '../services/api';
+import socketService from '../services/socketService';
 import { saveTokens, saveUser, getToken, getUser, clearTokens } from '../services/authStorage';
 import { registerForPushNotificationsAsync } from '../services/notificationService';
-
 import { parseApiError } from '../utils/apiError';
 
 interface AuthContextData {
@@ -17,6 +20,8 @@ interface AuthContextData {
   deleteAccount: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateProfile: (formData: any) => Promise<void>;
+  updateKevs: (newKevs: number) => void;
+  updateUser: (partial: Partial<any>) => void;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -24,6 +29,19 @@ const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  const updateUser = useCallback((partial: Partial<any>) => {
+    setUser((prev: any) => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...partial };
+      saveUser(updated).catch(() => {});
+      return updated;
+    });
+  }, []);
+
+  const updateKevs = useCallback((newKevs: number) => {
+    updateUser({ kevs: Math.max(0, newKevs) });
+  }, [updateUser]);
 
   useEffect(() => {
     let isMounted = true;
@@ -51,11 +69,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
+    const handleSocketBalance = (data: any) => {
+      if (!data || !isMounted) return;
+      updateUser(data);
+    };
+
+    socketService.on('user_balance_updated', handleSocketBalance);
+
     return () => {
       isMounted = false;
       authFailedListener.remove();
+      socketService.off('user_balance_updated', handleSocketBalance);
     };
-  }, []);
+  }, [updateUser]);
 
   const syncPushToken = async () => {
     try {
@@ -65,7 +91,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           token,
           platform: 'android',
         }).catch(() => api.post('/auth/fcm-token', { fcmToken: token }));
-        console.log('[PUSH] Token synchronise avec succes :', token);
       }
     } catch (err: any) {
       console.warn('[PUSH] Erreur synchronisation push-token backend :', err?.message);
@@ -80,7 +105,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await api.get('/auth/me');
       const freshUser = response.data?.data?.user;
       const currentToken = await getToken();
-      // On ne sauvegarde QUE si la session est toujours active après le retour de l'API
       if (freshUser && currentToken) {
         await saveUser(freshUser);
         setUser(freshUser);
@@ -93,7 +117,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await api.post('/auth/login', credentials);
       const { user: userData, accessToken, refreshToken } = response.data.data;
-
       await saveTokens(accessToken, refreshToken);
       await saveUser(userData);
       setUser(userData);
@@ -112,13 +135,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await api.post('/auth/google', googleData);
       const { user: userData, accessToken, refreshToken } = response.data.data;
-
       await saveTokens(accessToken, refreshToken);
       await saveUser(userData);
       setUser(userData);
       syncPushToken();
     } catch (error: any) {
-      const parsed = parseApiError(error, 'Connexion Google échouée', 'Erreur lors de la connexion Google.');
+      const parsed = parseApiError(error, 'Connexion Google echouee', 'Erreur lors de la connexion Google.');
       const err = new Error(parsed.message);
       (err as any).title = parsed.title;
       throw err;
@@ -129,13 +151,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await api.post('/auth/register', userData);
       const { user: newUserData, accessToken, refreshToken } = response.data.data;
-
       await saveTokens(accessToken, refreshToken);
       await saveUser(newUserData);
       setUser(newUserData);
       syncPushToken();
     } catch (error: any) {
-      const parsed = parseApiError(error, "Erreur d'inscription", "Erreur lors de la création du compte.");
+      const parsed = parseApiError(error, 'Erreur d\'inscription', 'Erreur lors de la creation du compte.');
       const err = new Error(parsed.message);
       (err as any).title = parsed.title;
       throw err;
@@ -149,16 +170,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateProfile = async (formData: any) => {
     try {
       const response = await api.put('/auth/me', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
       const updatedUser = response.data.data.user;
-
       await saveUser(updatedUser);
       setUser(updatedUser);
     } catch (error: any) {
-      const parsed = parseApiError(error, 'Mise à jour échouée', 'Erreur lors de la mise à jour du profil.');
+      const parsed = parseApiError(error, 'Mise a jour echouee', 'Erreur lors de la mise a jour du profil.');
       const err = new Error(parsed.message);
       (err as any).title = parsed.title;
       throw err;
@@ -194,10 +212,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           timeout: 2000,
         }).catch(() => {});
       }
-      await clearTokens();
-      setUser(null);
     } catch (e) {
-      console.warn('[AUTH] Erreur déconnexion:', e);
+      console.warn('[AUTH] Erreur deconnexion:', e);
+    } finally {
       await clearTokens();
       setUser(null);
     }
@@ -215,6 +232,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         deleteAccount,
         refreshProfile,
         updateProfile,
+        updateKevs,
+        updateUser,
       }}
     >
       {children}

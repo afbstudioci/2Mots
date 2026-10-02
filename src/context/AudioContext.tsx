@@ -10,7 +10,7 @@ interface AudioContextData {
   playError: () => void;
   playDanger: () => void;
   playLevelUp: () => void;
-  playGameOver: (hasScore: boolean) => void;
+  playGameOver: (hasScore?: boolean) => void;
   stopGameOver: () => void;
   playHint: () => void;
   playChest: () => void;
@@ -138,7 +138,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const playBuzzer = React.useCallback(() => playEffect('buzzer', 1.0, 700), [playEffect]);
   const playChest = React.useCallback(() => playEffect('chest', 1.0, 1500), [playEffect]);
 
-  const playGameOver = React.useCallback((hasScore: boolean) => {
+  const playGameOver = React.useCallback((hasScore: boolean = true) => {
     stopBgm();
     playEffect(hasScore ? 'gameover_score' : 'gameover_zero', 1.0, 0);
   }, [stopBgm, playEffect]);

@@ -1,4 +1,7 @@
-//src/hooks/useShopPayment.ts
+// src/hooks/useShopPayment.ts
+// GESTION DES TRANSACTIONS ET PAIEMENTS BOUTIQUE
+// Standard : Bank Grade (Strict <= 270 lignes, Sans Emojis)
+
 import { useState, useEffect } from 'react';
 import { initGooglePlayBilling, purchaseGooglePlayItem, listenToBillingEvents } from '../services/googlePlayBillingService';
 import * as Haptics from 'expo-haptics';
@@ -9,7 +12,8 @@ export function useShopPayment(
   userKevs: number,
   setUserKevs: (v: number) => void,
   setIsVip: (v: boolean) => void,
-  setStreakFreezes: (v: number) => void
+  setStreakFreezes: (v: number) => void,
+  updateUser?: (partial: Partial<any>) => void
 ) {
   const [alertConfig, setAlertConfig] = useState<{
     visible: boolean;
@@ -34,14 +38,16 @@ export function useShopPayment(
           const d = res.data?.data;
           if (d) {
             setUserKevs(d.userKevs);
-            if (user) { user.kevs = d.userKevs; user.isVip = d.isVip; }
+            if (updateUser) {
+              updateUser({ kevs: d.userKevs, isVip: d.isVip });
+            }
             if (d.isVip) setIsVip(true);
           }
           try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
           setAlertConfig({
             visible: true,
-            title: 'ACHAT VALIDÉ !',
-            message: 'Votre compte a été crédité avec succès.',
+            title: 'ACHAT VALIDE !',
+            message: 'Votre compte a ete credite avec succes.',
             type: 'success',
             buttonText: 'Parfait !',
           });
@@ -49,7 +55,7 @@ export function useShopPayment(
           setAlertConfig({
             visible: true,
             title: 'ERREUR',
-            message: 'Erreur lors de la validation du reçu Google Play.',
+            message: 'Erreur lors de la validation du recu Google Play.',
             type: 'error',
             buttonText: 'Fermer',
           });
@@ -59,8 +65,8 @@ export function useShopPayment(
       () => {
         setAlertConfig({
           visible: true,
-          title: 'PAIEMENT ANNULÉ',
-          message: 'La commande Google Play a été annulée ou a échoué.',
+          title: 'PAIEMENT ANNULE',
+          message: 'La commande Google Play a ete annulee ou a echoue.',
           type: 'error',
           buttonText: 'Fermer',
         });
@@ -68,7 +74,7 @@ export function useShopPayment(
     );
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, updateUser, setUserKevs, setIsVip]);
 
   const handleBuyWithKevs = (item: any, category?: string) => {
     const cat = category || item.category || 'boosters';
@@ -94,14 +100,16 @@ export function useShopPayment(
           const d = res.data?.data;
           if (d) {
             setUserKevs(d.userKevs);
-            if (user) { user.kevs = d.userKevs; user.inventory = d.inventory; }
+            if (updateUser) {
+              updateUser({ kevs: d.userKevs, inventory: d.inventory, streakFreezes: d.streakFreezes });
+            }
             if (d.streakFreezes !== undefined) setStreakFreezes(d.streakFreezes);
           }
           try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
           setAlertConfig({
             visible: true,
-            title: 'ACHAT RÉUSSI !',
-            message: `${item.title} a été ajouté à votre inventaire.`,
+            title: 'ACHAT REUSSI !',
+            message: `${item.title} a ete ajoute a votre inventaire.`,
             type: 'success',
             buttonText: 'Super !',
           });
@@ -125,7 +133,7 @@ export function useShopPayment(
       setAlertConfig({
         visible: true,
         title: 'SERVICE INDISPONIBLE',
-        message: 'Google Play Billing est inaccessible ou non initialisé.',
+        message: 'Google Play Billing est inaccessible ou non initialise.',
         type: 'error',
         buttonText: 'Fermer',
       });

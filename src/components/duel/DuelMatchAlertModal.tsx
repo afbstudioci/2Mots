@@ -203,11 +203,11 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 360,
-    borderRadius: borderRadius.xxl,
+    borderRadius: borderRadius.xl,
     padding: spacing.xl,
     alignItems: 'center',
     borderWidth: 2,
-    ...shadows.lg,
+    ...shadows.float(true),
   },
   headerBadge: {
     flexDirection: 'row',

@@ -7,7 +7,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { colors, spacing, borderRadius } from '../../theme/theme';
-import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import { useRewardedAd } from '../../hooks/useRewardedAd';
 import KevIcon from '../common/KevIcon';
 import api from '../../services/api';
@@ -18,15 +18,14 @@ interface DoubleKevsButtonProps {
 }
 
 export const DoubleKevsButton: React.FC<DoubleKevsButtonProps> = ({ score, onClaimed }) => {
-  const { themeColors } = useTheme();
-  const { isLoaded, showRewardedAd } = useRewardedAd();
+  const { updateUser } = useAuth();
+  const { showRewardedAd } = useRewardedAd();
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isClaimed, setIsClaimed] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   if (score <= 0) return null;
 
-  // Calcul des Kevs remportés sur la partie (minimum 1 Kev par point résolu)
   const earnedKevs = Math.max(1, Math.floor(score / 2));
 
   const handleWatchAd = () => {
@@ -48,6 +47,9 @@ export const DoubleKevsButton: React.FC<DoubleKevsButtonProps> = ({ score, onCla
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } catch {}
             setIsClaimed(true);
+            if (res.data?.data?.totalKevs !== undefined) {
+              updateUser({ kevs: res.data.data.totalKevs });
+            }
             if (onClaimed) onClaimed(earnedKevs);
           }
         } catch {
@@ -59,7 +61,7 @@ export const DoubleKevsButton: React.FC<DoubleKevsButtonProps> = ({ score, onCla
       },
       (error: any) => {
         setIsProcessing(false);
-        setErrorMessage(error?.message || 'Vidéo indisponible. Réessayez.');
+        setErrorMessage(error?.message || 'Video indisponible. Reessayez.');
       }
     );
   };
@@ -69,7 +71,7 @@ export const DoubleKevsButton: React.FC<DoubleKevsButtonProps> = ({ score, onCla
       <View style={[styles.claimedContainer, { backgroundColor: 'rgba(74, 222, 128, 0.15)', borderColor: colors.mint }]}>
         <Ionicons name="checkmark-circle" size={18} color={colors.mint} />
         <Text style={[styles.claimedText, { color: colors.mint }]}>
-          Gains doublés ! (+{earnedKevs} Kevs)
+          Gains doubles ! (+{earnedKevs} Kevs)
         </Text>
       </View>
     );
@@ -142,8 +144,8 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontFamily: 'Poppins_500Medium',
-    fontSize: 11,
+    fontSize: 12,
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
 });

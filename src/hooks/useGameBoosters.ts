@@ -1,4 +1,7 @@
-//src/hooks/useGameBoosters.ts
+// src/hooks/useGameBoosters.ts
+// GESTION DES JOKERS ET BOOSTERS TACTIQUES EN JEU
+// Standard : Bank Grade (Strict <= 270 lignes, Sans Emojis)
+
 import { useState, useCallback } from 'react';
 import api from '../services/api';
 import { EnrichedWordPair } from '../types/gameTypes';
@@ -12,6 +15,7 @@ interface UseGameBoostersProps {
   setUserKevs: React.Dispatch<React.SetStateAction<number>>;
   currentPair: EnrichedWordPair | null;
   isChecking: boolean;
+  isTimeFrozen: boolean;
   hasTriggeredGameOver: boolean;
   playHint: () => void;
   playSuccess: () => void;
@@ -25,6 +29,7 @@ export const useGameBoosters = ({
   setUserKevs,
   currentPair,
   isChecking,
+  isTimeFrozen,
   hasTriggeredGameOver,
   playHint,
   playSuccess,
@@ -34,7 +39,6 @@ export const useGameBoosters = ({
   const [timeFreezeCount, setTimeFreezeCount] = useState<number>(user?.inventory?.boosters?.timeFreeze ?? 2);
   const [superClueCount, setSuperClueCount] = useState<number>(user?.inventory?.boosters?.superClue ?? 2);
   const [secondChanceCount, setSecondChanceCount] = useState<number>(user?.inventory?.boosters?.secondChance ?? 1);
-  const [isTimeFrozen, setIsTimeFrozen] = useState<boolean>(false);
   const [eliminatedChoices, setEliminatedChoices] = useState<string[]>([]);
   const [isHintUsed, setIsHintUsed] = useState<boolean>(false);
   const [showNoKevsModal, setShowNoKevsModal] = useState<boolean>(false);
@@ -89,13 +93,8 @@ export const useGameBoosters = ({
       else if (!isVip) setUserKevs((prev) => Math.max(0, prev - 15));
 
       api.post('/shop/use-booster', { boosterType: 'timeFreeze' }).catch(() => {});
-      setIsTimeFrozen(true);
       onTimeFreezeActivated(5000);
       playHint();
-
-      setTimeout(() => {
-        setIsTimeFrozen(false);
-      }, 5000);
     } catch {}
   };
 
@@ -130,12 +129,8 @@ export const useGameBoosters = ({
       setIsHintUsed(true);
       playHint();
     } else if (type === 'timeFreeze') {
-      setIsTimeFrozen(true);
       onTimeFreezeActivated(5000);
       playHint();
-      setTimeout(() => {
-        setIsTimeFrozen(false);
-      }, 5000);
     } else if (type === 'superClue') {
       if (!currentPair?.options) return;
       const exact = currentPair.exactMatch ? currentPair.exactMatch[0] : currentPair.options[0];

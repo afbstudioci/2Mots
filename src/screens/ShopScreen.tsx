@@ -1,4 +1,7 @@
-//src/screens/ShopScreen.tsx
+// src/screens/ShopScreen.tsx
+// ECRAN DE BOUTIQUE AVEC SYNCHRONISATION EN TEMPS REEL DU SOLDE DE KEVS
+// Standard : Bank Grade (Strict <= 270 lignes, Sans Emojis)
+
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,22 +23,23 @@ import api from '../services/api';
 
 export default function ShopScreen() {
   const { themeColors } = useTheme();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const navigation = useNavigation<any>();
 
   const [catalog, setCatalog] = useState<any>(DEFAULT_SHOP_CATALOG);
-  const [userKevs, setUserKevs] = useState<number>(user?.kevs || 0);
-  const [streakFreezes, setStreakFreezes] = useState<number>(user?.streakFreezes || 0);
-  const [isVip, setIsVip] = useState<boolean>(Boolean(user?.isVip));
+  const userKevs = user?.kevs || 0;
+  const streakFreezes = user?.streakFreezes || 0;
+  const isVip = Boolean(user?.isVip);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [selectedDetailItem, setSelectedDetailItem] = useState<any>(null);
 
   const { alertConfig, handleBuyWithKevs, handleInAppPurchase, closeAlert } = useShopPayment(
     user,
     userKevs,
-    setUserKevs,
-    setIsVip,
-    setStreakFreezes
+    (k) => updateUser({ kevs: k }),
+    (v) => updateUser({ isVip: v }),
+    (s) => updateUser({ streakFreezes: s }),
+    updateUser
   );
 
   const sanitizeCatalog = (rawCatalog: any) => {
@@ -55,13 +59,17 @@ export default function ShopScreen() {
 
   const fetchShop = async () => {
     try {
+      setIsLoading(true);
       const res = await api.get('/shop/catalog');
       const d = res.data?.data;
       if (d) {
         if (d.catalog) setCatalog(sanitizeCatalog(d.catalog));
-        if (d.userKevs !== undefined) setUserKevs(d.userKevs);
-        if (d.streakFreezes !== undefined) setStreakFreezes(d.streakFreezes);
-        if (d.isVip !== undefined) setIsVip(d.isVip);
+        updateUser({
+          kevs: d.userKevs !== undefined ? d.userKevs : user?.kevs,
+          streakFreezes: d.streakFreezes !== undefined ? d.streakFreezes : user?.streakFreezes,
+          isVip: d.isVip !== undefined ? d.isVip : user?.isVip,
+          inventory: d.inventory || user?.inventory,
+        });
       }
     } catch { } finally {
       setIsLoading(false);
@@ -101,7 +109,7 @@ export default function ShopScreen() {
         </TouchableOpacity>
 
         {!isVip && (
-          <FreeKevsCard onRewardClaimed={(newKevs) => setUserKevs(newKevs)} />
+          <FreeKevsCard onRewardClaimed={(newKevs) => updateUser({ kevs: newKevs })} />
         )}
 
         <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>PACKS DE KEVS</Text>
@@ -111,7 +119,7 @@ export default function ShopScreen() {
           onBuy={handleInAppPurchase}
         />
 
-        <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>BOUCLIERS DE SÉRIE</Text>
+        <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>BOUCLIERS DE SERIE</Text>
         {catalog.streaks?.map((item: any) => (
           <ShopRowItem
             key={item.id}
@@ -141,7 +149,7 @@ export default function ShopScreen() {
 
         {catalog.combos && catalog.combos.length > 0 && (
           <>
-            <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>PACKS COMBOS ÉCONOMIQUES</Text>
+            <Text style={[styles.sectionTitle, { color: themeColors.textSecondary }]}>PACKS COMBOS ECONOMIQUES</Text>
             {catalog.combos.map((item: any) => (
               <ShopRowItem
                 key={item.id}

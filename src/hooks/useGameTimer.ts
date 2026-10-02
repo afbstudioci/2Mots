@@ -62,6 +62,7 @@ export const useGameTimer = ({
   const maxTimeRef = useRef<number>(initialMax);
   maxTimeRef.current = initialMax;
   const lastTickTimeRef = useRef<number>(Date.now());
+  const frozenUntilRef = useRef<number>(0);
   const timerIntervalRef = useRef<any>(null);
   const hasTriggeredGameOver = useRef<boolean>(false);
   const backgroundTimeRef = useRef<number | null>(null);
@@ -84,7 +85,7 @@ export const useGameTimer = ({
         if (!sessionAnswersRef.current.some((a) => a.wordPairId === pair._id)) {
           sessionAnswersRef.current.push({
             wordPairId: pair._id,
-            answer: reason || 'Temps écoulé',
+            answer: reason || 'Temps ecoule',
             timeSpent: 30,
             isCorrect: false,
             accuracy: 0,
@@ -102,7 +103,7 @@ export const useGameTimer = ({
         return {
           word1: p?.word1 || '',
           word2: p?.word2 || '',
-          userAnswer: item.answer || 'Temps écoulé',
+          userAnswer: item.answer || 'Temps ecoule',
           expectedAnswer: p?.exactMatch?.[0] || p?.options?.[0] || 'Inconnu',
           isCorrect: Boolean(item.isCorrect),
         };
@@ -119,7 +120,6 @@ export const useGameTimer = ({
 
       api.post('/game/end', sessionPayload, { timeout: 4500 })
         .catch(() => {
-          // Mise en file d'attente hors-ligne transparente en cas d'indisponibilite reseau
           queueOfflineSession({
             score: correctCount,
             durationMs: 30000,
@@ -144,7 +144,7 @@ export const useGameTimer = ({
         enigmasSummary,
       });
     },
-    [navigation, stopBgm, currentPairRef, playedPairsHistoryRef, sessionAnswersRef, kevyKeysRef]
+    [navigation, stopBgm, currentPairRef, playedPairsHistoryRef, sessionAnswersRef, kevyKeysRef, userLevel, userLevelRef, currentXpRef, userKevsRef]
   );
 
   useEffect(() => {
@@ -152,11 +152,20 @@ export const useGameTimer = ({
     lastTickTimeRef.current = Date.now();
 
     timerIntervalRef.current = setInterval(() => {
-      if (hasTriggeredGameOver.current || errorLimitData?.visible || showLevelUpModal || showKevyChest || isTimeFrozen) {
+      if (hasTriggeredGameOver.current || errorLimitData?.visible || showLevelUpModal || showKevyChest) {
         lastTickTimeRef.current = Date.now();
         return;
       }
+
       const now = Date.now();
+      const isFrozen = now < frozenUntilRef.current;
+      if (isFrozen) {
+        setIsTimeFrozen(true);
+        lastTickTimeRef.current = now;
+        return;
+      }
+
+      setIsTimeFrozen(false);
       const delta = now - lastTickTimeRef.current;
       lastTickTimeRef.current = now;
 
@@ -174,7 +183,7 @@ export const useGameTimer = ({
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
-  }, [isLoading, playDanger, triggerGameOver, errorLimitData?.visible, showLevelUpModal, showKevyChest, isTimeFrozen]);
+  }, [isLoading, playDanger, triggerGameOver, errorLimitData?.visible, showLevelUpModal, showKevyChest]);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
@@ -182,7 +191,7 @@ export const useGameTimer = ({
         const elapsed = Date.now() - backgroundTimeRef.current;
         backgroundTimeRef.current = null;
         lastTickTimeRef.current = Date.now();
-        if (!showLevelUpModal && !errorLimitData?.visible && !isTimeFrozen) {
+        if (!showLevelUpModal && !errorLimitData?.visible && Date.now() >= frozenUntilRef.current) {
           timeLeftMsRef.current = Math.max(0, timeLeftMsRef.current - elapsed);
           const rem = Math.ceil(timeLeftMsRef.current / 1000);
           setTimeLeft(rem);
@@ -195,15 +204,21 @@ export const useGameTimer = ({
       appState.current = next;
     });
     return () => sub.remove();
-  }, [triggerGameOver, showLevelUpModal, errorLimitData?.visible, isTimeFrozen]);
+  }, [triggerGameOver, showLevelUpModal, errorLimitData?.visible]);
 
   const addTimeMs = (extraMs: number) => {
-    timeLeftMsRef.current = Math.min(maxTimeRef.current * 1000, timeLeftMsRef.current + extraMs);
+    // Immunite complete contre les penalites de temps si le chrono est gele
+    if (extraMs < 0 && Date.now() < frozenUntilRef.current) {
+      return;
+    }
+    timeLeftMsRef.current = Math.min(maxTimeRef.current * 1000, Math.max(0, timeLeftMsRef.current + extraMs));
     setTimeLeft(Math.ceil(timeLeftMsRef.current / 1000));
   };
 
   const resetTimer = (newSeconds?: number) => {
     const sec = newSeconds || maxTimeRef.current;
+    frozenUntilRef.current = 0;
+    setIsTimeFrozen(false);
     setMaxTime(sec);
     maxTimeRef.current = sec;
     timeLeftMsRef.current = sec * 1000;
@@ -213,13 +228,11 @@ export const useGameTimer = ({
   };
 
   const freezeTimer = (seconds: number = 5) => {
+    const target = Date.now() + seconds * 1000;
+    frozenUntilRef.current = Math.max(frozenUntilRef.current, target);
     setIsTimeFrozen(true);
     lastTickTimeRef.current = Date.now();
     try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
-    setTimeout(() => {
-      lastTickTimeRef.current = Date.now();
-      setIsTimeFrozen(false);
-    }, seconds * 1000);
   };
 
   const stopTimer = () => {

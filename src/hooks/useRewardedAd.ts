@@ -17,7 +17,6 @@ interface PendingShowRequest {
   onError?: (err: any) => void;
 }
 
-// ETAT GLOBAL SINGLETON (Partagé entre tous les composants de l'application)
 class AdRewardManager {
   private static instance: AdRewardManager;
   private rewardedAd: RewardedAd | null = null;
@@ -98,7 +97,6 @@ class AdRewardManager {
         this.retryAttempt = 0;
         this.notify();
 
-        // Si une demande d'affichage était en attente
         if (this.pendingRequest) {
           if (this.requestTimeout) clearTimeout(this.requestTimeout);
           const req = this.pendingRequest;
@@ -118,7 +116,6 @@ class AdRewardManager {
         this.isLoaded = false;
         this.rewardedAd = null;
         this.notify();
-        // Préchargement automatique immédiat de la prochaine vidéo
         setTimeout(() => {
           this.preloadAd();
         }, 1200);
@@ -130,14 +127,12 @@ class AdRewardManager {
         this.rewardedAd = null;
         this.notify();
 
-        // Bascule automatique vers l'unité de test si l'unité de production renvoie un échec
         if (!this.isFallback) {
           this.isFallback = true;
           this.preloadAd(true);
           return;
         }
 
-        // Si l'utilisateur attendait cette pub
         if (this.pendingRequest) {
           if (this.requestTimeout) clearTimeout(this.requestTimeout);
           const req = this.pendingRequest;
@@ -149,7 +144,6 @@ class AdRewardManager {
           }
         }
 
-        // Réessai automatique en arrière-plan avec délai progressif
         this.scheduleRetry();
       });
 
@@ -166,7 +160,6 @@ class AdRewardManager {
   private scheduleRetry(): void {
     if (this.retryTimeout) clearTimeout(this.retryTimeout);
     this.retryAttempt += 1;
-    // Délai progressif : 4s, 8s, 16s, 30s max
     const delay = Math.min(30000, 4000 * Math.pow(1.8, Math.min(this.retryAttempt, 4)));
     this.retryTimeout = setTimeout(() => {
       this.preloadAd();
@@ -189,19 +182,16 @@ class AdRewardManager {
   public showAd(onEarned: () => void, onError?: (err: any) => void): void {
     const req: PendingShowRequest = { onEarned, onError };
 
-    // Cas 1 : La publicité est déjà disponible en mémoire
     if (this.isLoaded && this.rewardedAd) {
       this.executeShow(this.rewardedAd, req);
       return;
     }
 
-    // Cas 2 : La publicité est en cours de chargement ou doit être initiée
     this.pendingRequest = req;
     if (!this.isLoading) {
       this.preloadAd();
     }
 
-    // Timeout de sécurité de 10 secondes pour ne pas bloquer l'utilisateur
     if (this.requestTimeout) clearTimeout(this.requestTimeout);
     this.requestTimeout = setTimeout(() => {
       if (this.pendingRequest) {
@@ -209,7 +199,7 @@ class AdRewardManager {
         this.pendingRequest = null;
         if (pending.onError) {
           pending.onError(
-            new Error('Délai d’attente dépassé. Veuillez vérifier votre connexion et réessayer.')
+            new Error("Délai d'attente dépassé. Veuillez vérifier votre connexion et réessayer.")
           );
         }
       }
@@ -252,4 +242,3 @@ export const useRewardedAd = () => {
     reloadAd,
   };
 };
-
