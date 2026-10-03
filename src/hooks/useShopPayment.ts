@@ -94,22 +94,27 @@ export function useShopPayment(
 
   const handleBuyWithKevs = (item: any, category?: string) => {
     if (isProcessingPayment) return;
-    const cat = category || item.category || 'boosters';
-    if (userKevs < item.priceKevs) {
+    const cat = category || item.category || (item.rewards ? 'combos' : (String(item.id).startsWith('streak') ? 'streaks' : 'boosters'));
+    const itemPrice = Number(item.priceKevs) || 0;
+
+    if (userKevs < itemPrice) {
       setAlertConfig({
         visible: true,
         title: 'Solde insuffisant',
-        message: `Il vous manque ${item.priceKevs - userKevs} Kevs pour obtenir « ${item.title} ».`,
+        message: `Il vous manque ${itemPrice - userKevs} Kevs pour obtenir « ${item.title} ».`,
         type: 'error',
         buttonText: 'Compris',
+        confirmText: undefined,
+        onConfirm: undefined,
         isLoading: false,
       });
       return;
     }
+
     setAlertConfig({
       visible: true,
       title: "Confirmer l'achat",
-      message: `Voulez-vous acquérir « ${item.title} » pour ${item.priceKevs} Kevs ?`,
+      message: `Voulez-vous acquérir « ${item.title} » pour ${itemPrice} Kevs ?`,
       buttonText: 'Annuler',
       confirmText: 'Confirmer',
       isLoading: false,
@@ -118,31 +123,53 @@ export function useShopPayment(
           setIsProcessingPayment(true);
           setProcessingItemId(item.id);
           setAlertConfig((prev) => ({ ...prev, isLoading: true }));
-          const res = await api.post('/shop/buy-with-kevs', { itemId: item.id, category: cat });
+
+          const res = await api.post(
+            '/shop/buy-with-kevs',
+            { itemId: item.id, category: cat },
+            { timeout: 15000 }
+          );
+
           const d = res.data?.data;
           if (d) {
-            setUserKevs(d.userKevs);
-            if (updateUser) {
-              updateUser({ kevs: d.userKevs, inventory: d.inventory, streakFreezes: d.streakFreezes });
-            }
+            if (d.userKevs !== undefined) setUserKevs(d.userKevs);
             if (d.streakFreezes !== undefined) setStreakFreezes(d.streakFreezes);
+            if (updateUser) {
+              updateUser({
+                kevs: d.userKevs,
+                inventory: d.inventory,
+                streakFreezes: d.streakFreezes,
+              });
+            }
           }
+
           try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+
           setAlertConfig({
             visible: true,
-            title: 'Achat réussi !',
+            title: 'Achat validé !',
             message: `« ${item.title} » a été ajouté à votre inventaire avec succès.`,
             type: 'success',
             buttonText: 'Super',
+            confirmText: undefined,
+            onConfirm: undefined,
             isLoading: false,
           });
         } catch (e: any) {
+          const errMsg =
+            e.response?.data?.message ||
+            (e.code === 'ECONNABORTED'
+              ? "Délai d'attente dépassé. Veuillez vérifier votre connexion."
+              : "Une erreur est survenue lors de l'achat.");
+
           setAlertConfig({
             visible: true,
-            title: 'Erreur',
-            message: e.response?.data?.message || "Une erreur est survenue lors de l'achat.",
+            title: 'Échec de l\'achat',
+            message: errMsg,
             type: 'error',
             buttonText: 'Fermer',
+            confirmText: undefined,
+            onConfirm: undefined,
             isLoading: false,
           });
         } finally {
@@ -168,12 +195,22 @@ export function useShopPayment(
         message: 'Google Play Billing est momentanément inaccessible. Veuillez vérifier votre connexion.',
         type: 'error',
         buttonText: 'Fermer',
+        confirmText: undefined,
+        onConfirm: undefined,
         isLoading: false,
       });
     }
   };
 
-  const closeAlert = () => setAlertConfig({ visible: false, title: '', message: '', isLoading: false });
+  const closeAlert = () =>
+    setAlertConfig({
+      visible: false,
+      title: '',
+      message: '',
+      isLoading: false,
+      confirmText: undefined,
+      onConfirm: undefined,
+    });
 
   return {
     isProcessingPayment,

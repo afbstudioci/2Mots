@@ -192,8 +192,12 @@ export default function ShopScreen() {
         isLoading={isProcessingPayment && processingItemId === selectedDetailItem?.id}
         onClose={() => setSelectedDetailItem(null)}
         onBuy={(item) => {
-          if (item.priceEur) handleInAppPurchase(item);
-          else handleBuyWithKevs(item, item.category);
+          setSelectedDetailItem(null);
+          if (item.priceEur) {
+            handleInAppPurchase(item);
+          } else {
+            handleBuyWithKevs(item, item.category);
+          }
         }}
       />
 
