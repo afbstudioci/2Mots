@@ -1,10 +1,11 @@
 // src/components/shop/FreeKevsCard.tsx
-// CARTE BOUTIQUE "KEVS GRATUITS" AVEC RECOMPENSE PUBLICITAIRE ADMOB
-// Standard : Bank Grade (Strict <= 270 lignes, Sans Emojis, Typographie Française Soignée)
+// CARTE BOUTIQUE "KEVS GRATUITS" AVEC GESTION TEMPS REEL DU COOLDOWN ADMOB
+// Standard : Bank Grade (Strict <= 270 lignes, Sans Emojis, Typographie Francaise Soignee)
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, AppState } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../context/ThemeContext';
 import { colors, spacing, borderRadius } from '../../theme/theme';
@@ -42,7 +43,6 @@ export const FreeKevsCard: React.FC<FreeKevsCardProps> = ({ onRewardClaimed }) =
   const [cooldownSec, setCooldownSec] = useState<number>(0);
   const [isClaiming, setIsClaiming] = useState<boolean>(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-
   const [alertConfig, setAlertConfig] = useState<{
     visible: boolean;
     title: string;
@@ -53,46 +53,50 @@ export const FreeKevsCard: React.FC<FreeKevsCardProps> = ({ onRewardClaimed }) =
     onConfirm?: () => void;
   }>({ visible: false, title: '', message: '' });
 
-  const timerRef = useRef<any>(null);
+  const isMountedRef = useRef<boolean>(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   const fetchStatus = useCallback(async () => {
     try {
       const res = await api.get('/ads/shop-status');
-      if (res.data?.status === 'success' && res.data?.data) {
+      if (res.data?.status === 'success' && res.data?.data && isMountedRef.current) {
         setStatus(res.data.data);
         setCooldownSec(res.data.data.remainingCooldownSeconds || 0);
       }
-    } catch { }
+    } catch {}
   }, []);
 
+  useFocusEffect(useCallback(() => { fetchStatus(); }, [fetchStatus]));
+
   useEffect(() => {
-    fetchStatus();
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') fetchStatus();
+    });
+    return () => sub.remove();
   }, [fetchStatus]);
 
   useEffect(() => {
-    if (cooldownSec > 0) {
-      timerRef.current = setInterval(() => {
-        setCooldownSec((prev) => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current);
-            fetchStatus();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [cooldownSec, fetchStatus]);
+    if (cooldownSec <= 0) return;
+    const interval = setInterval(() => {
+      setCooldownSec((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          fetchStatus();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [cooldownSec > 0, fetchStatus]);
 
   const handleWatchAd = () => {
-    if (!status.canWatch || cooldownSec > 0 || isClaiming) return;
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    } catch {}
-
+    if (!status.canWatch || cooldownSec > 0 || status.dailyRemaining <= 0 || isClaiming) return;
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
     setIsClaiming(true);
     setSuccessMsg(null);
 
@@ -101,12 +105,16 @@ export const FreeKevsCard: React.FC<FreeKevsCardProps> = ({ onRewardClaimed }) =
         try {
           const res = await api.post('/ads/claim-shop');
           if (res.data?.status === 'success' && res.data?.data) {
-            try {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            } catch {}
-            onRewardClaimed(res.data.data.totalKevs);
+            const d = res.data.data;
+            try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+            onRewardClaimed(d.totalKevs);
             setSuccessMsg('+25 Kevs crédités avec succès !');
-            fetchStatus();
+            setTimeout(() => { if (isMountedRef.current) setSuccessMsg(null); }, 4000);
+
+            const remainingSec = d.remainingCooldownSeconds || 600;
+            const newRemaining = d.dailyRemaining !== undefined ? d.dailyRemaining : Math.max(0, status.dailyRemaining - 1);
+            setStatus((p) => ({ ...p, canWatch: false, inCooldown: true, dailyRemaining: newRemaining, remainingCooldownSeconds: remainingSec }));
+            setCooldownSec(remainingSec);
           }
         } catch (error: any) {
           setAlertConfig({
@@ -116,12 +124,13 @@ export const FreeKevsCard: React.FC<FreeKevsCardProps> = ({ onRewardClaimed }) =
             type: 'error',
             buttonText: 'Fermer',
           });
+          fetchStatus();
         } finally {
-          setIsClaiming(false);
+          if (isMountedRef.current) setIsClaiming(false);
         }
       },
       () => {
-        setIsClaiming(false);
+        if (isMountedRef.current) setIsClaiming(false);
         reloadAd();
         setAlertConfig({
           visible: true,
@@ -139,25 +148,12 @@ export const FreeKevsCard: React.FC<FreeKevsCardProps> = ({ onRewardClaimed }) =
     );
   };
 
-  const formatTimer = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-  };
-
+  const formatTimer = (s: number) => `${Math.floor(s / 60)}:${s % 60 < 10 ? '0' : ''}${s % 60}`;
   const isCompleted = status.dailyRemaining <= 0;
   const isInCooldown = cooldownSec > 0;
 
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: themeColors.card,
-          borderColor: isCompleted ? themeColors.border : colors.coral,
-        },
-      ]}
-    >
+    <View style={[styles.card, { backgroundColor: themeColors.card, borderColor: isCompleted ? themeColors.border : colors.coral }]}>
       <View style={styles.headerRow}>
         <View style={[styles.iconBox, { backgroundColor: colors.coral }]}>
           <Ionicons name="play-circle" size={24} color={colors.white} />
@@ -175,35 +171,23 @@ export const FreeKevsCard: React.FC<FreeKevsCardProps> = ({ onRewardClaimed }) =
         </View>
       </View>
 
-      {successMsg ? (
-        <Text style={[styles.feedback, { color: colors.mint }]}>{successMsg}</Text>
-      ) : null}
+      {successMsg ? <Text style={[styles.feedback, { color: colors.mint }]}>{successMsg}</Text> : null}
 
       <TouchableOpacity
         activeOpacity={0.85}
         disabled={!status.canWatch || isInCooldown || isCompleted || isClaiming}
         onPress={handleWatchAd}
-        style={[
-          styles.actionButton,
-          {
-            backgroundColor: isInCooldown || isCompleted ? themeColors.surface : colors.coral,
-            opacity: isClaiming ? 0.75 : 1,
-          },
-        ]}
+        style={[styles.actionButton, { backgroundColor: isInCooldown || isCompleted ? themeColors.surface : colors.coral, opacity: isClaiming ? 0.75 : 1 }]}
       >
         {isClaiming ? (
           <ActivityIndicator color={colors.white} size="small" />
         ) : isInCooldown ? (
           <View style={styles.buttonContent}>
             <Ionicons name="time-outline" size={16} color={themeColors.textSecondary} />
-            <Text style={[styles.buttonText, { color: themeColors.textSecondary }]}>
-              Disponible dans {formatTimer(cooldownSec)}
-            </Text>
+            <Text style={[styles.buttonText, { color: themeColors.textSecondary }]}>Disponible dans {formatTimer(cooldownSec)}</Text>
           </View>
         ) : isCompleted ? (
-          <Text style={[styles.buttonText, { color: themeColors.textSecondary }]}>
-            Limite quotidienne atteinte ({status.dailyLimit}/{status.dailyLimit})
-          </Text>
+          <Text style={[styles.buttonText, { color: themeColors.textSecondary }]}>Limite quotidienne atteinte ({status.dailyLimit}/{status.dailyLimit})</Text>
         ) : (
           <View style={styles.buttonContent}>
             <Text style={[styles.buttonText, { color: colors.white }]}>Regarder la vidéo (+25</Text>
@@ -228,66 +212,16 @@ export const FreeKevsCard: React.FC<FreeKevsCardProps> = ({ onRewardClaimed }) =
 };
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: borderRadius.md,
-    borderWidth: 1.5,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm + 4,
-  },
-  iconBox: {
-    width: 42,
-    height: 42,
-    borderRadius: borderRadius.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.sm + 4,
-  },
-  titleBox: {
-    flex: 1,
-  },
-  title: {
-    fontFamily: 'Poppins_800ExtraBold',
-    fontSize: 14,
-  },
-  subtitle: {
-    fontFamily: 'Poppins_400Regular',
-    fontSize: 11,
-    marginTop: 2,
-  },
-  badge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: borderRadius.full,
-  },
-  badgeText: {
-    fontFamily: 'Poppins_700Bold',
-    fontSize: 10,
-  },
-  feedback: {
-    fontFamily: 'Poppins_600SemiBold',
-    fontSize: 12,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  actionButton: {
-    borderRadius: borderRadius.sm,
-    paddingVertical: spacing.sm + 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 44,
-  },
-  buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  buttonText: {
-    fontFamily: 'Poppins_700Bold',
-    fontSize: 13,
-  },
+  card: { borderRadius: borderRadius.md, borderWidth: 1.5, padding: spacing.md, marginBottom: spacing.md },
+  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm + 4 },
+  iconBox: { width: 42, height: 42, borderRadius: borderRadius.sm, justifyContent: 'center', alignItems: 'center', marginRight: spacing.sm + 4 },
+  titleBox: { flex: 1 },
+  title: { fontFamily: 'Poppins_800ExtraBold', fontSize: 14 },
+  subtitle: { fontFamily: 'Poppins_400Regular', fontSize: 11, marginTop: 2 },
+  badge: { paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: borderRadius.full },
+  badgeText: { fontFamily: 'Poppins_700Bold', fontSize: 10 },
+  feedback: { fontFamily: 'Poppins_600SemiBold', fontSize: 12, textAlign: 'center', marginBottom: spacing.sm },
+  actionButton: { borderRadius: borderRadius.sm, paddingVertical: spacing.sm + 4, alignItems: 'center', justifyContent: 'center', minHeight: 44 },
+  buttonContent: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  buttonText: { fontFamily: 'Poppins_700Bold', fontSize: 13 },
 });
