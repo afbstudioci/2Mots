@@ -34,7 +34,7 @@ export const useGameLogic = () => {
   const [userLevel, setUserLevel] = useState(initialLevel);
   const [currentXp, setCurrentXp] = useState(initialXp);
   const [xpNeeded, setXpNeeded] = useState(initialNeeded);
-  const [userKevs, setUserKevs] = useState(user?.kevs || 0);
+  const [userKevs, setUserKevs] = useState<number>(user?.kevs || 0);
   const [kevyKeys, setKevyKeys] = useState(user?.kevyKeys || 0);
   const [showKevyChest, setShowKevyChest] = useState(false);
   const [isFeverMode, setIsFeverMode] = useState(false);
@@ -64,47 +64,25 @@ export const useGameLogic = () => {
   const timerRef = useRef<any>(null);
 
   const boosters = useGameBoosters({
-    user,
-    userKevs,
-    setUserKevs,
-    currentPair: currentPairRef.current,
-    isChecking,
+    user, userKevs, setUserKevs, updateKevs, currentPair: currentPairRef.current, isChecking,
     isTimeFrozen: timerRef.current?.isTimeFrozen ?? false,
     hasTriggeredGameOver: timerRef.current?.hasTriggeredGameOver ?? false,
-    playHint,
-    playSuccess,
+    playHint, playSuccess,
     onTimeFreezeActivated: () => timerRef.current?.freezeTimer(5),
     onSecondChanceReset: () => {
-      consecutiveErrorsRef.current = 0;
-      totalErrorsRef.current = 0;
-      feverStreakRef.current = 0;
-      setIsFeverMode(false);
-      setErrorLimitData(null);
-      setSelectedChoice(null);
-      setCorrectChoice(null);
-      setIsCorrectState(null);
-      setIsChecking(false);
-      timerRef.current?.resetTimer();
+      consecutiveErrorsRef.current = 0; totalErrorsRef.current = 0;
+      feverStreakRef.current = 0; setIsFeverMode(false); setErrorLimitData(null);
+      setSelectedChoice(null); setCorrectChoice(null); setIsCorrectState(null);
+      setIsChecking(false); timerRef.current?.resetTimer();
     },
   });
 
   const timer = useGameTimer({
-    isLoading: false,
-    showLevelUpModal,
-    showKevyChest,
-    errorLimitData,
+    isLoading: false, showLevelUpModal, showKevyChest, errorLimitData,
     emergencyBoosterVisible: Boolean(boosters.emergencyBoosterType),
     isPaused: Boolean(boosters.emergencyBoosterType) || Boolean(errorLimitData?.visible) || showLevelUpModal || showKevyChest,
-    userLevel,
-    userLevelRef,
-    currentXpRef,
-    userKevsRef,
-    currentPairRef,
-    sessionAnswersRef,
-    playedPairsHistoryRef,
-    kevyKeysRef,
-    stopBgm,
-    playDanger,
+    userLevel, userLevelRef, currentXpRef, userKevsRef, currentPairRef, sessionAnswersRef,
+    playedPairsHistoryRef, kevyKeysRef, stopBgm, playDanger,
   });
   timerRef.current = timer;
 
@@ -173,9 +151,12 @@ export const useGameLogic = () => {
       const bonusMs = isFeverMode ? 12000 : (isFast ? 10000 : 8000);
 
       if (kevsToAdd > 0) {
-        const nextKevs = (user?.kevs || userKevs || 0) + kevsToAdd;
-        setUserKevs(nextKevs);
-        updateKevs(nextKevs);
+        setUserKevs((prev: number) => {
+          const nextKevs = prev + kevsToAdd;
+          userKevsRef.current = nextKevs;
+          updateKevs(nextKevs);
+          return nextKevs;
+        });
       }
       timer.setTimeWon(Math.floor(bonusMs / 1000));
       timer.addTimeMs(bonusMs);
@@ -199,10 +180,13 @@ export const useGameLogic = () => {
           setShowLevelUpModal(true);
           playLevelUp();
           const lvlKevBonus = 5 * vipMultiplier;
-          const nextKevs = (user?.kevs || userKevs || 0) + lvlKevBonus;
-          setUserKevs(nextKevs);
-          updateUser({ level: currentLvl, xp: nextXp, kevs: nextKevs });
-          api.post('/game/sync-level', { level: currentLvl, xp: nextXp, kevs: nextKevs }, { timeout: 3000 }).catch(() => {});
+          setUserKevs((currentKevs: number) => {
+            const nextKevs = currentKevs + lvlKevBonus;
+            userKevsRef.current = nextKevs;
+            updateUser({ level: currentLvl, xp: nextXp, kevs: nextKevs });
+            return nextKevs;
+          });
+          api.post('/game/sync-level', { level: currentLvl, xp: nextXp }, { timeout: 3000 }).catch(() => {});
         } else {
           updateUser({ xp: nextXp });
         }
@@ -241,12 +225,15 @@ export const useGameLogic = () => {
   const handleCloseKevyChest = (gains: { kevs: number; freeze: number; hint: number; shield: number }) => {
     setShowKevyChest(false); setKevyKeys(0); kevyKeysRef.current = 0;
     const addedKevs = gains.kevs > 0 ? gains.kevs : 0;
-    const nextKevs = (user?.kevs || userKevs || 0) + addedKevs;
-    if (addedKevs > 0) setUserKevs(nextKevs);
-    updateUser({
-      kevyKeys: 0,
-      ...(addedKevs > 0 ? { kevs: nextKevs } : {}),
-    });
+    if (addedKevs > 0) {
+      setUserKevs((prev: number) => {
+        const nextKevs = prev + addedKevs;
+        userKevsRef.current = nextKevs;
+        updateKevs(nextKevs);
+        return nextKevs;
+      });
+    }
+    updateUser({ kevyKeys: 0 });
     if (gains.freeze > 0) boosters.addBooster('freeze', gains.freeze);
     if (gains.hint > 0) boosters.addBooster('hint', gains.hint);
     if (gains.shield > 0) boosters.addBooster('shield', gains.shield);
